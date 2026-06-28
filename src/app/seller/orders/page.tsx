@@ -1,0 +1,1337 @@
+'use client'
+
+import { useSellerAuth } from '@/hooks/use-seller-auth'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
+import { fmtPrice } from '@/lib/currency'
+import { STATUS_CONFIG, formatVariant, type Order, type OrderItem, type OrderStatus, type OrderStatusLog, type DeliveryAssignment } from '@/lib/order-types'
+import { normalizeStatus } from '@/lib/order-state-machine'
+import {
+  ShoppingCart,
+  Search,
+  Filter,
+  X,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  CheckCircle2,
+  Truck,
+  UserCheck,
+  Clock,
+  Package,
+  MapPin,
+  Phone,
+  Mail,
+  RotateCcw,
+  XCircle,
+  Image as ImageIcon,
+  AlertTriangle,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useToast } from '@/hooks/use-toast'
+import { useIsMobile } from '@/hooks/use-mobile'
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                               */
+/* ------------------------------------------------------------------ */
+
+interface DeliveryBoy {
+  _id: string
+  name: string
+  mobile: string
+  vehicleType?: string
+  vehicleNumber?: string
+  profileImage?: string | { url?: string; publicId?: string }
+  isAvailable?: boolean
+}
+
+interface OrderStats {
+  total: number
+  pending: number
+  processing: number
+  delivered: number
+}
+
+/* ------------------------------------------------------------------ */
+/*  Animation Variants                                                  */
+/* ------------------------------------------------------------------ */
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] } },
+}
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.04 } },
+}
+
+const rowVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
+}
+
+/* ------------------------------------------------------------------ */
+/*  Status Icon Mapping                                                 */
+/* ------------------------------------------------------------------ */
+
+const STATUS_ICONS: Record<string, typeof Clock> = {
+  'clock': Clock,
+  'package': Package,
+  'truck': Truck,
+  'check-circle': CheckCircle2,
+  'check-circle-2': CheckCircle2,
+  'x-circle': XCircle,
+  'alert-triangle': AlertTriangle,
+  'rotate-ccw': RotateCcw,
+}
+
+function StatusIcon({ icon, className }: { icon: string; className?: string }) {
+  const Icon = STATUS_ICONS[icon] || Clock
+  return <Icon className={className} />
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main Page Component                                                 */
+/* ------------------------------------------------------------------ */
+
+export default function SellerOrders() {
+  const { authenticated, loading } = useSellerAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && !authenticated) {
+      router.replace('/seller')
+    }
+  }, [authenticated, loading, router])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="h-6 w-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!authenticated) {
+    return null
+  }
+
+  return <OrdersContent />
+}
+
+/* ------------------------------------------------------------------ */
+/*  Orders Content                                                      */
+/* ------------------------------------------------------------------ */
+
+function OrdersContent() {
+  const { toast } = useToast()
+  const isMobile = useIsMobile()
+  const router = useRouter()
+  const { logout } = useSellerAuth()
+
+  const [orders, setOrders] = useState<Order[]>([])
+  const [totalOrders, setTotalOrders] = useState(0)
+  const [stats, setStats] = useState<OrderStats>({ total: 0, pending: 0, processing: 0, delivered: 0 })
+  const [loadingData, setLoadingData] = useState(true)
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+
+  // Order detail dialog
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailDeliveryBoys, setDetailDeliveryBoys] = useState<DeliveryBoy[]>([])
+  const [detailStatusLogs, setDetailStatusLogs] = useState<OrderStatusLog[]>([])
+
+  // Assign delivery boy dialog
+  const [assignOpen, setAssignOpen] = useState(false)
+  const [assignOrderItem, setAssignOrderItem] = useState<OrderItem | null>(null)
+  const [assignOrderId, setAssignOrderId] = useState<string>('')
+  const [assigning, setAssigning] = useState(false)
+  const [assignDeliveryBoys, setAssignDeliveryBoys] = useState<DeliveryBoy[]>([])
+  const [assignLoadingBoys, setAssignLoadingBoys] = useState(false)
+  // Track whether this is a pickup assignment or delivery assignment
+  const [assignType, setAssignType] = useState<'delivery' | 'pickup'>('delivery')
+
+  // Action loading states
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
+
+  const itemsPerPage = 10
+
+  /* ---------------------------------------------------------------- */
+  /*  Fetch Orders                                                      */
+  /* ---------------------------------------------------------------- */
+
+  const fetchOrders = useCallback(async () => {
+    setLoadingData(true)
+    try {
+      const params = new URLSearchParams()
+      if (searchQuery) params.set('search', searchQuery)
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter)
+      params.set('page', currentPage.toString())
+      params.set('limit', itemsPerPage.toString())
+
+      const res = await fetch(`/api/seller/orders?${params.toString()}`)
+
+      if (res.status === 401 || res.status === 403) {
+        await logout()
+        router.replace('/seller')
+        return
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to fetch orders')
+      }
+
+      const data = await res.json()
+      const orderList: Order[] = data.orders || []
+
+      setOrders(orderList)
+      setTotalOrders(data.total || 0)
+
+      // Compute stats from the full list (or from response if available)
+      const computedStats: OrderStats = { total: data.total || 0, pending: 0, processing: 0, delivered: 0 }
+      // The list API may not return all orders, so we compute from what we get
+      // But we can get the stats from the first-page data for a quick view
+      for (const order of orderList) {
+        for (const item of order.items) {
+          const s = normalizeStatus(item.status)
+          if (s === 'Pending') computedStats.pending++
+          if (s === 'Processing') computedStats.processing++
+          if (s === 'Delivered') computedStats.delivered++
+        }
+      }
+      setStats(prev => ({ ...computedStats, total: data.total || prev.total }))
+    } catch (err) {
+      if (err instanceof Error && (err.message.includes('Unauthorized') || err.message.includes('blocked'))) {
+        return
+      }
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to load orders. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoadingData(false)
+    }
+  }, [searchQuery, statusFilter, currentPage, logout, router, toast])
+
+  useEffect(() => {
+    fetchOrders()
+  }, [fetchOrders])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter])
+
+  const totalPages = Math.max(1, Math.ceil(totalOrders / itemsPerPage))
+
+  /* ---------------------------------------------------------------- */
+  /*  Fetch Order Detail                                                */
+  /* ---------------------------------------------------------------- */
+
+  const fetchOrderDetail = useCallback(async (orderId: string) => {
+    setDetailLoading(true)
+    try {
+      const res = await fetch(`/api/seller/orders?orderId=${orderId}`)
+      if (!res.ok) throw new Error('Failed to fetch order detail')
+      const data = await res.json()
+      setSelectedOrder(data.order)
+      setDetailDeliveryBoys(data.deliveryBoys || [])
+      setDetailStatusLogs(data.statusLogs || [])
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to load order details',
+        variant: 'destructive',
+      })
+    } finally {
+      setDetailLoading(false)
+    }
+  }, [toast])
+
+  /* ---------------------------------------------------------------- */
+  /*  Order Actions                                                     */
+  /* ---------------------------------------------------------------- */
+
+  const handleAction = useCallback(async (
+    actionKey: string,
+    action: string,
+    orderId: string,
+    orderItemId?: string,
+    deliveryBoyId?: string,
+    reason?: string,
+  ) => {
+    setActionLoading(prev => ({ ...prev, [actionKey]: true }))
+    try {
+      const res = await fetch('/api/seller/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, orderId, orderItemId, deliveryBoyId, reason }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Action failed')
+
+      toast({
+        title: 'Success',
+        description: data.message || 'Order updated successfully',
+      })
+
+      // Refresh data
+      fetchOrders()
+      if (detailOpen && selectedOrder?.orderId === orderId) {
+        fetchOrderDetail(orderId)
+      }
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to update order',
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoading(prev => ({ ...prev, [actionKey]: false }))
+    }
+  }, [toast, fetchOrders, detailOpen, selectedOrder, fetchOrderDetail])
+
+  /* ---------------------------------------------------------------- */
+  /*  Assign Delivery Boy                                               */
+  /* ---------------------------------------------------------------- */
+
+  const handleAssignDeliveryBoy = useCallback(async (deliveryBoyId: string) => {
+    if (!assignOrderItem || !assignOrderId) return
+    setAssigning(true)
+    try {
+      const res = await fetch('/api/seller/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'assign',
+          orderId: assignOrderId,
+          orderItemId: assignOrderItem._id || assignOrderItem.orderId,
+          deliveryBoyId,
+          type: assignType,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Assignment failed')
+
+      toast({
+        title: 'Delivery Boy Assigned',
+        description: `${deliveryBoyId} has been assigned successfully.`,
+      })
+
+      setAssignOpen(false)
+      setAssignOrderItem(null)
+      setAssignOrderId('')
+      fetchOrders()
+      if (detailOpen && selectedOrder?.orderId === assignOrderId) {
+        fetchOrderDetail(assignOrderId)
+      }
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to assign delivery boy',
+        variant: 'destructive',
+      })
+    } finally {
+      setAssigning(false)
+    }
+  }, [assignOrderItem, assignOrderId, toast, fetchOrders, detailOpen, selectedOrder, fetchOrderDetail])
+
+  /* ---------------------------------------------------------------- */
+  /*  Open Detail                                                       */
+  /* ---------------------------------------------------------------- */
+
+  const openDetail = useCallback((order: Order) => {
+    setSelectedOrder(order)
+    setDetailOpen(true)
+    fetchOrderDetail(order.orderId)
+  }, [fetchOrderDetail])
+
+  /* ---------------------------------------------------------------- */
+  /*  Open Assign Dialog — fetches delivery boys independently           */
+  /* ---------------------------------------------------------------- */
+
+  const openAssignDialog = useCallback(async (orderId: string, item: OrderItem) => {
+    setAssignOrderId(orderId)
+    setAssignOrderItem(item)
+    // Determine assignment type based on item status
+    const itemStatus = normalizeStatus(item.status)
+    const isPickup = itemStatus === 'Return Approved' || itemStatus === 'Return Requested'
+    setAssignType(isPickup ? 'pickup' : 'delivery')
+    setAssignOpen(true)
+    setAssignLoadingBoys(true)
+
+    // Fetch available delivery boys from the dedicated endpoint
+    try {
+      const res = await fetch('/api/seller/delivery-boys')
+      if (res.ok) {
+        const data = await res.json()
+        setAssignDeliveryBoys(data.deliveryBoys || [])
+      } else {
+        setAssignDeliveryBoys([])
+      }
+    } catch {
+      setAssignDeliveryBoys([])
+    } finally {
+      setAssignLoadingBoys(false)
+    }
+  }, [])
+
+  /* ---------------------------------------------------------------- */
+  /*  Get seller items from an order                                    */
+  /* ---------------------------------------------------------------- */
+
+  const getSellerItems = useCallback((order: Order): OrderItem[] => {
+    return order.items || []
+  }, [])
+
+  /* ---------------------------------------------------------------- */
+  /*  Get primary status for an order (worst/earliest status)           */
+  /* ---------------------------------------------------------------- */
+
+  const getPrimaryStatus = useCallback((order: Order): OrderStatus => {
+    const items = getSellerItems(order)
+    if (items.length === 0) return normalizeStatus(order.status)
+    // Return the most "active" status (lowest in the pipeline)
+    const priority: OrderStatus[] = [
+      'Pending', 'Processing', 'Shipped', 'Out for Delivery',
+      'Return Requested', 'Return Approved', 'Out for Pickup',
+      'Delivered', 'Cancelled', 'Not Delivered',
+      'Return Cancelled', 'Return Completed',
+    ]
+    for (const s of priority) {
+      if (items.some(item => normalizeStatus(item.status) === s)) return s
+    }
+    return normalizeStatus(items[0].status)
+  }, [getSellerItems])
+
+  /* ---------------------------------------------------------------- */
+  /*  Render Action Buttons for an order item                           */
+  /* ---------------------------------------------------------------- */
+
+  const renderActions = useCallback((order: Order, item: OrderItem) => {
+    const status = normalizeStatus(item.status)
+    const itemId = item._id || item.orderId
+    const isLoading = (key: string) => !!actionLoading[key]
+
+    switch (status) {
+      case 'Pending':
+        return (
+          <Button
+            size="sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 text-xs gap-1"
+            disabled={isLoading(`accept-${itemId}`)}
+            onClick={() => handleAction(`accept-${itemId}`, 'processing', order.orderId, itemId)}
+          >
+            {isLoading(`accept-${itemId}`) ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+            Accept
+          </Button>
+        )
+      case 'Processing':
+        return (
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              className="bg-orange-500 hover:bg-orange-600 text-white h-7 text-xs gap-1"
+              disabled={isLoading(`ship-${itemId}`)}
+              onClick={() => handleAction(`ship-${itemId}`, 'ship', order.orderId, itemId)}
+            >
+              {isLoading(`ship-${itemId}`) ? <Loader2 className="h-3 w-3 animate-spin" /> : <Truck className="h-3 w-3" />}
+              Ship
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+              onClick={() => openAssignDialog(order.orderId, item)}
+            >
+              <UserCheck className="h-3 w-3" />
+              Assign
+            </Button>
+          </div>
+        )
+      case 'Shipped':
+        return (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+            onClick={() => openAssignDialog(order.orderId, item)}
+          >
+            <UserCheck className="h-3 w-3" />
+            Assign Delivery Boy
+          </Button>
+        )
+      case 'Return Requested':
+        return (
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 text-xs gap-1"
+              disabled={isLoading(`approve-${itemId}`)}
+              onClick={() => handleAction(`approve-${itemId}`, 'approve-return', order.orderId, itemId)}
+            >
+              {isLoading(`approve-${itemId}`) ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+              Approve
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-7 text-xs gap-1"
+              disabled={isLoading(`reject-${itemId}`)}
+              onClick={() => handleAction(`reject-${itemId}`, 'reject-return', order.orderId, itemId, undefined, 'Rejected by seller')}
+            >
+              {isLoading(`reject-${itemId}`) ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+              Reject
+            </Button>
+          </div>
+        )
+      case 'Return Approved':
+        return (
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+              onClick={() => openAssignDialog(order.orderId, item)}
+            >
+              <RotateCcw className="h-3 w-3" />
+              Assign for Pickup
+            </Button>
+          </div>
+        )
+      default:
+        return (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs gap-1 text-muted-foreground"
+            onClick={() => openDetail(order)}
+          >
+            <Eye className="h-3 w-3" />
+            View
+          </Button>
+        )
+    }
+  }, [actionLoading, handleAction, openAssignDialog, openDetail])
+
+  /* ---------------------------------------------------------------- */
+  /*  Format Date                                                       */
+  /* ---------------------------------------------------------------- */
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    } catch {
+      return dateStr
+    }
+  }
+
+  const formatDateTime = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return dateStr
+    }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Status Badge                                                      */
+  /* ---------------------------------------------------------------- */
+
+  const StatusBadge = ({ status }: { status: OrderStatus }) => {
+    const normalized = normalizeStatus(status)
+    const config = STATUS_CONFIG[normalized]
+    if (!config) return <Badge variant="secondary">{status}</Badge>
+    return (
+      <Badge className={cn(config.bgColor, config.color, 'border', config.borderColor, 'text-[11px] font-medium gap-1')}>
+        <StatusIcon icon={config.icon} className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    )
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  Render                                                            */
+  /* ---------------------------------------------------------------- */
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-6"
+    >
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
+              <ShoppingCart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Orders</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Manage your store orders
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 mt-3 ml-[46px]">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
+                statusFilter === 'all'
+                  ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              )}
+            >
+              <span className={cn('h-1.5 w-1.5 rounded-full', statusFilter === 'all' ? 'bg-emerald-500' : 'bg-muted-foreground/40')} />
+              All ({stats.total})
+            </button>
+            <button
+              onClick={() => setStatusFilter('Pending')}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
+                statusFilter === 'Pending'
+                  ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              )}
+            >
+              <span className={cn('h-1.5 w-1.5 rounded-full', statusFilter === 'Pending' ? 'bg-amber-500' : 'bg-muted-foreground/40')} />
+              Pending
+            </button>
+            <button
+              onClick={() => setStatusFilter('Processing')}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
+                statusFilter === 'Processing'
+                  ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              )}
+            >
+              <span className={cn('h-1.5 w-1.5 rounded-full', statusFilter === 'Processing' ? 'bg-blue-500' : 'bg-muted-foreground/40')} />
+              Processing
+            </button>
+            <button
+              onClick={() => setStatusFilter('Delivered')}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
+                statusFilter === 'Delivered'
+                  ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              )}
+            >
+              <span className={cn('h-1.5 w-1.5 rounded-full', statusFilter === 'Delivered' ? 'bg-emerald-500' : 'bg-muted-foreground/40')} />
+              Delivered
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {[
+          { label: 'Total Orders', value: stats.total, icon: ShoppingCart, bgClass: 'bg-emerald-50 dark:bg-emerald-950/30', textClass: 'text-emerald-600 dark:text-emerald-400', gradient: 'bg-gradient-to-r from-emerald-500 to-teal-400' },
+          { label: 'Pending', value: stats.pending, icon: Clock, bgClass: 'bg-amber-50 dark:bg-amber-950/30', textClass: 'text-amber-600 dark:text-amber-400', gradient: 'bg-gradient-to-r from-amber-500 to-orange-400' },
+          { label: 'Processing', value: stats.processing, icon: Package, bgClass: 'bg-blue-50 dark:bg-blue-950/30', textClass: 'text-blue-600 dark:text-blue-400', gradient: 'bg-gradient-to-r from-blue-500 to-cyan-400' },
+          { label: 'Delivered', value: stats.delivered, icon: CheckCircle2, bgClass: 'bg-emerald-50 dark:bg-emerald-950/30', textClass: 'text-emerald-600 dark:text-emerald-400', gradient: 'bg-gradient-to-r from-emerald-500 to-green-400' },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
+            transition={{ delay: i * 0.05 }}
+            className="group relative overflow-hidden bg-card rounded-xl border border-border hover:shadow-lg transition-all duration-300"
+          >
+            <div className={cn('absolute top-0 left-0 right-0 h-1 rounded-t-xl', stat.gradient)} />
+            <div className="p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center', stat.bgClass)}>
+                  <stat.icon className={cn('h-5 w-5', stat.textClass)} />
+                </div>
+              </div>
+              <p className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">{stat.value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Filter Bar */}
+      <div className="bg-card rounded-xl border border-border p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by order ID or customer name..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-9 bg-background"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Processing">Processing</SelectItem>
+              <SelectItem value="Shipped">Shipped</SelectItem>
+              <SelectItem value="Out for Delivery">Out for Delivery</SelectItem>
+              <SelectItem value="Delivered">Delivered</SelectItem>
+              <SelectItem value="Cancelled">Cancelled</SelectItem>
+              <SelectItem value="Not Delivered">Not Delivered</SelectItem>
+              <SelectItem value="Return Requested">Return Requested</SelectItem>
+              <SelectItem value="Return Approved">Return Approved</SelectItem>
+              <SelectItem value="Out for Pickup">Out for Pickup</SelectItem>
+              <SelectItem value="Return Completed">Return Completed</SelectItem>
+              <SelectItem value="Return Cancelled">Return Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Loading Skeleton */}
+      {loadingData && (
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="p-4 border-b border-border">
+            <Skeleton className="h-4 w-40" />
+          </div>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 p-4 border-b border-border last:border-0">
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <div className="flex gap-2">
+                <Skeleton className="h-7 w-16 rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loadingData && orders.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card rounded-xl border border-border p-12 text-center"
+        >
+          <div className="h-16 w-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mx-auto mb-4">
+            <ShoppingCart className="h-8 w-8 text-emerald-400" />
+          </div>
+          <h3 className="text-base font-semibold text-foreground mb-1">
+            {searchQuery || statusFilter !== 'all'
+              ? 'No orders found'
+              : 'No orders yet'}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
+            {searchQuery || statusFilter !== 'all'
+              ? 'Try adjusting your filters or search query.'
+              : 'Orders from customers will appear here when they place orders.'}
+          </p>
+        </motion.div>
+      )}
+
+      {/* Orders Table */}
+      {!loadingData && orders.length > 0 && (
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="bg-card rounded-xl border border-border overflow-hidden"
+        >
+          {/* Desktop Header */}
+          <div className="hidden md:grid grid-cols-[1fr_1fr_80px_120px_100px_140px] items-center gap-3 px-4 py-3 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <span>Order ID</span>
+            <span>Customer</span>
+            <span>Items</span>
+            <span>Amount</span>
+            <span>Status</span>
+            <span className="text-right">Actions</span>
+          </div>
+
+          {orders.map((order) => {
+            const sellerItems = getSellerItems(order)
+            const primaryStatus = getPrimaryStatus(order)
+            const totalAmount = sellerItems.reduce((sum, item) => sum + (item.total || 0), 0)
+            const config = STATUS_CONFIG[primaryStatus]
+
+            return (
+              <motion.div
+                key={order.orderId}
+                variants={rowVariants}
+                className="group border-b border-border last:border-0 hover:bg-muted/20 transition-colors"
+              >
+                {/* Desktop Row */}
+                <div className="hidden md:grid grid-cols-[1fr_1fr_80px_120px_100px_140px] items-center gap-3 px-4 py-3">
+                  <div>
+                    <button
+                      onClick={() => openDetail(order)}
+                      className="text-sm font-medium text-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-mono"
+                    >
+                      {order.orderId}
+                    </button>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{formatDate(order.createdAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-foreground truncate">{order.customerName}</p>
+                    {order.customerPhone && (
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Phone className="h-2.5 w-2.5" />
+                        {order.customerPhone}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground">{sellerItems.length} item{sellerItems.length !== 1 ? 's' : ''}</div>
+                  <div className="text-sm font-semibold text-foreground">{fmtPrice(totalAmount)}</div>
+                  <div>
+                    <StatusBadge status={primaryStatus} />
+                  </div>
+                  <div className="flex items-center justify-end gap-1">
+                    {sellerItems.length === 1 ? (
+                      renderActions(order, sellerItems[0])
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                        onClick={() => openDetail(order)}
+                      >
+                        <Eye className="h-3 w-3" />
+                        View
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mobile Card */}
+                <div className="md:hidden p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <button
+                        onClick={() => openDetail(order)}
+                        className="text-sm font-medium text-foreground hover:text-emerald-600 transition-colors font-mono"
+                      >
+                        {order.orderId}
+                      </button>
+                      <p className="text-xs text-muted-foreground mt-0.5">{order.customerName}</p>
+                    </div>
+                    <StatusBadge status={primaryStatus} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-foreground">{fmtPrice(totalAmount)}</span>
+                      <span className="text-xs text-muted-foreground">{sellerItems.length} item{sellerItems.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">{formatDate(order.createdAt)}</span>
+                  </div>
+                  {/* Action buttons for first seller item on mobile */}
+                  {sellerItems.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {renderActions(order, sellerItems[0])}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )
+          })}
+        </motion.div>
+      )}
+
+      {/* Pagination */}
+      {!loadingData && totalPages > 1 && (
+        <div className="flex items-center justify-between bg-card rounded-xl border border-border px-4 py-3">
+          <p className="text-xs text-muted-foreground">
+            Showing {((currentPage - 1) * itemsPerPage) + 1}&ndash;{Math.min(currentPage * itemsPerPage, totalOrders)} of {totalOrders} orders
+          </p>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="h-8 w-8 p-0">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              let pageNum: number
+              if (totalPages <= 5) { pageNum = i + 1 }
+              else if (currentPage <= 3) { pageNum = i + 1 }
+              else if (currentPage >= totalPages - 2) { pageNum = totalPages - 4 + i }
+              else { pageNum = currentPage - 2 + i }
+              return (
+                <Button key={pageNum} variant={currentPage === pageNum ? 'default' : 'outline'} size="sm" onClick={() => setCurrentPage(pageNum)} className={cn('h-8 w-8 p-0 text-xs', currentPage === pageNum && 'bg-emerald-600 hover:bg-emerald-700 text-white')}>
+                  {pageNum}
+                </Button>
+              )
+            })}
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="h-8 w-8 p-0">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────── */}
+      {/*  Order Detail Dialog                                              */}
+      {/* ──────────────────────────────────────────────────────────────── */}
+
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-lg font-bold font-mono">
+                  {detailLoading ? 'Loading Order...' : selectedOrder ? selectedOrder.orderId : 'Order Details'}
+                </DialogTitle>
+                {!detailLoading && selectedOrder && (
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                    Placed on {formatDateTime(selectedOrder.createdAt)}
+                  </DialogDescription>
+                )}
+              </div>
+              {!detailLoading && selectedOrder && (
+                <StatusBadge status={getPrimaryStatus(selectedOrder)} />
+              )}
+            </div>
+          </DialogHeader>
+
+          {detailLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+            </div>
+          ) : selectedOrder ? (
+            <ScrollArea className="flex-1 overflow-y-auto">
+                <div className="px-6 py-4 space-y-6">
+                  {/* Order Items */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <Package className="h-4 w-4 text-emerald-500" />
+                      Order Items
+                    </h4>
+                    <div className="space-y-3">
+                      {getSellerItems(selectedOrder).map((item, idx) => {
+                        const itemStatus = normalizeStatus(item.status)
+                        const itemConfig = STATUS_CONFIG[itemStatus]
+                        return (
+                          <div key={item._id || idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+                            {/* Product Image */}
+                            <div className="h-14 w-14 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0 overflow-hidden border border-border">
+                              {item.productImage ? (
+                                <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />
+                              ) : (
+                                <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">{item.productName}</p>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {formatVariant(item.variant) && (
+                                  <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">{formatVariant(item.variant)}</span>
+                                )}
+                                <span className="text-xs text-muted-foreground">Qty: {item.quantity}</span>
+                                <span className="text-xs font-medium text-foreground">{fmtPrice(item.total)}</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <StatusBadge status={itemStatus} />
+                                {item.deliveryBoyName && (
+                                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                    <Truck className="h-2.5 w-2.5" />
+                                    {item.deliveryBoyName} (Delivery)
+                                  </span>
+                                )}
+                                {item.pickupDeliveryBoyName && (
+                                  <span className="text-[10px] text-violet-600 dark:text-violet-400 flex items-center gap-1">
+                                    <RotateCcw className="h-2.5 w-2.5" />
+                                    {item.pickupDeliveryBoyName} (Pickup)
+                                  </span>
+                                )}
+                              </div>
+                              {/* Action buttons per item */}
+                              <div className="mt-2">
+                                {renderActions(selectedOrder, item)}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Customer & Address */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-emerald-500" />
+                        Shipping Address
+                      </h4>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-1">
+                        <p className="text-sm font-medium text-foreground">{selectedOrder.shippingAddress.name}</p>
+                        <p className="text-xs text-muted-foreground">{selectedOrder.shippingAddress.addressLine1}</p>
+                        {selectedOrder.shippingAddress.addressLine2 && (
+                          <p className="text-xs text-muted-foreground">{selectedOrder.shippingAddress.addressLine2}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} - {selectedOrder.shippingAddress.pincode}
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <Phone className="h-3 w-3" />
+                          {selectedOrder.shippingAddress.phone}
+                        </p>
+                        {selectedOrder.shippingAddress.type && (
+                          <Badge variant="secondary" className="mt-1 text-[10px]">{selectedOrder.shippingAddress.type}</Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <ShoppingCart className="h-4 w-4 text-emerald-500" />
+                        Payment Info
+                      </h4>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-xs text-muted-foreground">Method</span>
+                          <span className="text-xs font-medium text-foreground uppercase">{selectedOrder.paymentMethod}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-muted-foreground">Status</span>
+                          <Badge className={cn(
+                            selectedOrder.paymentStatus === 'paid'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                              : selectedOrder.paymentStatus === 'refunded'
+                              ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
+                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                            'text-[10px] border'
+                          )}>
+                            {selectedOrder.paymentStatus}
+                          </Badge>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between">
+                          <span className="text-xs text-muted-foreground">Subtotal</span>
+                          <span className="text-xs text-foreground">{fmtPrice(selectedOrder.subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-muted-foreground">Delivery Fee</span>
+                          <span className="text-xs text-foreground">{fmtPrice(selectedOrder.deliveryFee)}</span>
+                        </div>
+                        {selectedOrder.discount > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-xs text-muted-foreground">Discount</span>
+                            <span className="text-xs text-emerald-600">-{fmtPrice(selectedOrder.discount)}</span>
+                          </div>
+                        )}
+                        <Separator />
+                        <div className="flex justify-between">
+                          <span className="text-xs font-medium text-foreground">Total</span>
+                          <span className="text-sm font-bold text-foreground">{fmtPrice(selectedOrder.totalAmount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Delivery Boy Info */}
+                  {(getSellerItems(selectedOrder).some(item => item.deliveryBoyName) ||
+                    getSellerItems(selectedOrder).some(item => item.pickupDeliveryBoyName)) && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-emerald-500" />
+                          Delivery Personnel
+                        </h4>
+                        <div className="space-y-2">
+                          {getSellerItems(selectedOrder).filter(item => item.deliveryBoyName).map((item, idx) => (
+                            <div key={`delivery-${idx}`} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
+                              <div>
+                                <p className="text-sm font-medium text-foreground">{item.deliveryBoyName}</p>
+                                {item.deliveryBoyPhone && (
+                                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                    <Phone className="h-2.5 w-2.5" />
+                                    {item.deliveryBoyPhone}
+                                  </p>
+                                )}
+                              </div>
+                              <Badge variant="secondary" className="text-[10px]">Delivery</Badge>
+                            </div>
+                          ))}
+                          {getSellerItems(selectedOrder).filter(item => item.pickupDeliveryBoyName).map((item, idx) => (
+                            <div key={`pickup-${idx}`} className="flex items-center justify-between p-3 rounded-lg bg-violet-50/50 dark:bg-violet-950/10 border border-violet-200 dark:border-violet-800/30">
+                              <div>
+                                <p className="text-sm font-medium text-foreground">{item.pickupDeliveryBoyName}</p>
+                                {item.pickupDeliveryBoyPhone && (
+                                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                    <Phone className="h-2.5 w-2.5" />
+                                    {item.pickupDeliveryBoyPhone}
+                                  </p>
+                                )}
+                                {item.returnId && (
+                                  <p className="text-[10px] text-violet-600 dark:text-violet-400 font-medium mt-0.5">
+                                    Return ID: {item.returnId}
+                                  </p>
+                                )}
+                              </div>
+                              <Badge className="text-[10px] bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border-0">Pickup</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Status Timeline */}
+                  {detailStatusLogs.length > 0 && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-emerald-500" />
+                          Status Timeline
+                        </h4>
+                        <div className="space-y-0">
+                          {detailStatusLogs.map((log, idx) => {
+                            const toConfig = STATUS_CONFIG[normalizeStatus(log.toStatus)]
+                            return (
+                              <div key={idx} className="flex gap-3">
+                                <div className="flex flex-col items-center">
+                                  <div className={cn('h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0', toConfig?.bgColor || 'bg-muted/50')}>
+                                    <StatusIcon icon={toConfig?.icon || 'clock'} className={cn('h-3 w-3', toConfig?.color || 'text-muted-foreground')} />
+                                  </div>
+                                  {idx < detailStatusLogs.length - 1 && (
+                                    <div className="w-px flex-1 bg-border min-h-[20px]" />
+                                  )}
+                                </div>
+                                <div className="pb-4">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-foreground">{log.toStatus}</span>
+                                    {log.fromStatus && (
+                                      <span className="text-[10px] text-muted-foreground">from {log.fromStatus}</span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {formatDateTime(log.createdAt)} &middot; by {log.userName} ({log.updatedBy})
+                                  </p>
+                                  {log.reason && (
+                                    <p className="text-[10px] text-muted-foreground mt-0.5 italic">&quot;{log.reason}&quot;</p>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Return Info */}
+                  {(selectedOrder.returnId || getSellerItems(selectedOrder).some(item => item.returnId)) && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                          <RotateCcw className="h-4 w-4 text-orange-500" />
+                          Return Information
+                        </h4>
+                        <div className="space-y-2">
+                          {getSellerItems(selectedOrder).filter(item => item.returnId).map((item, idx) => (
+                            <div key={idx} className="p-3 rounded-lg bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 space-y-1">
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">Return ID</span>
+                                <span className="text-xs font-medium text-foreground font-mono">{item.returnId}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-xs text-muted-foreground">Product</span>
+                                <span className="text-xs text-foreground truncate max-w-[200px]">{item.productName}</span>
+                              </div>
+                              {item.returnReason && (
+                                <div className="flex justify-between">
+                                  <span className="text-xs text-muted-foreground">Reason</span>
+                                  <span className="text-xs text-foreground">{item.returnReason}</span>
+                                </div>
+                              )}
+                              {item.returnRequestedAt && (
+                                <div className="flex justify-between">
+                                  <span className="text-xs text-muted-foreground">Requested</span>
+                                  <span className="text-xs text-foreground">{formatDateTime(item.returnRequestedAt)}</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </ScrollArea>
+          ) : (
+            <div className="py-16 text-center text-sm text-muted-foreground">Order not found</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ──────────────────────────────────────────────────────────────── */}
+      {/*  Assign Delivery Boy Dialog                                       */}
+      {/* ──────────────────────────────────────────────────────────────── */}
+
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent className="max-w-md p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              {assignType === 'pickup' ? (
+                <>
+                  <RotateCcw className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                  Assign for Return Pickup
+                </>
+              ) : (
+                <>
+                  <Truck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  Assign Delivery Boy
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+              {assignType === 'pickup' ? (
+                <>
+                  Select a delivery boy for return pickup of order {assignOrderId}
+                  {assignOrderItem?.returnId && (
+                    <span className="block mt-1 text-violet-600 dark:text-violet-400 font-medium">
+                      Return ID: {assignOrderItem.returnId}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>Select a delivery boy for order {assignOrderId}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 py-4">
+            {assignLoadingBoys ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading delivery boys...</span>
+              </div>
+            ) : assignDeliveryBoys.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                  <Truck className="h-6 w-6 text-muted-foreground/40" />
+                </div>
+                <p className="text-sm text-muted-foreground">No delivery boys available</p>
+                <p className="text-xs text-muted-foreground mt-1">Please ensure delivery boys are registered and active</p>
+              </div>
+            ) : (
+              <ScrollArea className="max-h-64">
+                <div className="space-y-2">
+                  {assignDeliveryBoys.map((boy) => (
+                    <button
+                      key={boy._id}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors"
+                      disabled={assigning}
+                      onClick={() => handleAssignDeliveryBoy(boy._id)}
+                    >
+                      <div className="h-9 w-9 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center flex-shrink-0">
+                        {boy.profileImage ? (
+                          <img src={typeof boy.profileImage === 'string' ? boy.profileImage : (boy.profileImage as { url?: string }).url || ''} alt={boy.name} className="h-full w-full rounded-full object-cover" />
+                        ) : (
+                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            {boy.name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <p className="text-sm font-medium text-foreground">{boy.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <Phone className="h-2.5 w-2.5" />
+                            {boy.mobile}
+                          </span>
+                          {boy.vehicleType && (
+                            <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+                              {boy.vehicleType}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {assigning ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+                      ) : (
+                        <UserCheck className="h-4 w-4 text-muted-foreground group-hover:text-emerald-500" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+          <DialogFooter className="px-6 py-3 border-t border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAssignOpen(false)}
+              disabled={assigning}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </motion.div>
+  )
+}
