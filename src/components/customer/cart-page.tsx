@@ -519,7 +519,6 @@ export function CartPage({ onNavigate, onCheckout, onBack }: { onNavigate?: (tab
               )}
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">{t('cart.title')}</h1>
-                <span className="text-xs text-gray-400">{t('cart.emptyItems')}</span>
               </div>
             </div>
 
@@ -592,7 +591,6 @@ export function CartPage({ onNavigate, onCheckout, onBack }: { onNavigate?: (tab
             )}
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">{t('cart.title')}</h1>
-              <span className="text-xs text-gray-400">{t('cart.itemCount', { count: totalItems })}</span>
             </div>
           </div>
 

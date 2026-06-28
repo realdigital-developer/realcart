@@ -1584,7 +1584,6 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
               {onBack && <div className="h-8 w-8" />}
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200">{t('orders.title')}</h1>
-                <span className="text-xs text-gray-400">{t('orders.orderCount', { count: orders.length })}</span>
               </div>
             </div>
             <div className="flex items-center gap-0.5">
@@ -1697,7 +1696,6 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
             )}
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">{t('orders.title')}</h1>
-              <span className="text-xs text-gray-400">{t('orders.orderCount', { count: orders.length })}</span>
             </div>
           </div>
 

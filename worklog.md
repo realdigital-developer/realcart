@@ -2975,3 +2975,29 @@ Stage Summary:
 - The CategoriesPage component is backward-compatible: uses cached props when provided, falls back to its own fetch when used standalone.
 - Lint: 0 errors. Dev server: stable, no console errors. Verified via Agent Browser across 3+ tab switches.
 - No existing UI or code was damaged — only the data flow was optimized to reuse the existing cache.
+
+---
+Task ID: remove-item-count-headers
+Agent: main-orchestrator
+Task: Remove the "(x items)" count from the top navbar beside the page title on customer panel cart, orders, and wishlist pages.
+
+Work Log:
+- Examined all 3 pages to find the item count spans in their custom inline headers (these pages use their own sticky headers, not the shared PageHeader component):
+  * cart-page.tsx: 2 locations — line 522 (empty state: "cart.emptyItems") + line 595 (populated state: "cart.itemCount" with {count: totalItems})
+  * orders-page.tsx: 2 locations — line 1587 (loading state: "orders.orderCount") + line 1700 (main state: "orders.orderCount" with {count: orders.length})
+  * wishlist-page.tsx: 1 location — line 330 ("wishlist.itemCount" with {count: totalItems})
+- Removed the `<span className="text-xs text-gray-400">{t('...itemCount...')}</span>` element from all 5 locations across the 3 files. Only the span was removed — the h1 title and all surrounding structure (back button, right-side icons, etc.) are untouched.
+- The translation keys (cart.emptyItems, cart.itemCount, orders.orderCount, wishlist.itemCount) remain in the locale JSON files — they're just no longer rendered in these headers. This is intentional: the keys might be useful elsewhere and removing them from JSON could break other references.
+- Ran `bun run lint`: 0 errors, 24 warnings (all pre-existing, none new).
+- All 3 pages compile and return HTTP 200.
+- Agent Browser verification (with test customer login):
+  * Cart page: h1="My Cart", 0 sibling spans (no item count). ✓
+  * Orders page: h1="My Orders", 0 sibling spans (no item count). ✓
+  * Wishlist page: h1="Wishlist", 0 sibling spans (no item count). ✓
+  * No console errors on any page.
+
+Stage Summary:
+- Removed the "(x items)" count from the top navbar beside the page title on all 3 customer panel pages: cart, orders, and wishlist.
+- Only 3 files were edited; only the count span elements were removed. No styling, layout, icons, logic, or other UI elements were touched.
+- Lint: 0 errors. Dev server: stable, all pages HTTP 200, no console errors. Verified via Agent Browser.
+- No existing UI or code was damaged.

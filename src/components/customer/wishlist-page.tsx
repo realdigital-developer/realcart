@@ -327,7 +327,6 @@ export function WishlistPage({ onNavigate, onBack }: WishlistPageProps = {}) {
             <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">
               {t('wishlist.title')}
             </h1>
-            <span className="text-xs text-gray-400">{t('wishlist.itemCount', { count: totalItems })}</span>
           </div>
 
           {/* Right Icons: Search → Cart */}
