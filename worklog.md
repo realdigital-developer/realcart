@@ -2773,3 +2773,36 @@ Stage Summary:
 - The CategorySection component is now backward-compatible: it uses cached props when provided, and falls back to its own fetch when used standalone.
 - Lint: 0 errors. Dev server: stable, no console errors. Verified via Agent Browser across 3+ tab switches.
 - No existing UI or code was damaged — only the data flow was optimized to eliminate redundant re-fetching.
+
+---
+Task ID: vercel-deployment-github-upload
+Agent: main-orchestrator
+Task: Make the code Vercel deployment-ready and upload to GitHub (https://github.com/realdigital-developer/realcart.git).
+
+Work Log:
+- Reviewed all deployment configs: vercel.json (npm install + next build, search API maxDuration 60s), next.config.ts (output: standalone, serverExternalPackages, ignoreBuildErrors), .gitignore (excludes .env, node_modules, .next, bun.lock, dev.log, sandbox files), .env.example (documents all env vars), .npmrc (legacy-peer-deps=true), .nvmrc (Node 20).
+- Checked for hardcoded localhost URLs: only 3 in optional Google Drive OAuth fallback (google-drive.ts) — on Vercel, request headers are used first, so this won't affect production.
+- Checked for hardcoded /home/z paths: none in source.
+- Generated package-lock.json via `npm install --package-lock-only --legacy-peer-deps` — needed for Vercel's `npm install` installCommand. 359KB, 966 packages.
+- Verified the build succeeds: ran `npx next build` — completed with zero errors. All 440+ routes compiled (static + dynamic). .next/BUILD_ID generated (ajq1nhR6tpnBrf5N-Yi5M).
+- Committed package-lock.json to git.
+- Stopped dev server temporarily for the build, then restarted via .zscripts/dev.sh after all deployment tasks.
+- Set up GitHub remote: https://github.com/realdigital-developer/realcart.git
+- Force pushed to GitHub main branch (repo had existing content that was overwritten).
+- Security fixes:
+  * Removed .env from git tracking (was committed before .gitignore rule was added; contained only local SQLite path — no real secrets, but shouldn't be in repo).
+  * Removed download/README.md and scripts/translate_kn_ml.py (stray agent-generated files) from tracking.
+  * Removed GitHub token from remote URL after push (using plain HTTPS URL).
+- Verified GitHub repo state: 17 root items (all necessary deployment files), no sensitive files tracked, latest commit ec84770.
+
+Stage Summary:
+- Code is Vercel deployment-ready:
+  * vercel.json configured (framework: nextjs, installCommand: npm install, buildCommand: next build)
+  * package-lock.json committed for reproducible npm installs
+  * Build verified to succeed with zero errors
+  * .env.example documents all required environment variables
+  * MongoDB Atlas fallback URI in mongodb.ts is accessible from Vercel
+  * All server external packages (cloudinary, googleapis, bcryptjs, jose, mongodb, razorpay, pdfkit, nodemailer) properly configured
+- Code uploaded to GitHub: https://github.com/realdigital-developer/realcart (main branch, public repo)
+- To deploy on Vercel: import the GitHub repo → Vercel auto-detects Next.js → set env vars from .env.example → deploy
+- No existing UI or code was damaged — only deployment config files and lockfile were added/removed.
