@@ -14,6 +14,7 @@ import { CreditCard, RotateCcw, RefreshCw, Package, CheckCircle2, Clock, XCircle
 import { cn } from '@/lib/utils'
 import AdminModal from '@/components/admin/admin-modal'
 import { PageHeader } from './page-header'
+import { useLanguage } from '@/components/providers/language-provider'
 
 interface PaymentItem {
   name: string
@@ -68,6 +69,7 @@ interface PaymentRefundPageProps {
 }
 
 export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps) {
+  const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState<'payments' | 'refunds'>('payments')
   const [payments, setPayments] = useState<Payment[]>([])
   const [refunds, setRefunds] = useState<Refund[]>([])
@@ -120,7 +122,7 @@ export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps
 
   const getMethodLabel = (p: Payment) => {
     const m = p.method.toLowerCase()
-    if (m === 'cod') return 'Cash on Delivery'
+    if (m === 'cod') return t('paymentRefund.cashOnDelivery')
     if (m === 'upi') return `UPI${p.vpa ? ' • ' + p.vpa : ''}`
     if (m === 'card') return `Card${p.cardNetwork ? ' • ' + p.cardNetwork : ''}${p.cardLast4 ? ' ****' + p.cardLast4 : ''}`
     if (m === 'wallet') return `Wallet${p.wallet ? ' • ' + p.wallet : ''}`
@@ -131,13 +133,13 @@ export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps
   const getStatusBadge = (status: string) => {
     const s = status.toLowerCase()
     if (s === 'paid' || s === 'processed' || s === 'completed')
-      return <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full"><CheckCircle2 className="h-3 w-3" /> Success</span>
+      return <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full"><CheckCircle2 className="h-3 w-3" /> {t('paymentRefund.success')}</span>
     if (s === 'pending' || s === 'initiated' || s === 'created')
-      return <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full"><Clock className="h-3 w-3" /> Pending</span>
+      return <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full"><Clock className="h-3 w-3" /> {t('paymentRefund.pending')}</span>
     if (s === 'failed' || s === 'rejected')
-      return <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full"><XCircle className="h-3 w-3" /> Failed</span>
+      return <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full"><XCircle className="h-3 w-3" /> {t('paymentRefund.failed')}</span>
     if (s === 'refunded')
-      return <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full"><RotateCcw className="h-3 w-3" /> Refunded</span>
+      return <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full"><RotateCcw className="h-3 w-3" /> {t('paymentRefund.refunded')}</span>
     return <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full capitalize">{status}</span>
   }
 
@@ -165,7 +167,7 @@ export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
-      <PageHeader title="Payment & Refund" onBack={onBack} onNavigate={onNavigate} />
+      <PageHeader title={t('paymentRefund.title')} onBack={onBack} onNavigate={onNavigate} />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
@@ -185,7 +187,7 @@ export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps
             </div>
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error}</p>
             <button onClick={() => window.location.reload()} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600 transition-colors flex items-center gap-1.5">
-              <RefreshCw className="h-4 w-4" /> Retry
+              <RefreshCw className="h-4 w-4" /> {t('common.retry')}
             </button>
           </div>
         ) : (
@@ -194,11 +196,11 @@ export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps
             <div className="px-4 pt-4">
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-100 dark:border-gray-800 text-center">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Total Spent</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">{t('paymentRefund.totalSpent')}</p>
                   <p className="text-sm font-bold text-gray-800 dark:text-gray-200 mt-1">{formatPrice(summary.totalSpent)}</p>
                 </div>
                 <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-100 dark:border-gray-800 text-center">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Total Refunded</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">{t('paymentRefund.totalRefunded')}</p>
                   <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatPrice(summary.totalRefunded)}</p>
                 </div>
               </div>
@@ -208,10 +210,10 @@ export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps
             <div className="px-4 pt-4">
               <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
                 <button onClick={() => setActiveTab('payments')} className={cn('flex-1 py-2 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5', activeTab === 'payments' ? 'bg-white dark:bg-gray-900 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
-                  <CreditCard className="h-3.5 w-3.5" /> Payments ({payments.length})
+                  <CreditCard className="h-3.5 w-3.5" /> {t('paymentRefund.payments')} ({payments.length})
                 </button>
                 <button onClick={() => setActiveTab('refunds')} className={cn('flex-1 py-2 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5', activeTab === 'refunds' ? 'bg-white dark:bg-gray-900 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
-                  <RotateCcw className="h-3.5 w-3.5" /> Refunds ({refunds.length})
+                  <RotateCcw className="h-3.5 w-3.5" /> {t('paymentRefund.refunds')} ({refunds.length})
                 </button>
               </div>
             </div>
@@ -224,8 +226,8 @@ export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps
                     {payments.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-16 text-center">
                         <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4"><CreditCard className="h-8 w-8 text-gray-300 dark:text-gray-600" /></div>
-                        <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No payments yet</p>
-                        <p className="text-xs text-gray-400 mt-1">Your payment history will appear here</p>
+                        <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t('paymentRefund.noPayments')}</p>
+                        <p className="text-xs text-gray-400 mt-1">{t('paymentRefund.noPaymentsDesc')}</p>
                       </div>
                     ) : (
                       payments.map((payment, i) => (
@@ -270,8 +272,8 @@ export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps
                     {refunds.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-16 text-center">
                         <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4"><RotateCcw className="h-8 w-8 text-gray-300 dark:text-gray-600" /></div>
-                        <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No refunds yet</p>
-                        <p className="text-xs text-gray-400 mt-1">Your refund history will appear here</p>
+                        <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t('paymentRefund.noRefunds')}</p>
+                        <p className="text-xs text-gray-400 mt-1">{t('paymentRefund.noRefundsDesc')}</p>
                       </div>
                     ) : (
                       refunds.map((refund, i) => (
@@ -452,7 +454,7 @@ export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps
               <DetailRow label="Order Number" value={selectedRefund.orderNumber || '—'} copyable />
               {selectedRefund.gatewayRefundId && <DetailRow label="Gateway Refund ID" value={selectedRefund.gatewayRefundId} copyable />}
               <DetailRow label="Refund Type" value={selectedRefund.refundType} />
-              <DetailRow label="Payment Method" value={selectedRefund.paymentMethod === 'cod' ? 'Cash on Delivery' : selectedRefund.paymentMethod} />
+              <DetailRow label="Payment Method" value={selectedRefund.paymentMethod === 'cod' ? t('paymentRefund.cashOnDelivery') : selectedRefund.paymentMethod} />
               {selectedRefund.reason && <DetailRow label="Reason" value={selectedRefund.reason} />}
               <DetailRow label="Amount" value={`-${formatPrice(selectedRefund.amount)}`} />
               <DetailRow label="Status" value={selectedRefund.status} />

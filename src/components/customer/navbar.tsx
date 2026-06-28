@@ -9,6 +9,7 @@ import { useSiteLogo } from '@/hooks/use-site-logo'
 import { useCart } from '@/components/providers/cart-provider'
 import { useWishlist } from '@/components/providers/wishlist-provider'
 import { useUnreadNotifications } from '@/hooks/use-unread-notifications'
+import { useLanguage } from '@/components/providers/language-provider'
 
 export function Navbar() {
   const { authenticated } = useCustomerAuth()
@@ -17,6 +18,7 @@ export function Navbar() {
   const { totalItems: cartCount } = useCart()
   const { totalItems: wishlistCount } = useWishlist()
   const { unreadCount: notificationCount } = useUnreadNotifications()
+  const { t } = useLanguage()
 
   return (
     <motion.header
@@ -35,14 +37,14 @@ export function Navbar() {
             onClick={() => router.push('/customer')}
           >
             {logo?.url ? (
-              <img src={logo.url} alt="RealCart" className="h-7 w-7 rounded-lg object-cover bg-white/20 p-0.5" />
+              <img src={logo.url} alt={t('brand')} className="h-7 w-7 rounded-lg object-cover bg-white/20 p-0.5" />
             ) : (
               <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-white/20 text-white font-bold text-xs">
                 RC
               </div>
             )}
             <span className="text-base font-bold tracking-tight text-white">
-              RealCart
+              {t('brand')}
             </span>
           </motion.div>
 

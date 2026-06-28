@@ -33,6 +33,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Camera, ImageIcon, X, Loader2, AlertCircle, RefreshCw, Zap } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { useLanguage } from '@/components/providers/language-provider'
 import type { Product } from './types'
 
 /* ------------------------------------------------------------------ */
@@ -94,6 +95,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const objectUrlRef = useRef<string | null>(null)
+  const { t } = useLanguage()
 
   // ── Cleanup object URLs on unmount/close to avoid memory leaks ──
   const revokePreview = useCallback(() => {
@@ -124,7 +126,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
     // Validate type
     if (!ACCEPTED_TYPES.includes(file.type)) {
       setError({
-        message: 'Unsupported file type. Please use a JPEG, PNG, or WebP image.',
+        message: t('imageSearch.errorFileType'),
         retryable: false,
       })
       setPhase('error')
@@ -134,7 +136,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
     // Validate size (pre-compression)
     if (file.size > MAX_FILE_BYTES) {
       setError({
-        message: `Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Please choose an image under 5MB.`,
+        message: t('imageSearch.errorFileSize', { size: (file.size / 1024 / 1024).toFixed(1) }),
         retryable: false,
       })
       setPhase('error')
@@ -144,7 +146,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
     // Immediately enter processing phase — the user sees the loader
     // while we compress + upload in the background.
     setPhase('processing')
-    setProgress('Preparing image…')
+    setProgress(t('imageSearch.preparing'))
 
     try {
       // ── Compress client-side ──
@@ -157,11 +159,11 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
       setPreviewUrl(url)
 
       // ── Auto-upload immediately (no button click) ──
-      setProgress('Analyzing image…')
+      setProgress(t('imageSearch.analyzing'))
       const formData = new FormData()
       formData.append('image', compressed, `search-${Date.now()}.jpg`)
 
-      setProgress('Searching products…')
+      setProgress(t('imageSearch.searching'))
       const res = await fetch('/api/search/image', {
         method: 'POST',
         body: formData,
@@ -237,12 +239,12 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
       })
     } catch (err) {
       console.error('[ImageSearch] processing error:', err)
-      const msg = err instanceof Error ? err.message : 'Network error. Please check your connection.'
+      const msg = err instanceof Error ? err.message : t('imageSearch.errorNetwork')
       setError({ message: msg, retryable: true })
       setPhase('error')
       setProgress('')
     }
-  }, [revokePreview, previewUrl, onSuccess])
+  }, [revokePreview, previewUrl, onSuccess, t])
 
   // ── Retry from the beginning ──
   const handleRetry = useCallback(() => {
@@ -265,9 +267,9 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
         {/* Visually-hidden title + description for screen reader accessibility
             (Radix Dialog requires these; we hide them visually because the
             custom gradient header provides the visible title). */}
-        <DialogTitle className="sr-only">Visual Search</DialogTitle>
+        <DialogTitle className="sr-only">{t('imageSearch.title')}</DialogTitle>
         <DialogDescription className="sr-only">
-          Search products by uploading or capturing a photo
+          {t('imageSearch.description')}
         </DialogDescription>
 
         {/* ── Header: glassmorphic gradient with glow ── */}
@@ -281,8 +283,8 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
               <Camera className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white leading-tight">Visual Search</h2>
-              <p className="text-[11px] text-white/80 leading-tight mt-0.5">Find products with your camera</p>
+              <h2 className="text-lg font-bold text-white leading-tight">{t('imageSearch.title')}</h2>
+              <p className="text-[11px] text-white/80 leading-tight mt-0.5">{t('imageSearch.subtitle')}</p>
             </div>
           </div>
 
@@ -290,7 +292,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
           <button
             onClick={onClose}
             className="absolute top-4 right-4 h-8 w-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -310,7 +312,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
                 className="space-y-3"
               >
                 <p className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4">
-                  Choose an option below to start searching
+                  {t('imageSearch.chooseOption')}
                 </p>
 
                 {/* Camera option card */}
@@ -324,8 +326,8 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
                       <Camera className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Take Photo</p>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Use your camera to capture a product</p>
+                      <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{t('imageSearch.takePhoto')}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('imageSearch.takePhotoDesc')}</p>
                     </div>
                     <Zap className="h-4 w-4 text-emerald-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
@@ -342,8 +344,8 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
                       <ImageIcon className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Choose from Gallery</p>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Select an existing photo from your device</p>
+                      <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{t('imageSearch.chooseGallery')}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('imageSearch.chooseGalleryDesc')}</p>
                     </div>
                     <Zap className="h-4 w-4 text-violet-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
@@ -417,7 +419,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
                 <div className="flex items-center gap-2 mb-2">
                   <Loader2 className="h-4 w-4 text-emerald-500 animate-spin" />
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                    {progress || 'Processing…'}
+                    {progress || t('imageSearch.processing')}
                   </p>
                 </div>
 
@@ -434,7 +436,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
                 </div>
 
                 <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-4 text-center">
-                  Finding the best matches for your image
+                  {t('imageSearch.findingMatches')}
                 </p>
               </motion.div>
             )}
@@ -452,8 +454,8 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
                   <AlertCircle className="h-8 w-8 text-red-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Search failed</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 px-4">{error?.message || 'Something went wrong.'}</p>
+                  <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{t('imageSearch.searchFailed')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 px-4">{error?.message || t('imageSearch.searchFailedDesc')}</p>
                 </div>
                 {error?.retryable && (
                   <div className="flex gap-2 justify-center pt-1">
@@ -463,7 +465,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
                       className="px-4 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5"
                     >
                       <RefreshCw className="h-4 w-4" />
-                      Try Again
+                      {t('imageSearch.tryAgain')}
                     </motion.button>
                   </div>
                 )}

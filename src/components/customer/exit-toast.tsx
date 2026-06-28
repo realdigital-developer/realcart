@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { LogOut } from 'lucide-react'
+import { useLanguage } from '@/components/providers/language-provider'
 
 /**
  * ExitToast
@@ -36,6 +37,7 @@ import { LogOut } from 'lucide-react'
  *   - The icon is decorative (aria-hidden)
  */
 export function ExitToast({ visible }: { visible: boolean }) {
+  const { t } = useLanguage()
   return (
     <AnimatePresence>
       {visible && (
@@ -55,7 +57,7 @@ export function ExitToast({ visible }: { visible: boolean }) {
         >
           <LogOut className="h-4 w-4 text-emerald-400 shrink-0" aria-hidden="true" strokeWidth={2.5} />
           <span className="text-sm font-medium text-white whitespace-nowrap">
-            Press back again to exit
+            {t('exitToast.pressBackAgain')}
           </span>
         </motion.div>
       )}

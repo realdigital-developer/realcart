@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useWishlist } from '@/components/providers/wishlist-provider'
 import { useUnreadNotifications } from '@/hooks/use-unread-notifications'
+import { useLanguage } from '@/components/providers/language-provider'
 
 interface AccountPageProps {
   onNavigate?: (tab: string) => void
@@ -33,6 +34,7 @@ export function AccountPage({ onNavigate, onBack }: AccountPageProps) {
   const { user, logout } = useCustomerAuth()
   const { totalItems: wishlistCount } = useWishlist()
   const { unreadCount: notificationCount } = useUnreadNotifications()
+  const { t } = useLanguage()
 
   // ── Modern scroll approach ──
   // Instead of morphing a single header element (which causes jank due to
@@ -77,20 +79,20 @@ export function AccountPage({ onNavigate, onBack }: AccountPageProps) {
     }
   }, [])
 
-  const displayName = user?.name || 'Customer'
-  const displayMobile = user?.mobile ? `+91 ${user.mobile}` : 'Tap to view profile'
+  const displayName = user?.name || t('account.customer')
+  const displayMobile = user?.mobile ? `+91 ${user.mobile}` : t('account.tapToViewProfile')
   const profileImageUrl = user?.profileImage || null
 
   const menuItems = [
-    { icon: <MapPin className="h-5 w-5" />, label: 'Addresses', desc: 'Manage delivery addresses', tab: 'addresses', badge: undefined },
-    { icon: <Bell className="h-5 w-5" />, label: 'Notifications', desc: notificationCount > 0 ? `${notificationCount} unread notification${notificationCount !== 1 ? 's' : ''}` : 'Manage your alerts', tab: 'notifications', badge: notificationCount > 0 ? notificationCount : undefined },
-    { icon: <CreditCard className="h-5 w-5" />, label: 'Payment & Refund', desc: 'Manage payments and refunds', tab: 'payment-refund', badge: undefined },
-    { icon: <Wallet className="h-5 w-5" />, label: 'Bank & UPI Details', desc: 'Manage your bank and UPI info', tab: 'bank-upi', badge: undefined },
-    { icon: <Globe className="h-5 w-5" />, label: 'Change Language', desc: 'Select your preferred language', tab: 'language', badge: undefined },
-    { icon: <Share2 className="h-5 w-5" />, label: 'Shared Products', desc: 'Products you have shared', tab: 'shared-products', badge: undefined },
-    { icon: <Wallet className="h-5 w-5" />, label: 'RealCart Balance', desc: 'View balance and transactions', tab: 'wallet', badge: undefined },
-    { icon: <Gift className="h-5 w-5" />, label: 'Referral', desc: 'Invite friends and earn rewards', tab: 'referral', badge: undefined },
-    { icon: <HelpCircle className="h-5 w-5" />, label: 'Help & Support', desc: 'Get help and assistance', tab: 'help', badge: undefined },
+    { icon: <MapPin className="h-5 w-5" />, label: t('account.addresses'), desc: t('account.addressesDesc'), tab: 'addresses', badge: undefined },
+    { icon: <Bell className="h-5 w-5" />, label: t('account.notifications'), desc: notificationCount > 0 ? t('account.notificationsUnread', { count: notificationCount }) : t('account.notificationsDesc'), tab: 'notifications', badge: notificationCount > 0 ? notificationCount : undefined },
+    { icon: <CreditCard className="h-5 w-5" />, label: t('account.paymentRefund'), desc: t('account.paymentRefundDesc'), tab: 'payment-refund', badge: undefined },
+    { icon: <Wallet className="h-5 w-5" />, label: t('account.bankUpi'), desc: t('account.bankUpiDesc'), tab: 'bank-upi', badge: undefined },
+    { icon: <Globe className="h-5 w-5" />, label: t('account.changeLanguage'), desc: t('account.changeLanguageDesc'), tab: 'language', badge: undefined },
+    { icon: <Share2 className="h-5 w-5" />, label: t('account.sharedProducts'), desc: t('account.sharedProductsDesc'), tab: 'shared-products', badge: undefined },
+    { icon: <Wallet className="h-5 w-5" />, label: t('account.realcartBalance'), desc: t('account.realcartBalanceDesc'), tab: 'wallet', badge: undefined },
+    { icon: <Gift className="h-5 w-5" />, label: t('account.referral'), desc: t('account.referralDesc'), tab: 'referral', badge: undefined },
+    { icon: <HelpCircle className="h-5 w-5" />, label: t('account.helpSupport'), desc: t('account.helpSupportDesc'), tab: 'help', badge: undefined },
   ]
 
   return (
@@ -199,11 +201,11 @@ export function AccountPage({ onNavigate, onBack }: AccountPageProps) {
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-400 to-pink-500 flex items-center justify-center shadow-sm mb-2 group-hover:scale-105 transition-transform">
                 <Heart className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Wishlist</span>
+              <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('account.wishlist')}</span>
               {wishlistCount > 0 ? (
-                <span className="text-[11px] text-gray-400 mt-0.5">{wishlistCount} item{wishlistCount !== 1 ? 's' : ''}</span>
+                <span className="text-[11px] text-gray-400 mt-0.5">{t('account.wishlistItems', { count: wishlistCount })}</span>
               ) : (
-                <span className="text-[11px] text-gray-400 mt-0.5">Your saved items</span>
+                <span className="text-[11px] text-gray-400 mt-0.5">{t('account.wishlistEmptyDesc')}</span>
               )}
             </motion.button>
 
@@ -218,8 +220,8 @@ export function AccountPage({ onNavigate, onBack }: AccountPageProps) {
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-sm mb-2 group-hover:scale-105 transition-transform">
                 <Store className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Followed Sellers</span>
-              <span className="text-[11px] text-gray-400 mt-0.5">Sellers you follow</span>
+              <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('account.followedSellers')}</span>
+              <span className="text-[11px] text-gray-400 mt-0.5">{t('account.followedSellersDesc')}</span>
             </motion.button>
           </div>
         </div>
@@ -264,7 +266,7 @@ export function AccountPage({ onNavigate, onBack }: AccountPageProps) {
             className="w-full mt-4 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl h-11"
           >
             <Lock className="h-4 w-4 mr-2" />
-            Logout
+            {t('account.logout')}
           </Button>
         </div>
       </div>

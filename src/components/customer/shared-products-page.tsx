@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Share2, Package, RefreshCw } from 'lucide-react'
 import { PageHeader } from './page-header'
+import { useLanguage } from '@/components/providers/language-provider'
 
 interface SharedProduct {
   _id: string
@@ -35,6 +36,7 @@ interface SharedProductsPageProps {
 }
 
 export function SharedProductsPage({ onBack, onNavigate }: SharedProductsPageProps) {
+  const { t } = useLanguage()
   const router = useRouter()
   const [products, setProducts] = useState<SharedProduct[]>([])
   const [loading, setLoading] = useState(true)
@@ -69,10 +71,10 @@ export function SharedProductsPage({ onBack, onNavigate }: SharedProductsPagePro
       const d = new Date(iso)
       const now = new Date()
       const diffH = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60))
-      if (diffH < 1) return 'Just now'
-      if (diffH < 24) return `${diffH}h ago`
+      if (diffH < 1) return t('common.justNow')
+      if (diffH < 24) return t('sharedProducts.hAgo', { count: diffH })
       const diffD = Math.floor(diffH / 24)
-      if (diffD === 1) return 'Yesterday'
+      if (diffD === 1) return t('common.yesterday')
       if (diffD < 7) return `${diffD}d ago`
       return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
     } catch {
@@ -83,12 +85,12 @@ export function SharedProductsPage({ onBack, onNavigate }: SharedProductsPagePro
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
       <PageHeader
-        title="Shared Products"
+        title={t('sharedProducts.title')}
         onBack={onBack}
         onNavigate={onNavigate}
         headerExtra={
           products.length > 0 ? (
-            <span className="text-xs text-gray-400 mr-1">{products.length} item{products.length !== 1 ? 's' : ''}</span>
+            <span className="text-xs text-gray-400 mr-1">{t('sharedProducts.itemCount', { count: products.length })}</span>
           ) : undefined
         }
       />
@@ -114,13 +116,13 @@ export function SharedProductsPage({ onBack, onNavigate }: SharedProductsPagePro
             <div className="h-16 w-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
               <Package className="h-8 w-8 text-red-500" />
             </div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error}</p>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error === 'Failed to load shared products' ? t('sharedProducts.loadFailed') : error}</p>
             <button
               onClick={() => window.location.reload()}
               className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600 transition-colors flex items-center gap-1.5"
             >
               <RefreshCw className="h-4 w-4" />
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         ) : products.length === 0 ? (
@@ -132,9 +134,9 @@ export function SharedProductsPage({ onBack, onNavigate }: SharedProductsPagePro
                 <Share2 className="h-10 w-10 text-emerald-500 dark:text-emerald-400" />
               </div>
             </div>
-            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">No shared products yet</h2>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">{t('sharedProducts.empty')}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-              When you share a product from its detail page, it will appear here so you can easily find and reshare it.
+              {t('sharedProducts.emptyDesc')}
             </p>
           </div>
         ) : (

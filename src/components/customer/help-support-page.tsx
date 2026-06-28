@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PageHeader } from './page-header'
+import { useLanguage } from '@/components/providers/language-provider'
 
 interface FAQQuestion {
   id: string
@@ -68,6 +69,7 @@ const colorMap: Record<string, { bg: string; text: string }> = {
 }
 
 export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
+  const { t } = useLanguage()
   const [faqCategories, setFaqCategories] = useState<FAQCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -111,7 +113,7 @@ export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
       <PageHeader
-        title="Help & Support"
+        title={t('help.title')}
         onBack={onBack}
         onNavigate={onNavigate}
       />
@@ -127,8 +129,8 @@ export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-20 text-center px-4">
             <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error}</p>
-            <button onClick={fetchData} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">Retry</button>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error === 'Failed to load help & support data' ? t('help.loadFailed') : error}</p>
+            <button onClick={fetchData} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">{t('common.retry')}</button>
           </div>
         ) : (
           <div className="p-4 space-y-4 pb-8">
@@ -136,7 +138,7 @@ export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
             <div>
               <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1.5">
                 <HelpCircle className="h-4 w-4 text-blue-500" />
-                Browse Help Topics
+                {t('help.browseTopics')}
               </h3>
 
               {/* FAQ Search */}
@@ -145,7 +147,7 @@ export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for help..."
+                  placeholder={t('help.searchPlaceholder')}
                   className="w-full h-11 pl-10 pr-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-400 transition-colors"
                 />
               </div>
@@ -153,7 +155,7 @@ export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
               {filteredCategories.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Search className="h-8 w-8 text-gray-300 mb-2" />
-                  <p className="text-xs text-gray-400">No results found for "{searchQuery}"</p>
+                  <p className="text-xs text-gray-400">{t('help.noResults', { query: searchQuery })}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -176,7 +178,7 @@ export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{cat.category}</p>
-                            <p className="text-[10px] text-gray-400">{cat.questions.length} question{cat.questions.length !== 1 ? 's' : ''}</p>
+                            <p className="text-[10px] text-gray-400">{cat.questions.length === 1 ? t('help.question', { count: cat.questions.length }) : t('help.questions', { count: cat.questions.length })}</p>
                           </div>
                           <ChevronDown className={cn('h-4 w-4 text-gray-400 transition-transform', isExpanded && 'rotate-180')} />
                         </button>
@@ -232,7 +234,7 @@ export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
               <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1.5">
                 <Phone className="h-4 w-4 text-emerald-500" />
-                Other ways to reach us
+                {t('help.otherWays')}
               </h3>
               <div className="grid grid-cols-2 gap-2">
                 <a href="tel:+918000000000" className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors">
@@ -240,8 +242,8 @@ export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
                     <Phone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-800 dark:text-gray-200">Call Us</p>
-                    <p className="text-[10px] text-gray-400">9 AM - 9 PM</p>
+                    <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{t('help.callUs')}</p>
+                    <p className="text-[10px] text-gray-400">{t('help.callHours')}</p>
                   </div>
                 </a>
                 <a href="mailto:support@realcart.com" className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
@@ -249,8 +251,8 @@ export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
                     <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-800 dark:text-gray-200">Email Us</p>
-                    <p className="text-[10px] text-gray-400">24/7 response</p>
+                    <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{t('help.emailUs')}</p>
+                    <p className="text-[10px] text-gray-400">{t('help.emailHours')}</p>
                   </div>
                 </a>
               </div>

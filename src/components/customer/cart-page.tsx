@@ -26,6 +26,7 @@ import { useCart } from '@/components/providers/cart-provider'
 import { useWishlist } from '@/components/providers/wishlist-provider'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
 import { CartItem, Address } from './types'
+import { useLanguage } from '@/components/providers/language-provider'
 
 function formatPrice(price: number): string {
   return `₹${price.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
@@ -42,6 +43,7 @@ function CartItemCard({ item, onRemove, onUpdateQuantity, onWishlist }: {
   onWishlist: () => void
 }) {
   const [removing, setRemoving] = useState(false)
+  const { t } = useLanguage()
 
   const handleRemove = () => {
     setRemoving(true)
@@ -142,13 +144,13 @@ function CartItemCard({ item, onRemove, onUpdateQuantity, onWishlist }: {
               onClick={onWishlist}
               className="text-[11px] font-semibold text-blue-500 hover:text-blue-600 px-2 py-1.5 transition-colors"
             >
-              SAVE FOR LATER
+              {t('cart.saveForLater')}
             </button>
             <button
               onClick={handleRemove}
               className="text-[11px] font-semibold text-red-500 hover:text-red-600 px-2 py-1.5 transition-colors"
             >
-              REMOVE
+              {t('cart.remove')}
             </button>
           </div>
         </div>
@@ -222,21 +224,23 @@ function PriceDetailsCard({ items, totalPrice, totalSavings, deliveryCharge, del
     ? totalPrice
     : totalPrice + deliveryCharge
 
+  const { t } = useLanguage()
+
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-        <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">Price Details</h3>
+        <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">{t('cart.priceDetails')}</h3>
       </div>
 
       <div className="px-4 py-3 space-y-2.5">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Price ({totalItems} item{totalItems !== 1 ? 's' : ''})</span>
+          <span className="text-gray-500">{t('cart.priceLabel', { count: totalItems })}</span>
           <span className="text-gray-800 dark:text-gray-200 font-medium">{formatPrice(priceWithoutDiscount)}</span>
         </div>
 
         {totalProductDiscount > 0 && (
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Product Discount</span>
+            <span className="text-gray-500">{t('cart.productDiscount')}</span>
             <span className="text-green-600 font-medium">- {formatPrice(totalProductDiscount)}</span>
           </div>
         )}
@@ -245,7 +249,7 @@ function PriceDetailsCard({ items, totalPrice, totalSavings, deliveryCharge, del
           <div className="flex justify-between text-sm bg-amber-50 dark:bg-amber-900/20 -mx-1 px-2 py-1 rounded">
             <span className="text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
               <Sparkles className="h-3 w-3" />
-              Special Offer
+              {t('cart.specialOffer')}
             </span>
             <span className="text-amber-700 dark:text-amber-400 font-semibold">- {formatPrice(totalSpecialOffer)}</span>
           </div>
@@ -259,13 +263,13 @@ function PriceDetailsCard({ items, totalPrice, totalSavings, deliveryCharge, del
             cart page never shows a misleading "FREE" for low-value carts. */}
         <div className="flex justify-between text-sm items-center">
           <span className="text-gray-500 flex items-center gap-1">
-            Delivery Charges
+            {t('cart.deliveryCharges')}
             {deliveryLoading && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
           </span>
           {deliveryLoading ? (
-            <span className="text-gray-400 text-xs">Calculating…</span>
+            <span className="text-gray-400 text-xs">{t('cart.calculating')}</span>
           ) : deliveryCharge === 0 ? (
-            <span className="text-green-600 font-medium">FREE</span>
+            <span className="text-green-600 font-medium">{t('cart.free')}</span>
           ) : (
             <span className="text-gray-800 dark:text-gray-200 font-medium">{formatPrice(deliveryCharge)}</span>
           )}
@@ -282,7 +286,7 @@ function PriceDetailsCard({ items, totalPrice, totalSavings, deliveryCharge, del
         )}
 
         <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-2.5 flex justify-between">
-          <span className="text-base font-bold text-gray-800 dark:text-gray-200">Total Amount</span>
+          <span className="text-base font-bold text-gray-800 dark:text-gray-200">{t('cart.totalAmount')}</span>
           <span className="text-base font-bold text-gray-800 dark:text-gray-200">{formatPrice(finalTotal)}</span>
         </div>
       </div>
@@ -300,7 +304,7 @@ function PriceDetailsCard({ items, totalPrice, totalSavings, deliveryCharge, del
           onClick={onCheckout}
           className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm"
         >
-          PLACE ORDER
+          {t('cart.placeOrder')}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
@@ -308,7 +312,7 @@ function PriceDetailsCard({ items, totalPrice, totalSavings, deliveryCharge, del
       {/* Safe payment badges */}
       <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800/30 flex items-center gap-3">
         <ShieldCheck className="h-4 w-4 text-gray-400" />
-        <span className="text-[11px] text-gray-400">Safe and Secure Payments. Easy returns.</span>
+        <span className="text-[11px] text-gray-400">{t('cart.securePayments')}</span>
       </div>
     </div>
   )
@@ -322,6 +326,7 @@ export function CartPage({ onNavigate, onCheckout, onBack }: { onNavigate?: (tab
   const router = useRouter()
   const { items, totalItems, totalPrice, totalSavings, updateQuantity, removeFromCart, loading } = useCart()
   const { toggleWishlist, isInWishlist, totalItems: wishlistCount } = useWishlist()
+  const { t } = useLanguage()
 
   // Available coupons for this cart — shown in a "Coupons & Offers" card so
   // customers can see what they can use before checkout (Flipkart/Meesho UX).
@@ -513,8 +518,8 @@ export function CartPage({ onNavigate, onCheckout, onBack }: { onNavigate?: (tab
                 </button>
               )}
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">My Cart</h1>
-                <span className="text-xs text-gray-400">(0 items)</span>
+                <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">{t('cart.title')}</h1>
+                <span className="text-xs text-gray-400">{t('cart.emptyItems')}</span>
               </div>
             </div>
 
@@ -555,15 +560,15 @@ export function CartPage({ onNavigate, onCheckout, onBack }: { onNavigate?: (tab
               <ShoppingCart className="h-10 w-10 text-gray-300 dark:text-gray-600" />
             </div>
             <div className="text-center">
-              <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">Your cart is empty</h2>
-              <p className="text-sm text-gray-400">Add items to get started</p>
+              <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">{t('cart.empty')}</h2>
+              <p className="text-sm text-gray-400">{t('cart.emptyDesc')}</p>
             </div>
             <button
               onClick={() => onNavigate?.('products')}
               className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition-colors"
             >
               <ShoppingBag className="h-4 w-4" />
-              Start Shopping
+              {t('common.startShopping')}
             </button>
           </motion.div>
         </div>
@@ -586,8 +591,8 @@ export function CartPage({ onNavigate, onCheckout, onBack }: { onNavigate?: (tab
               </button>
             )}
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">My Cart</h1>
-              <span className="text-xs text-gray-400">({totalItems} item{totalItems !== 1 ? 's' : ''})</span>
+              <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">{t('cart.title')}</h1>
+              <span className="text-xs text-gray-400">{t('cart.itemCount', { count: totalItems })}</span>
             </div>
           </div>
 
@@ -662,7 +667,7 @@ export function CartPage({ onNavigate, onCheckout, onBack }: { onNavigate?: (tab
                   >
                     <span className="flex items-center gap-2">
                       <Tag className="h-4 w-4 text-orange-500" />
-                      <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Coupons &amp; Offers</span>
+                      <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('cart.couponsOffers')}</span>
                       {availableCoupons.filter((c) => c.applicable).length > 0 && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
                           {availableCoupons.filter((c) => c.applicable).length} applicable

@@ -3,6 +3,7 @@
 import { Search, ShoppingCart, ArrowLeft, Heart } from 'lucide-react'
 import { useCart } from '@/components/providers/cart-provider'
 import { useWishlist } from '@/components/providers/wishlist-provider'
+import { useLanguage } from '@/components/providers/language-provider'
 
 /**
  * Reusable sticky page header that replicates the exact top navbar
@@ -44,6 +45,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   const { totalItems: cartCount } = useCart()
   const { totalItems: wishlistCount } = useWishlist()
+  const { t } = useLanguage()
 
   return (
     <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-3 py-2 flex-shrink-0">
@@ -53,7 +55,7 @@ export function PageHeader({
             <button
               onClick={onBack}
               className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              aria-label="Go back"
+              aria-label={t('common.back')}
             >
               <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
             </button>
@@ -71,7 +73,7 @@ export function PageHeader({
           <button
             onClick={() => onNavigate?.('search')}
             className="h-9 w-9 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full flex items-center justify-center transition-colors"
-            aria-label="Search"
+            aria-label={t('common.search')}
           >
             <Search className="h-5 w-5" />
           </button>
@@ -80,7 +82,7 @@ export function PageHeader({
           <button
             onClick={() => onNavigate?.('wishlist')}
             className="h-9 w-9 relative text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full flex items-center justify-center transition-colors"
-            aria-label="Wishlist"
+            aria-label={t('common.wishlist')}
           >
             <Heart className="h-5 w-5" />
             {wishlistCount > 0 && (
@@ -94,7 +96,7 @@ export function PageHeader({
           <button
             onClick={() => onNavigate?.('cart')}
             className="h-9 w-9 relative text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full flex items-center justify-center transition-colors"
-            aria-label="Cart"
+            aria-label={t('common.cart')}
           >
             <ShoppingCart className="h-5 w-5" />
             {cartCount > 0 && (

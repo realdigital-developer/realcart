@@ -4,6 +4,7 @@ import { Component, ReactNode } from 'react'
 import { CustomerAuthProvider } from '@/components/providers/customer-auth-provider'
 import { CartProvider } from '@/components/providers/cart-provider'
 import { WishlistProvider } from '@/components/providers/wishlist-provider'
+import { LanguageProvider } from '@/components/providers/language-provider'
 import { CustomerSplashScreen } from '@/components/customer/splash-screen'
 import { CustomerOnboardingScreen } from '@/components/customer/onboarding-screen'
 import { CustomerLightModeLock } from '@/components/customer/light-mode-lock'
@@ -127,23 +128,25 @@ export default function CustomerLayoutClient({ children }: { children: React.Rea
     <>
       <CustomerLightModeLock />
       <CustomerInteractionLock />
-      <CustomerSplashScreen>
-        <CustomerOnboardingScreen>
-          <ProviderErrorBoundary name="CustomerAuth">
-            <CustomerAuthProvider>
-              <ProviderErrorBoundary name="Cart">
-                <CartProvider>
-                  <ProviderErrorBoundary name="Wishlist">
-                    <WishlistProvider>
-                      {children}
-                    </WishlistProvider>
-                  </ProviderErrorBoundary>
-                </CartProvider>
-              </ProviderErrorBoundary>
-            </CustomerAuthProvider>
-          </ProviderErrorBoundary>
-        </CustomerOnboardingScreen>
-      </CustomerSplashScreen>
+      <LanguageProvider>
+        <CustomerSplashScreen>
+          <CustomerOnboardingScreen>
+            <ProviderErrorBoundary name="CustomerAuth">
+              <CustomerAuthProvider>
+                <ProviderErrorBoundary name="Cart">
+                  <CartProvider>
+                    <ProviderErrorBoundary name="Wishlist">
+                      <WishlistProvider>
+                        {children}
+                      </WishlistProvider>
+                    </ProviderErrorBoundary>
+                  </CartProvider>
+                </ProviderErrorBoundary>
+              </CustomerAuthProvider>
+            </ProviderErrorBoundary>
+          </CustomerOnboardingScreen>
+        </CustomerSplashScreen>
+      </LanguageProvider>
     </>
   )
 }

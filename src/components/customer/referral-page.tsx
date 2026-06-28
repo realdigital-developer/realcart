@@ -38,6 +38,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from './page-header'
+import { useLanguage } from '@/components/providers/language-provider'
 
 interface InvitedFriend {
   id: string
@@ -85,6 +86,7 @@ interface ReferralPageProps {
 }
 
 export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
+  const { t } = useLanguage()
   const [data, setData] = useState<ReferralData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -213,7 +215,7 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
-      <PageHeader title="Refer & Earn" onBack={onBack} onNavigate={onNavigate} />
+      <PageHeader title={t('referral.title')} onBack={onBack} onNavigate={onNavigate} />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
@@ -228,8 +230,8 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error}</p>
-            <button onClick={fetchData} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">Retry</button>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error === 'Failed to load referral data' ? t('referral.loadFailed') : error}</p>
+            <button onClick={fetchData} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">{t('common.retry')}</button>
           </div>
         ) : !data ? null : (
           <div className="p-4 space-y-4 pb-8">
@@ -246,22 +248,22 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-1">
                   <Gift className="h-5 w-5" />
-                  <h2 className="text-lg font-bold">Refer & Earn</h2>
+                  <h2 className="text-lg font-bold">{t('referral.heroTitle')}</h2>
                 </div>
                 {programActive ? (
                   <p className="text-xs text-white/90 mb-4 leading-relaxed">
-                    Invite friends to RealCart. When they place their first order, you both earn{' '}
+                    {t('referral.heroDescActive')}{' '}
                     <span className="font-bold">{formatPrice(data.program?.referrerReward || 0)}</span> each!
                   </p>
                 ) : (
                   <p className="text-xs text-white/90 mb-4 leading-relaxed">
-                    Invite friends to RealCart and earn exciting rewards when they shop.
+                    {t('referral.heroDescInactive')}
                   </p>
                 )}
 
                 {/* Referral Code Box */}
                 <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 border border-white/30">
-                  <p className="text-[10px] uppercase tracking-wider text-white/80 mb-1.5 font-semibold">Your Referral Code</p>
+                  <p className="text-[10px] uppercase tracking-wider text-white/80 mb-1.5 font-semibold">{t('referral.yourCode')}</p>
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-2xl font-black tracking-wider font-mono">{data.referralCode}</span>
                     <button
@@ -269,7 +271,7 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
                       className="flex items-center gap-1.5 bg-white text-emerald-600 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-emerald-50 transition-colors"
                     >
                       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copied ? 'Copied!' : 'Copy'}
+                      {copied ? t('common.copied') : t('common.copy')}
                     </button>
                   </div>
                 </div>
@@ -281,21 +283,21 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
                     className="flex flex-col items-center gap-1 bg-white/20 backdrop-blur-sm rounded-xl py-2.5 hover:bg-white/30 transition-colors border border-white/20"
                   >
                     <MessageCircle className="h-4 w-4" />
-                    <span className="text-[10px] font-semibold">WhatsApp</span>
+                    <span className="text-[10px] font-semibold">{t('referral.whatsapp')}</span>
                   </button>
                   <button
                     onClick={() => handleShare('sms')}
                     className="flex flex-col items-center gap-1 bg-white/20 backdrop-blur-sm rounded-xl py-2.5 hover:bg-white/30 transition-colors border border-white/20"
                   >
                     <Send className="h-4 w-4" />
-                    <span className="text-[10px] font-semibold">SMS</span>
+                    <span className="text-[10px] font-semibold">{t('referral.sms')}</span>
                   </button>
                   <button
                     onClick={() => handleShare('native')}
                     className="flex flex-col items-center gap-1 bg-white/20 backdrop-blur-sm rounded-xl py-2.5 hover:bg-white/30 transition-colors border border-white/20"
                   >
                     <Share2 className="h-4 w-4" />
-                    <span className="text-[10px] font-semibold">More</span>
+                    <span className="text-[10px] font-semibold">{t('referral.more')}</span>
                   </button>
                 </div>
               </div>
@@ -305,25 +307,25 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
             <div className="grid grid-cols-2 gap-3">
               <StatCard
                 icon={<Users className="h-4 w-4" />}
-                label="Friends Invited"
+                label={t('referral.friendsInvited')}
                 value={data.stats.totalInvited.toString()}
                 color="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
               />
               <StatCard
                 icon={<CheckCircle2 className="h-4 w-4" />}
-                label="Qualified"
+                label={t('referral.qualified')}
                 value={data.stats.totalQualified.toString()}
                 color="bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400"
               />
               <StatCard
                 icon={<Award className="h-4 w-4" />}
-                label="Total Earned"
+                label={t('referral.totalEarned')}
                 value={formatPrice(data.stats.totalEarnings)}
                 color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400"
               />
               <StatCard
                 icon={<Wallet className="h-4 w-4" />}
-                label="Wallet Balance"
+                label={t('referral.walletBalance')}
                 value={formatPrice(data.stats.walletBalance)}
                 color="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400"
               />
@@ -338,8 +340,8 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
               >
                 <Clock className="h-5 w-5 text-amber-500 flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">{formatPrice(data.stats.pendingEarnings)} pending</p>
-                  <p className="text-[10px] text-amber-600/70 dark:text-amber-500/70">Will be credited when friends' first orders are delivered</p>
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">{t('referral.pending', { amount: formatPrice(data.stats.pendingEarnings) })}</p>
+                  <p className="text-[10px] text-amber-600/70 dark:text-amber-500/70">{t('referral.pendingDesc')}</p>
                 </div>
               </motion.div>
             )}
@@ -348,25 +350,25 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
             <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
               <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1.5">
                 <Sparkles className="h-4 w-4 text-amber-500" />
-                How It Works
+                {t('referral.howItWorks')}
               </h3>
               <div className="space-y-3">
                 <HowItWorksStep
                   step={1}
                   icon={<Share2 className="h-4 w-4" />}
-                  title="Share Your Code"
-                  desc="Send your referral code to friends via WhatsApp, SMS, or social media"
+                  title={t('referral.step1Title')}
+                  desc={t('referral.step1Desc')}
                 />
                 <HowItWorksStep
                   step={2}
                   icon={<UserPlus className="h-4 w-4" />}
-                  title="Friend Signs Up"
-                  desc="Your friend joins RealCart using your referral code"
+                  title={t('referral.step2Title')}
+                  desc={t('referral.step2Desc')}
                 />
                 <HowItWorksStep
                   step={3}
                   icon={<Gift className="h-4 w-4" />}
-                  title="Both Earn Rewards"
+                  title={t('referral.step3Title')}
                   desc={`When their first order is delivered, you both get ${formatPrice(data.program?.referrerReward || 0)} in your wallet`}
                 />
               </div>
@@ -377,7 +379,7 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-blue-500" />
-                  Invited Friends ({data.invitedFriends.length})
+                  {t('referral.invitedFriends', { count: data.invitedFriends.length })}
                 </h3>
               </div>
               {data.invitedFriends.length === 0 ? (
@@ -385,8 +387,8 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
                   <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
                     <Users className="h-8 w-8 text-gray-300 dark:text-gray-600" />
                   </div>
-                  <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No friends invited yet</p>
-                  <p className="text-xs text-gray-400 mt-1">Share your referral code to start earning</p>
+                  <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t('referral.noFriends')}</p>
+                  <p className="text-xs text-gray-400 mt-1">{t('referral.noFriendsDesc')}</p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -417,16 +419,16 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
               <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
                 <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-1 flex items-center gap-1.5">
                   <Gift className="h-4 w-4 text-violet-500" />
-                  Have a Referral Code?
+                  {t('referral.haveCode')}
                 </h3>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3">
-                  Applied a friend's code when you signed up? If not, you can still apply one now to earn a welcome bonus.
+                  {t('referral.haveCodeDesc')}
                 </p>
                 <button
                   onClick={() => { setApplyError(null); setApplySuccess(null); setApplyModalOpen(true) }}
                   className="w-full py-2.5 rounded-xl border-2 border-dashed border-violet-200 dark:border-violet-800 text-violet-600 dark:text-violet-400 text-xs font-bold hover:bg-violet-50 dark:hover:bg-violet-900/10 transition-colors"
                 >
-                  + Apply Referral Code
+                  {t('referral.applyCode')}
                 </button>
               </div>
             )}
@@ -439,12 +441,12 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
                 </div>
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-violet-700 dark:text-violet-400">
-                    You were referred by {data.referredBy.name}
+                    {t('referral.referredBy', { name: data.referredBy.name })}
                   </p>
                   <p className="text-[10px] text-violet-600/70 dark:text-violet-500/70">
                     {data.referredBy.rewarded
-                      ? '✓ Welcome bonus credited to your wallet'
-                      : 'Place your first order to earn your welcome bonus'}
+                      ? `✓ ${t('referral.bonusCredited')}`
+                      : t('referral.bonusPending')}
                   </p>
                 </div>
               </div>
@@ -459,7 +461,7 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
                 >
                   <span className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
                     <Info className="h-4 w-4 text-gray-400" />
-                    Terms & Conditions
+                    {t('referral.termsConditions')}
                   </span>
                   <ChevronRight className={cn('h-4 w-4 text-gray-400 transition-transform', showTerms && 'rotate-90')} />
                 </button>
@@ -491,7 +493,7 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
               <div className="flex items-center gap-2 p-3 bg-gray-100 dark:bg-gray-800/50 rounded-xl">
                 <Info className="h-4 w-4 text-gray-400 flex-shrink-0" />
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  The referral program is currently inactive. Please check back later.
+                  {t('referral.inactiveMsg')}
                 </p>
               </div>
             )}
@@ -505,14 +507,14 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
         onOpenChange={(o) => setApplyModalOpen(o)}
         type="form"
         size="sm"
-        title="Apply Referral Code"
-        description="Enter your friend's referral code to link your account and earn a welcome bonus."
+        title={t('referral.applyCodeTitle')}
+        description={t('referral.applyCodeDesc')}
         submitting={applySubmitting}
         footer={
           <>
-            <Button variant="outline" onClick={() => setApplyModalOpen(false)} className="rounded-xl">Cancel</Button>
+            <Button variant="outline" onClick={() => setApplyModalOpen(false)} className="rounded-xl">{t('common.cancel')}</Button>
             <Button onClick={handleApplyCode} disabled={applySubmitting} className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white">
-              {applySubmitting ? 'Applying...' : 'Apply Code'}
+              {applySubmitting ? t('referral.applying') : t('referral.applyCodeButton')}
             </Button>
           </>
         }
@@ -530,17 +532,17 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
             </div>
           )}
           <div>
-            <Label className="text-xs">Referral Code *</Label>
+            <Label className="text-xs">{t('referral.referralCodeLabel')}</Label>
             <Input
               value={applyCode}
               onChange={(e) => { setApplyCode(e.target.value.toUpperCase()); setApplyError(null) }}
-              placeholder="e.g., USER99-7K3X"
+              placeholder={t('referral.referralCodePlaceholder')}
               className="mt-1 h-11 font-mono uppercase tracking-wider"
               style={{ textTransform: 'uppercase' }}
             />
           </div>
           <p className="text-[10px] text-gray-400 leading-relaxed">
-            Note: You can only apply a referral code once. Make sure to enter the correct code before submitting.
+            {t('referral.referralCodeNote')}
           </p>
         </div>
       </AdminModal>

@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { useWishlist } from '@/components/providers/wishlist-provider'
 import { useCart } from '@/components/providers/cart-provider'
 import { WishlistItem } from './types'
+import { useLanguage } from '@/components/providers/language-provider'
 
 function formatPrice(price: number): string {
   return `₹${price.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
@@ -54,6 +55,7 @@ function WishlistItemCard({ item, onRemove, onAddToCart, inCart }: {
 }) {
   const router = useRouter()
   const isInStock = item.stock > 0
+  const { t } = useLanguage()
 
   return (
     <motion.div
@@ -95,7 +97,7 @@ function WishlistItemCard({ item, onRemove, onAddToCart, inCart }: {
               'w-1.5 h-1.5 rounded-full',
               isInStock ? 'bg-emerald-500' : 'bg-red-500'
             )} />
-            {isInStock ? 'In Stock' : 'Out of Stock'}
+            {isInStock ? t('common.inStock') : t('common.outOfStock')}
           </div>
         </button>
 
@@ -147,7 +149,7 @@ function WishlistItemCard({ item, onRemove, onAddToCart, inCart }: {
               )}
             >
               <ShoppingCart className="h-3.5 w-3.5" />
-              {inCart ? 'IN CART' : isInStock ? 'ADD TO CART' : 'OUT OF STOCK'}
+              {inCart ? t('wishlist.inCart') : isInStock ? t('wishlist.addToCart') : t('wishlist.outOfStockShort')}
             </button>
             <motion.button
               whileTap={{ scale: 0.9 }}
@@ -176,6 +178,7 @@ export function WishlistPage({ onNavigate, onBack }: WishlistPageProps = {}) {
   const router = useRouter()
   const { items, totalItems, removeFromWishlist, loading } = useWishlist()
   const { addToCart, isInCart, totalItems: cartCount } = useCart()
+  const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -322,9 +325,9 @@ export function WishlistPage({ onNavigate, onBack }: WishlistPageProps = {}) {
               </button>
             )}
             <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">
-              Wishlist
+              {t('wishlist.title')}
             </h1>
-            <span className="text-xs text-gray-400">({totalItems} item{totalItems !== 1 ? 's' : ''})</span>
+            <span className="text-xs text-gray-400">{t('wishlist.itemCount', { count: totalItems })}</span>
           </div>
 
           {/* Right Icons: Search → Cart */}
@@ -369,7 +372,7 @@ export function WishlistPage({ onNavigate, onBack }: WishlistPageProps = {}) {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search wishlist..."
+                  placeholder={t('wishlist.searchPlaceholder')}
                   className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none"
                 />
                 {searchQuery && (
@@ -413,15 +416,15 @@ export function WishlistPage({ onNavigate, onBack }: WishlistPageProps = {}) {
               </div>
 
               <div className="text-center">
-                <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">Your wishlist is empty</h2>
-                <p className="text-sm text-gray-400 max-w-[250px]">Save items you love by tapping the heart icon. They&apos;ll be waiting for you here!</p>
+                <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">{t('wishlist.empty')}</h2>
+                <p className="text-sm text-gray-400 max-w-[250px]">{t('wishlist.emptyDesc')}</p>
               </div>
               <button
                 onClick={() => onNavigate?.('products')}
                 className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition-colors shadow-sm"
               >
                 <ShoppingBag className="h-4 w-4" />
-                Browse Products
+                {t('common.browseProducts')}
                 <ArrowRight className="h-4 w-4" />
               </button>
             </motion.div>
@@ -430,12 +433,12 @@ export function WishlistPage({ onNavigate, onBack }: WishlistPageProps = {}) {
           /* Search no results */
           <div className="flex flex-col items-center justify-center p-6 min-h-[300px]">
             <Search className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
-            <p className="text-sm text-muted-foreground">No items match &quot;{searchQuery}&quot;</p>
+            <p className="text-sm text-muted-foreground">{t('wishlist.noMatch', { query: searchQuery })}</p>
             <button
               onClick={() => setSearchQuery('')}
               className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
             >
-              Clear search
+              {t('common.clearSearch')}
             </button>
           </div>
         ) : (
@@ -456,15 +459,15 @@ export function WishlistPage({ onNavigate, onBack }: WishlistPageProps = {}) {
             <div className="flex items-center justify-center gap-6 py-6 mt-4 border-t border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-1.5 text-xs text-gray-400">
                 <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                <span>Secure</span>
+                <span>{t('common.secure')}</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-gray-400">
                 <Truck className="h-4 w-4 text-emerald-500" />
-                <span>Free Delivery</span>
+                <span>{t('common.freeDelivery')}</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-gray-400">
                 <ShoppingBag className="h-4 w-4 text-emerald-500" />
-                <span>Easy Returns</span>
+                <span>{t('common.easyReturns')}</span>
               </div>
             </div>
           </div>

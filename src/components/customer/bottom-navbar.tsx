@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Home, LayoutGrid, User, ShoppingCart, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCart } from '@/components/providers/cart-provider'
+import { useLanguage } from '@/components/providers/language-provider'
 
 export type BottomTab = 'home' | 'categories' | 'cart' | 'orders' | 'account'
 
@@ -16,36 +17,37 @@ interface BottomNavbarProps {
 
 export function BottomNavbar({ activeTab, onTabChange, visible = true }: BottomNavbarProps) {
   const { totalItems: cartCount } = useCart()
+  const { t } = useLanguage()
 
   const tabs: { id: BottomTab; label: string; icon: React.ReactNode; activeIcon: React.ReactNode; badge?: number }[] = [
     {
       id: 'home',
-      label: 'Home',
+      label: t('nav.home'),
       icon: <Home className="h-[22px] w-[22px]" />,
       activeIcon: <Home className="h-[22px] w-[22px]" strokeWidth={2.5} />,
     },
     {
       id: 'categories',
-      label: 'Categories',
+      label: t('nav.categories'),
       icon: <LayoutGrid className="h-[22px] w-[22px]" />,
       activeIcon: <LayoutGrid className="h-[22px] w-[22px]" strokeWidth={2.5} />,
     },
     {
       id: 'cart',
-      label: 'Cart',
+      label: t('nav.cart'),
       icon: <ShoppingCart className="h-[22px] w-[22px]" />,
       activeIcon: <ShoppingCart className="h-[22px] w-[22px]" strokeWidth={2.5} />,
       badge: cartCount,
     },
     {
       id: 'orders',
-      label: 'Orders',
+      label: t('nav.orders'),
       icon: <ClipboardList className="h-[22px] w-[22px]" />,
       activeIcon: <ClipboardList className="h-[22px] w-[22px]" strokeWidth={2.5} />,
     },
     {
       id: 'account',
-      label: 'Account',
+      label: t('nav.account'),
       icon: <User className="h-[22px] w-[22px]" />,
       activeIcon: <User className="h-[22px] w-[22px]" strokeWidth={2.5} />,
     },

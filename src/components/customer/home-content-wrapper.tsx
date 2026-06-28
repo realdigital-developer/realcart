@@ -12,6 +12,7 @@ import { BottomNavbar, BottomTab } from './bottom-navbar'
 import { useBackToExit } from '@/hooks/use-back-to-exit'
 import { ExitToast } from './exit-toast'
 import { ImageSearchDialog } from './image-search-dialog'
+import { useLanguage } from '@/components/providers/language-provider'
 import type { Product } from './types'
 
 // Dynamic imports with ssr: false
@@ -193,6 +194,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
 
   // Check for payment callback URL params on mount
   const searchParams = useSearchParams()
+  const { t } = useLanguage()
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
@@ -356,10 +358,10 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
 
   // Non-home, non-sub tabs: categories, cart, orders, account — need a header
   const mainTabLabels: Record<string, string> = {
-    categories: 'Categories',
-    cart: 'Cart',
-    orders: 'My Orders',
-    account: 'My Account',
+    categories: t('nav.categories'),
+    cart: t('nav.cart'),
+    orders: t('nav.orders'),
+    account: t('account.title'),
   }
   const needsMainHeader = !isHomeTab && !isSubTab
 
@@ -383,8 +385,8 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
           <div className="bg-emerald-500 text-white rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3 max-w-md w-full">
             <CheckCircle2 className="h-6 w-6 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm">Payment Successful!</p>
-              <p className="text-xs text-emerald-100 truncate">Order: {paymentSuccessInfo.orderNumber}</p>
+              <p className="font-bold text-sm">{t('payment.success')}</p>
+              <p className="text-xs text-emerald-100 truncate">{t('payment.successOrder', { orderNumber: paymentSuccessInfo.orderNumber })}</p>
             </div>
             <button
               onClick={() => setPaymentSuccessInfo(null)}
@@ -406,7 +408,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
           <div className="bg-red-500 text-white rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3 max-w-md w-full">
             <X className="h-6 w-6 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm">Payment Failed</p>
+              <p className="font-bold text-sm">{t('payment.failed')}</p>
               <p className="text-xs text-red-100">{paymentErrorInfo}</p>
             </div>
             <button
@@ -447,7 +449,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
               <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
             </button>
             <h1 className="text-base font-bold text-gray-800 dark:text-gray-200">
-              {activeTab === 'notifications' ? 'Notifications' : activeTab === 'profile' ? 'My Profile' : activeTab === 'addresses' ? 'My Addresses' : 'Products'}
+              {activeTab === 'notifications' ? t('common.notifications') : activeTab === 'profile' ? t('account.title') : activeTab === 'addresses' ? 'My Addresses' : 'Products'}
             </h1>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { CategoryItem } from './types'
 import { useCart } from '@/components/providers/cart-provider'
 import { useWishlist } from '@/components/providers/wishlist-provider'
+import { useLanguage } from '@/components/providers/language-provider'
 
 /**
  * A highlight section groups subcategories under a headline,
@@ -35,6 +36,7 @@ export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {})
   const searchInputRef = useRef<HTMLInputElement>(null)
   const { totalItems: cartCount } = useCart()
   const { totalItems: wishlistCount } = useWishlist()
+  const { t } = useLanguage()
 
   // Helper: update URL with or without categoryId
   const updateUrlCategoryId = useCallback((categoryId: string | null) => {
@@ -212,13 +214,14 @@ export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {})
             {onBack && (
               <button
                 onClick={onBack}
+                aria-label={t('common.back')}
                 className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
               </button>
             )}
             <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">
-              All Categories
+              {t('categories.title')}
             </h1>
           </div>
 
@@ -227,6 +230,7 @@ export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {})
             {/* Search Icon */}
             <button
               onClick={() => onNavigate?.('search')}
+              aria-label={t('common.search')}
               className="h-9 w-9 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full flex items-center justify-center transition-colors"
             >
               <Search className="h-5 w-5" />
@@ -235,6 +239,7 @@ export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {})
             {/* Wishlist Icon with Badge */}
             <button
               onClick={() => onNavigate?.('wishlist')}
+              aria-label={t('common.wishlist')}
               className="h-9 w-9 relative text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full flex items-center justify-center transition-colors"
             >
               <Heart className="h-5 w-5" />
@@ -248,6 +253,7 @@ export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {})
             {/* Cart Icon with Badge */}
             <button
               onClick={() => onNavigate?.('cart')}
+              aria-label={t('common.cart')}
               className="h-9 w-9 relative text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full flex items-center justify-center transition-colors"
             >
               <ShoppingCart className="h-5 w-5" />
@@ -277,7 +283,7 @@ export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {})
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search categories..."
+                  placeholder={t('categories.searchPlaceholder')}
                   className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none"
                 />
                 {searchQuery && (
@@ -400,7 +406,7 @@ export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {})
                   {/* Section Headline */}
                   <div className="flex items-center gap-1 mb-2.5">
                     <h3 className="text-[13px] font-bold text-gray-800 dark:text-gray-200">
-                      {section.name}
+                      {section.name === 'Other' ? t('common.other') : section.name}
                     </h3>
                     <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                   </div>
@@ -441,7 +447,7 @@ export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {})
                         <ChevronDown className="h-5 w-5 text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors" />
                       </div>
                       <span className="mt-1 text-[10px] sm:text-[11px] font-medium text-gray-400 dark:text-gray-500 text-center leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        View All
+                        {t('common.viewAll')}
                       </span>
                     </button>
                   </div>
@@ -484,7 +490,7 @@ export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {})
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-600">
               <Package className="h-10 w-10 mb-2" />
-              <p className="text-sm">No categories available</p>
+              <p className="text-sm">{t('categories.noCategories')}</p>
             </div>
           )}
         </div>

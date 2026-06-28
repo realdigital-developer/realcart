@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Search, Mic, X, Camera } from 'lucide-react'
+import { useLanguage } from '@/components/providers/language-provider'
 
 interface MeeshoSearchBarProps {
   onSearch?: (query: string) => void
@@ -13,6 +14,7 @@ interface MeeshoSearchBarProps {
 
 export function MeeshoSearchBar({ onSearch, onSearchClick, onImageSearch, initialQuery = '' }: MeeshoSearchBarProps) {
   const [searchQuery, setSearchQuery] = useState(initialQuery)
+  const { t } = useLanguage()
   const [isStuck, setIsStuck] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -63,7 +65,7 @@ export function MeeshoSearchBar({ onSearch, onSearchClick, onImageSearch, initia
             <button
               onClick={handleSearch}
               className="flex items-center justify-center pl-2.5 sm:pl-3 pr-1.5 sm:pr-2 hover:opacity-70 transition-opacity flex-shrink-0"
-              aria-label="Search"
+              aria-label={t('common.search')}
             >
               <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </button>
@@ -82,7 +84,7 @@ export function MeeshoSearchBar({ onSearch, onSearchClick, onImageSearch, initia
               onClick={() => onSearchClick?.()}
               readOnly
               className="flex-1 min-w-0 h-full bg-transparent text-xs sm:text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none cursor-pointer"
-              placeholder="Search by Keyword or Product Name"
+              placeholder={t('header.searchPlaceholder')}
             />
 
             {/* Clear button */}
@@ -115,7 +117,7 @@ export function MeeshoSearchBar({ onSearch, onSearchClick, onImageSearch, initia
                 }
               }}
               className={`flex items-center justify-center pr-2 sm:pr-3 pl-1.5 sm:pl-2.5 py-2 transition-opacity flex-shrink-0 ${onImageSearch ? 'hover:opacity-70 cursor-pointer relative z-20' : ''}`}
-              aria-label="Search by image"
+              aria-label={t('header.searchByImage')}
             >
               <Camera className={`h-4 w-4 sm:h-5 sm:w-5 ${onImageSearch ? 'text-emerald-600' : 'text-gray-400'}`} />
             </button>

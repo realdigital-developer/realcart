@@ -33,6 +33,7 @@ import {
 import AdminModal from '@/components/admin/admin-modal'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from './page-header'
+import { useLanguage } from '@/components/providers/language-provider'
 
 interface FollowedSeller {
   id: string
@@ -55,6 +56,7 @@ interface FollowedSellersPageProps {
 }
 
 export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageProps) {
+  const { t } = useLanguage()
   const router = useRouter()
   const [sellers, setSellers] = useState<FollowedSeller[]>([])
   const [loading, setLoading] = useState(true)
@@ -116,7 +118,7 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
       <PageHeader
-        title="Followed Sellers"
+        title={t('followedSellers.title')}
         onBack={onBack}
         onNavigate={onNavigate}
       />
@@ -132,17 +134,17 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error}</p>
-            <button onClick={fetchSellers} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">Retry</button>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error === 'Failed to load followed sellers' ? t('followedSellers.loadFailed') : error}</p>
+            <button onClick={fetchSellers} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">{t('common.retry')}</button>
           </div>
         ) : sellers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center px-4">
             <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 flex items-center justify-center mb-4">
               <Store className="h-10 w-10 text-emerald-500" />
             </div>
-            <p className="text-sm font-bold text-gray-800 dark:text-gray-200">No followed sellers yet</p>
+            <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('followedSellers.empty')}</p>
             <p className="text-xs text-gray-400 mt-1 max-w-xs">
-              Follow sellers you love to keep track of their latest products. Tap the heart icon next to a seller's name on any product page.
+              {t('followedSellers.emptyDesc')}
             </p>
           </div>
         ) : (
@@ -151,7 +153,7 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
             <div className="mb-4 flex items-center gap-2 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl border border-emerald-100 dark:border-emerald-800/30">
               <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
               <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-                You are following {sellers.length} seller{sellers.length !== 1 ? 's' : ''}
+                {t('followedSellers.followingCount', { count: sellers.length })}
               </p>
             </div>
 
@@ -188,7 +190,7 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
                         )}
                         <div className="flex items-center gap-1 mt-0.5">
                           <Calendar className="h-2.5 w-2.5 text-gray-300" />
-                          <p className="text-[10px] text-gray-400">Following since {formatDate(seller.followedAt)}</p>
+                          <p className="text-[10px] text-gray-400">{t('followedSellers.followingSince', { date: formatDate(seller.followedAt) })}</p>
                         </div>
                       </div>
 
@@ -210,21 +212,21 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
                           <Package className="h-3 w-3 text-blue-400" />
                           <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{seller.productCount}</p>
                         </div>
-                        <p className="text-[9px] text-gray-400 uppercase tracking-wide mt-0.5">Products</p>
+                        <p className="text-[9px] text-gray-400 uppercase tracking-wide mt-0.5">{t('common.products')}</p>
                       </div>
                       <div className="text-center border-x border-gray-50 dark:border-gray-800">
                         <div className="flex items-center justify-center gap-1">
                           <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
                           <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{seller.avgRating || '—'}</p>
                         </div>
-                        <p className="text-[9px] text-gray-400 uppercase tracking-wide mt-0.5">Rating</p>
+                        <p className="text-[9px] text-gray-400 uppercase tracking-wide mt-0.5">{t('common.rating')}</p>
                       </div>
                       <div className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <TrendingUp className="h-3 w-3 text-emerald-400" />
                           <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{seller.totalSold}</p>
                         </div>
-                        <p className="text-[9px] text-gray-400 uppercase tracking-wide mt-0.5">Sold</p>
+                        <p className="text-[9px] text-gray-400 uppercase tracking-wide mt-0.5">{t('common.sold')}</p>
                       </div>
                     </div>
 
@@ -234,7 +236,7 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
                       className="w-full mt-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors flex items-center justify-center gap-1.5"
                     >
                       <ShoppingBag className="h-3.5 w-3.5" />
-                      Visit Store
+                      {t('common.visitStore')}
                     </button>
                   </motion.div>
                 ))}
@@ -250,13 +252,13 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
         onOpenChange={(o) => { if (!o) setUnfollowTarget(null) }}
         type="delete"
         size="sm"
-        title="Unfollow Seller"
-        description={`Stop following ${unfollowTarget?.storeName}? You can always follow them again later.`}
+        title={t('followedSellers.unfollowSeller')}
+        description={unfollowTarget ? t('followedSellers.unfollowConfirm', { name: unfollowTarget.storeName }) : ''}
         footer={
           <>
-            <Button variant="outline" onClick={() => setUnfollowTarget(null)} className="rounded-xl">Cancel</Button>
+            <Button variant="outline" onClick={() => setUnfollowTarget(null)} className="rounded-xl">{t('common.cancel')}</Button>
             <Button onClick={handleUnfollow} disabled={unfollowing} className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white">
-              {unfollowing ? 'Unfollowing...' : 'Unfollow'}
+              {unfollowing ? t('followedSellers.unfollowing') : t('followedSellers.unfollow')}
             </Button>
           </>
         }
@@ -264,7 +266,7 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
         <div className="flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-900/10 rounded-xl border border-rose-100 dark:border-rose-800/20">
           <HeartOff className="h-5 w-5 text-rose-500 flex-shrink-0" />
           <p className="text-xs text-rose-700 dark:text-rose-400">
-            You will no longer see updates from this seller in your followed list.
+            {t('followedSellers.unfollowResult')}
           </p>
         </div>
       </AdminModal>

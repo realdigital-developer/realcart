@@ -2,37 +2,20 @@
 
 /**
  * Change Language page — lets the customer pick a preferred UI language.
- * Selection is persisted to localStorage (`realcart_lang`) and reflected
- * immediately via local state. Uses the shared PageHeader so the top
- * navbar matches the Categories page exactly.
+ *
+ * Selection is applied LIVE: the whole customer panel re-renders in the
+ * chosen language immediately (via the LanguageProvider context) and the
+ * preference is persisted to localStorage (`realcart_lang`) so it survives
+ * reloads. Uses the shared PageHeader so the top navbar matches the
+ * Categories page exactly.
  */
 
-import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Globe, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PageHeader } from './page-header'
-
-interface LanguageOption {
-  code: string
-  label: string
-  nativeLabel: string
-}
-
-const LANGUAGES: LanguageOption[] = [
-  { code: 'en', label: 'English', nativeLabel: 'English' },
-  { code: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी' },
-  { code: 'bn', label: 'Bengali', nativeLabel: 'বাংলা' },
-  { code: 'ta', label: 'Tamil', nativeLabel: 'தமிழ்' },
-  { code: 'te', label: 'Telugu', nativeLabel: 'తెలుగు' },
-  { code: 'mr', label: 'Marathi', nativeLabel: 'मराठी' },
-  { code: 'kn', label: 'Kannada', nativeLabel: 'ಕನ್ನಡ' },
-  { code: 'ml', label: 'Malayalam', nativeLabel: 'മലയാളം' },
-  { code: 'pa', label: 'Punjabi', nativeLabel: 'ਪੰਜਾਬੀ' },
-  { code: 'gu', label: 'Gujarati', nativeLabel: 'ગુજરાતી' },
-]
-
-const STORAGE_KEY = 'realcart_lang'
+import { useLanguage } from '@/components/providers/language-provider'
+import { toast } from 'sonner'
 
 interface LanguagePageProps {
   onBack?: () => void
@@ -40,44 +23,32 @@ interface LanguagePageProps {
 }
 
 export function LanguagePage({ onBack, onNavigate }: LanguagePageProps) {
-  const [selected, setSelected] = useState<string>('en')
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored && LANGUAGES.some((l) => l.code === stored)) {
-        setSelected(stored)
-      }
-    } catch {
-      // ignore storage errors
-    }
-  }, [])
+  const { locale, languages, setLocale, t } = useLanguage()
 
   const handleSelect = (code: string) => {
-    setSelected(code)
-    try {
-      localStorage.setItem(STORAGE_KEY, code)
-    } catch {
-      // ignore storage errors
-    }
+    if (code === locale) return
+    setLocale(code as typeof locale)
+    const lang = languages.find((l) => l.code === code)
+    // Show a toast in the newly-selected language for immediate feedback.
+    toast.success(t('language.changedToast', { language: lang?.nativeLabel || code }))
   }
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
-      <PageHeader title="Change Language" onBack={onBack} onNavigate={onNavigate} />
+      <PageHeader title={t('language.title')} onBack={onBack} onNavigate={onNavigate} />
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-3 py-4">
         <div className="flex items-center gap-2 mb-4 px-1">
           <Globe className="h-4 w-4 text-gray-500" />
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Select your preferred language for the app interface
+            {t('language.description')}
           </p>
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
-          {LANGUAGES.map((lang, idx) => {
-            const isActive = selected === lang.code
+          {languages.map((lang, idx) => {
+            const isActive = locale === lang.code
             return (
               <motion.button
                 key={lang.code}
@@ -128,7 +99,7 @@ export function LanguagePage({ onBack, onNavigate }: LanguagePageProps) {
         </div>
 
         <p className="text-center text-[11px] text-gray-400 dark:text-gray-500 mt-6">
-          More languages coming soon
+          {t('language.moreComingSoon')}
         </p>
       </div>
     </div>

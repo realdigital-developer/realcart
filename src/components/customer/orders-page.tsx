@@ -45,6 +45,7 @@ import { STATUS_CONFIG, formatVariant, type Order, type OrderItem, type OrderSta
 import { normalizeStatus } from '@/lib/order-state-machine'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
 import { useWishlist } from '@/components/providers/wishlist-provider'
+import { useLanguage } from '@/components/providers/language-provider'
 import { InvoiceDialog } from '@/components/customer/invoice-dialog'
 import { CreditNoteDialog } from '@/components/customer/credit-note-dialog'
 
@@ -439,6 +440,7 @@ function OrderCard({ order, onClick }: { order: Order; onClick: () => void }) {
   const config = STATUS_CONFIG[status]
   const totalItems = order.items.reduce((sum, item) => sum + item.quantity, 0)
   const [showInvoice, setShowInvoice] = useState(false)
+  const { t } = useLanguage()
   const hasCreditNote = !!(order.creditNoteNumber || (order.creditNotes && order.creditNotes.length > 0))
   // For cancelled OR return-completed orders with a credit note, the invoice
   // view button shows the credit note instead. Both are terminal statuses
@@ -454,10 +456,10 @@ function OrderCard({ order, onClick }: { order: Order; onClick: () => void }) {
   // Determine action button type
   const getActionInfo = () => {
     if (status === 'Pending' || status === 'Processing') {
-      return { type: 'cancel' as const, label: 'Cancel Order', color: 'text-red-500 hover:text-red-600' }
+      return { type: 'cancel' as const, label: t('orders.cancelOrder'), color: 'text-red-500 hover:text-red-600' }
     }
     if (status === 'Delivered') {
-      return { type: 'return' as const, label: 'Return', color: 'text-orange-500 hover:text-orange-600' }
+      return { type: 'return' as const, label: t('orders.return'), color: 'text-orange-500 hover:text-orange-600' }
     }
     if (status === 'Return Requested') {
       return { type: 'cancel-return' as const, label: 'Cancel Return', color: 'text-red-500 hover:text-red-600' }
@@ -601,7 +603,7 @@ function OrderCard({ order, onClick }: { order: Order; onClick: () => void }) {
                 ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
                 : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
             )}
-            title={showCreditNoteInstead ? 'View Credit Note' : 'View Invoice'}
+            title={showCreditNoteInstead ? t('orders.viewCreditNote') : t('orders.viewInvoice')}
           >
             <FileText className="h-3.5 w-3.5" />
           </button>
@@ -673,6 +675,7 @@ function OrderDetailView({
   // Transaction ID expandable popover (shown on clicking the Payment Status badge)
   const [showTxnDetail, setShowTxnDetail] = useState(false)
   const [copiedTxn, setCopiedTxn] = useState<string | null>(null)
+  const { t } = useLanguage()
   const hasCreditNote = !!(order.creditNoteNumber || (order.creditNotes && order.creditNotes.length > 0))
   // For cancelled OR return-completed orders with a credit note, the invoice
   // view button shows the credit note instead. Both are terminal statuses
@@ -720,7 +723,7 @@ function OrderDetailView({
             <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold text-gray-800 dark:text-gray-200 truncate">Order Details</h1>
+            <h1 className="text-base font-bold text-gray-800 dark:text-gray-200 truncate">{t('orders.orderDetails')}</h1>
             <p className="text-[10px] font-mono text-gray-400">{order.orderId}</p>
           </div>
           {/* Document quick-access button — Credit Note for cancelled/returned orders, Invoice otherwise */}
@@ -732,7 +735,7 @@ function OrderDetailView({
                 ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30'
                 : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
             )}
-            title={showCreditNoteInstead ? 'View Credit Note' : 'View Invoice'}
+            title={showCreditNoteInstead ? t('orders.viewCreditNote') : t('orders.viewInvoice')}
           >
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{showCreditNoteInstead ? 'Credit Note' : 'Invoice'}</span>
@@ -766,11 +769,11 @@ function OrderDetailView({
 
             <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="text-gray-400">Order Date</span>
+                <span className="text-gray-400">{t('orders.orderDate')}</span>
                 <p className="font-semibold text-gray-700 dark:text-gray-300 mt-0.5">{formatDate(order.createdAt)}</p>
               </div>
               <div>
-                <span className="text-gray-400">Payment</span>
+                <span className="text-gray-400">{t('orders.payment')}</span>
                 <p className="font-semibold text-gray-700 dark:text-gray-300 mt-0.5 flex items-center gap-1">
                   {order.paymentMethod === 'cod' ? 'COD' : order.paymentMethodDetail === 'upi' ? 'UPI' : order.paymentMethodDetail === 'card' ? 'Card' : order.paymentMethodDetail === 'netbanking' ? 'Net Banking' : 'Online'}
                   {order.paymentStatus === 'paid' && (
@@ -780,7 +783,7 @@ function OrderDetailView({
               </div>
               {order.estimatedDelivery && (
                 <div>
-                  <span className="text-gray-400">Est. Delivery</span>
+                  <span className="text-gray-400">{t('orders.estDelivery')}</span>
                   <p className="font-semibold text-gray-700 dark:text-gray-300 mt-0.5">
                     {formatDate(order.estimatedDelivery)}
                   </p>
@@ -799,13 +802,13 @@ function OrderDetailView({
               )}
               {order.deliveredAt && (
                 <div>
-                  <span className="text-gray-400">Delivered On</span>
+                  <span className="text-gray-400">{t('orders.deliveredOn')}</span>
                   <p className="font-semibold text-emerald-600 mt-0.5">{formatDate(order.deliveredAt)}</p>
                 </div>
               )}
               {order.cancelledAt && (
                 <div>
-                  <span className="text-gray-400">Cancelled On</span>
+                  <span className="text-gray-400">{t('orders.cancelledOn')}</span>
                   <p className="font-semibold text-red-500 mt-0.5">{formatDate(order.cancelledAt)}</p>
                 </div>
               )}
@@ -901,7 +904,7 @@ function OrderDetailView({
                                 }}
                                 className="text-[10px] font-semibold text-orange-500 hover:text-orange-600 px-2 py-1 rounded transition-colors"
                               >
-                                Return
+                                {t('orders.return')}
                               </button>
                             )}
                           </div>
@@ -1359,7 +1362,7 @@ function OrderDetailView({
                 disabled={actionLoading === 'cancel'}
               >
                 {actionLoading === 'cancel' ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-                Cancel Order
+                {t('orders.cancelOrder')}
               </Button>
             )}
             {canReturn && order.items.length > 0 && (
@@ -1449,6 +1452,7 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const { totalItems: wishlistCount } = useWishlist()
+  const { t } = useLanguage()
 
   // Track if we've already attempted to load an order detail from URL orderId
   const urlOrderIdLoaded = useRef(false)
@@ -1579,8 +1583,8 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
             <div className="flex items-center gap-2">
               {onBack && <div className="h-8 w-8" />}
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200">My Orders</h1>
-                <span className="text-xs text-gray-400">(0 orders)</span>
+                <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200">{t('orders.title')}</h1>
+                <span className="text-xs text-gray-400">{t('orders.orderCount', { count: orders.length })}</span>
               </div>
             </div>
             <div className="flex items-center gap-0.5">
@@ -1632,7 +1636,7 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
                 </button>
               )}
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200">My Orders</h1>
+                <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200">{t('orders.title')}</h1>
               </div>
             </div>
             <div className="flex items-center gap-0.5">
@@ -1667,14 +1671,14 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
 
   // Status filter options
   const statusFilters = [
-    { value: '', label: 'All' },
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Processing', label: 'Processing' },
-    { value: 'Shipped', label: 'Shipped' },
-    { value: 'Out for Delivery', label: 'Out for Delivery' },
-    { value: 'Delivered', label: 'Delivered' },
-    { value: 'Cancelled', label: 'Cancelled' },
-    { value: 'Return Requested', label: 'Return' },
+    { value: '', label: t('orders.statusAll') },
+    { value: 'Pending', label: t('orders.statusPending') },
+    { value: 'Processing', label: t('orders.statusProcessing') },
+    { value: 'Shipped', label: t('orders.statusShipped') },
+    { value: 'Out for Delivery', label: t('orders.statusOutForDelivery') },
+    { value: 'Delivered', label: t('orders.statusDelivered') },
+    { value: 'Cancelled', label: t('orders.statusCancelled') },
+    { value: 'Return Requested', label: t('orders.statusReturn') },
   ]
 
   return (
@@ -1692,8 +1696,8 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
               </button>
             )}
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">My Orders</h1>
-              <span className="text-xs text-gray-400">({orders.length} order{orders.length !== 1 ? 's' : ''})</span>
+              <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">{t('orders.title')}</h1>
+              <span className="text-xs text-gray-400">{t('orders.orderCount', { count: orders.length })}</span>
             </div>
           </div>
 
@@ -1737,7 +1741,7 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by order ID, product, or seller..."
+                  placeholder={t('orders.searchPlaceholder')}
                   className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none"
                 />
                 {searchQuery && (
@@ -1797,9 +1801,9 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
               </div>
 
               <div className="text-center">
-                <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">No orders yet</h2>
+                <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">{t('orders.empty')}</h2>
                 <p className="text-sm text-gray-400 max-w-[250px]">
-                  Your orders will appear here once you place them. Start shopping to get going!
+                  {t('orders.emptyDesc')}
                 </p>
               </div>
               {onBack && (
@@ -1808,7 +1812,7 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
                   className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition-colors shadow-sm"
                 >
                   <ShoppingBag className="h-4 w-4" />
-                  Start Shopping
+                  {t('common.startShopping')}
                 </button>
               )}
             </motion.div>
@@ -1817,12 +1821,12 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
           /* Search no results */
           <div className="flex flex-col items-center justify-center p-6 min-h-[300px]">
             <Search className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
-            <p className="text-sm text-gray-500">No orders match &quot;{searchQuery}&quot;</p>
+            <p className="text-sm text-gray-500">{t('orders.noMatch', { query: searchQuery })}</p>
             <button
               onClick={() => setSearchQuery('')}
               className="mt-2 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
             >
-              Clear search
+              {t('common.clearSearch')}
             </button>
           </div>
         ) : (
@@ -1845,17 +1849,17 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
                   disabled={page === 1}
                   className="h-8 px-3 rounded-lg text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 disabled:opacity-40 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
                 >
-                  Previous
+                  {t('common.previous')}
                 </button>
                 <span className="text-xs text-gray-400">
-                  Page {page} of {totalPages}
+                  {t('orders.pageInfo', { page, total: totalPages })}
                 </span>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="h-8 px-3 rounded-lg text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 disabled:opacity-40 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
                 >
-                  Next
+                  {t('common.next')}
                 </button>
               </div>
             )}

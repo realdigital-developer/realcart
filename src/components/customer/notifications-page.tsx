@@ -27,12 +27,13 @@ import { cn } from '@/lib/utils'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
 import { Notification, NotificationType } from './types'
 import { PageHeader } from './page-header'
+import { useLanguage } from '@/components/providers/language-provider'
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-function getRelativeTime(dateStr: string): string {
+function getRelativeTime(dateStr: string, t: (key: string, params?: Record<string, string | number>) => string): string {
   try {
     const date = new Date(dateStr)
     const now = new Date()
@@ -42,11 +43,11 @@ function getRelativeTime(dateStr: string): string {
     const diffHours = Math.floor(diffMins / 60)
     const diffDays = Math.floor(diffHours / 24)
 
-    if (diffSecs < 60) return 'Just now'
-    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-    if (diffDays === 1) return 'Yesterday'
-    if (diffDays < 7) return `${diffDays} days ago`
+    if (diffSecs < 60) return t('common.justNow')
+    if (diffMins < 60) return diffMins === 1 ? t('notifications.minAgo', { count: diffMins }) : t('notifications.minsAgo', { count: diffMins })
+    if (diffHours < 24) return diffHours === 1 ? t('notifications.hourAgo', { count: diffHours }) : t('notifications.hoursAgo', { count: diffHours })
+    if (diffDays === 1) return t('common.yesterday')
+    if (diffDays < 7) return t('notifications.daysAgo', { count: diffDays })
     return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   } catch {
     return ''
@@ -54,13 +55,13 @@ function getRelativeTime(dateStr: string): string {
 }
 
 // Category mapping for filter tabs
-const categoryConfig: Record<string, { label: string; types: NotificationType[]; icon: React.ElementType; color: string }> = {
-  all: { label: 'All', types: [], icon: Bell, color: 'text-gray-600 dark:text-gray-400' },
-  orders: { label: 'Orders', types: ['order_placed', 'order_confirmed', 'order_shipped', 'order_out_for_delivery', 'order_delivered', 'order_cancelled'], icon: Package, color: 'text-blue-600 dark:text-blue-400' },
-  payments: { label: 'Payments', types: ['payment_success', 'payment_failed', 'refund_processed'], icon: CreditCard, color: 'text-violet-600 dark:text-violet-400' },
-  returns: { label: 'Returns', types: ['return_requested', 'return_completed'], icon: RotateCcw, color: 'text-amber-600 dark:text-amber-400' },
-  referrals: { label: 'Referrals', types: ['referral_reward', 'referral_joined'], icon: Gift, color: 'text-rose-600 dark:text-rose-400' },
-  wallet: { label: 'Balance', types: ['wallet_credit', 'wallet_debit', 'wallet_low_balance'], icon: Wallet, color: 'text-emerald-600 dark:text-emerald-400' },
+const categoryConfig: Record<string, { labelKey: string; types: NotificationType[]; icon: React.ElementType; color: string }> = {
+  all: { labelKey: 'notifications.filterAll', types: [], icon: Bell, color: 'text-gray-600 dark:text-gray-400' },
+  orders: { labelKey: 'notifications.filterOrders', types: ['order_placed', 'order_confirmed', 'order_shipped', 'order_out_for_delivery', 'order_delivered', 'order_cancelled'], icon: Package, color: 'text-blue-600 dark:text-blue-400' },
+  payments: { labelKey: 'notifications.filterPayments', types: ['payment_success', 'payment_failed', 'refund_processed'], icon: CreditCard, color: 'text-violet-600 dark:text-violet-400' },
+  returns: { labelKey: 'notifications.filterReturns', types: ['return_requested', 'return_completed'], icon: RotateCcw, color: 'text-amber-600 dark:text-amber-400' },
+  referrals: { labelKey: 'notifications.filterReferrals', types: ['referral_reward', 'referral_joined'], icon: Gift, color: 'text-rose-600 dark:text-rose-400' },
+  wallet: { labelKey: 'notifications.filterBalance', types: ['wallet_credit', 'wallet_debit', 'wallet_low_balance'], icon: Wallet, color: 'text-emerald-600 dark:text-emerald-400' },
 }
 
 function getNotificationIcon(type: NotificationType): { icon: React.ReactNode; bgColor: string; iconColor: string } {
@@ -119,6 +120,7 @@ function NotificationCard({
   notification: Notification
   onMarkRead: (id: string) => void
 }) {
+  const { t } = useLanguage()
   const { icon, bgColor, iconColor } = getNotificationIcon(notification.type)
 
   const handleClick = () => {
@@ -166,14 +168,14 @@ function NotificationCard({
             </p>
           </div>
           <span className="text-[10px] text-gray-400 flex-shrink-0 mt-0.5">
-            {getRelativeTime(notification.createdAt)}
+            {getRelativeTime(notification.createdAt, t)}
           </span>
         </div>
 
         {/* Navigate indicator */}
         {notification.relatedId && (
           <div className="flex items-center gap-1 mt-1.5 text-emerald-600 dark:text-emerald-400">
-            <span className="text-[11px] font-medium">View details</span>
+            <span className="text-[11px] font-medium">{t('common.viewDetails')}</span>
             <ArrowRight className="h-3 w-3" />
           </div>
         )}
@@ -187,6 +189,7 @@ function NotificationCard({
 /* ------------------------------------------------------------------ */
 
 export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void; onNavigate?: (tab: string, params?: Record<string, string>) => void }) {
+  const { t } = useLanguage()
   const { authenticated } = useCustomerAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
@@ -291,7 +294,7 @@ export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void;
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
       <PageHeader
-        title="Notifications"
+        title={t('notifications.title')}
         onBack={onBack}
         onNavigate={onNavigate}
         headerExtra={
@@ -308,7 +311,7 @@ export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void;
                 className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 disabled:opacity-50 transition-colors mr-1"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
-                {markingAll ? 'Marking...' : 'Mark all read'}
+                {markingAll ? t('notifications.marking') : t('notifications.markAllRead')}
               </button>
             )}
           </>
@@ -332,7 +335,7 @@ export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void;
                 )}
               >
                 <Icon className={cn('h-3.5 w-3.5', isActive ? 'text-white' : config.color)} />
-                {config.label}
+                {t(config.labelKey)}
                 {count > 0 && (
                   <span className={cn(
                     'text-[9px] rounded-full min-w-[16px] h-[16px] flex items-center justify-center font-bold px-1',
@@ -352,8 +355,8 @@ export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void;
         {!authenticated ? (
           <div className="flex flex-col items-center justify-center p-6 min-h-[300px]">
             <Bell className="h-12 w-12 text-gray-300 mb-3" />
-            <h2 className="text-base font-bold text-gray-700 dark:text-gray-300 mb-1">Login to view notifications</h2>
-            <p className="text-sm text-gray-400">Sign in to stay updated</p>
+            <h2 className="text-base font-bold text-gray-700 dark:text-gray-300 mb-1">{t('notifications.loginToView')}</h2>
+            <p className="text-sm text-gray-400">{t('notifications.signInToStayUpdated')}</p>
           </div>
         ) : loading ? (
           <div className="space-y-0">
@@ -378,12 +381,12 @@ export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void;
                 <BellOff className="h-8 w-8 text-gray-300 dark:text-gray-600" />
               </div>
               <h2 className="text-base font-bold text-gray-700 dark:text-gray-300">
-                {activeFilter === 'all' ? 'No notifications yet' : `No ${categoryConfig[activeFilter]?.label || ''} notifications`}
+                {activeFilter === 'all' ? 'No notifications yet' : t('notifications.emptyTitle', { category: t(categoryConfig[activeFilter]?.labelKey || '') })}
               </h2>
               <p className="text-sm text-gray-400 text-center max-w-[250px]">
                 {activeFilter === 'all'
-                  ? "We'll notify you about orders, payments, returns, referrals, and more"
-                  : `You have no ${categoryConfig[activeFilter]?.label || ''} notifications at this time`}
+                  ? t('notifications.emptyDesc')
+                  : t('notifications.emptyDescFiltered', { category: t(categoryConfig[activeFilter]?.labelKey || '') })}
               </p>
             </motion.div>
           </div>
@@ -406,7 +409,7 @@ export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void;
                   onClick={loadMore}
                   className="px-6 py-2 text-sm font-semibold text-emerald-600 border border-emerald-200 dark:border-emerald-800 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
                 >
-                  Load More
+                  {t('common.loadMore')}
                 </button>
               </div>
             )}

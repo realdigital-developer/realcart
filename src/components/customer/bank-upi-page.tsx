@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from './page-header'
+import { useLanguage } from '@/components/providers/language-provider'
 
 interface PaymentMethod {
   id: string
@@ -49,6 +50,7 @@ interface BankUpiPageProps {
 }
 
 export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
+  const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState<'bank' | 'upi' | 'card' | 'netbanking' | 'wallet'>('bank')
   const [methods, setMethods] = useState<PaymentMethod[]>([])
   const [loading, setLoading] = useState(true)
@@ -179,7 +181,7 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
     >
       {method.isDefault && (
         <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full">
-          <Star className="h-2.5 w-2.5 fill-emerald-500" /> Default
+          <Star className="h-2.5 w-2.5 fill-emerald-500" /> {t('common.default')}
         </span>
       )}
       <div className="flex items-center gap-3 mb-3">
@@ -201,11 +203,11 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-800">
         {!method.isDefault && (
           <button onClick={() => handleSetDefault(method.id)} className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1">
-            <Star className="h-3 w-3" /> Set Default
+            <Star className="h-3 w-3" /> {t('common.setDefault')}
           </button>
         )}
         <button onClick={() => setDeleteId(method.id)} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1 ml-auto">
-          <Trash2 className="h-3 w-3" /> Remove
+          <Trash2 className="h-3 w-3" /> {t('common.remove')}
         </button>
       </div>
     </motion.div>
@@ -220,7 +222,7 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
     >
       {method.isDefault && (
         <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full">
-          <Star className="h-2.5 w-2.5 fill-emerald-500" /> Default
+          <Star className="h-2.5 w-2.5 fill-emerald-500" /> {t('common.default')}
         </span>
       )}
       <div className="flex items-center gap-3 mb-3">
@@ -240,11 +242,11 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-800">
         {!method.isDefault && (
           <button onClick={() => handleSetDefault(method.id)} className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1">
-            <Star className="h-3 w-3" /> Set Default
+            <Star className="h-3 w-3" /> {t('common.setDefault')}
           </button>
         )}
         <button onClick={() => setDeleteId(method.id)} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1 ml-auto">
-          <Trash2 className="h-3 w-3" /> Remove
+          <Trash2 className="h-3 w-3" /> {t('common.remove')}
         </button>
       </div>
     </motion.div>
@@ -252,7 +254,7 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
-      <PageHeader title="Bank & UPI Details" onBack={onBack} onNavigate={onNavigate} />
+      <PageHeader title={t('bankUpi.title')} onBack={onBack} onNavigate={onNavigate} />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
@@ -263,26 +265,26 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error}</p>
-            <button onClick={fetchMethods} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">Retry</button>
+            <button onClick={fetchMethods} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">{t('common.retry')}</button>
           </div>
         ) : (
           <>
             {/* Tab switcher — horizontal scrollable for 5 tabs */}
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-4 overflow-x-auto scrollbar-none">
               <button onClick={() => setActiveTab('bank')} className={cn('py-2 px-3 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap', activeTab === 'bank' ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
-                <Landmark className="h-3.5 w-3.5" /> Bank ({bankAccounts.length})
+                <Landmark className="h-3.5 w-3.5" /> {t('bankUpi.tabBank')} ({bankAccounts.length})
               </button>
               <button onClick={() => setActiveTab('upi')} className={cn('py-2 px-3 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap', activeTab === 'upi' ? 'bg-white dark:bg-gray-900 text-violet-600 dark:text-violet-400 shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
-                <Smartphone className="h-3.5 w-3.5" /> UPI ({upiIds.length})
+                <Smartphone className="h-3.5 w-3.5" /> {t('bankUpi.tabUpi')} ({upiIds.length})
               </button>
               <button onClick={() => setActiveTab('card')} className={cn('py-2 px-3 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap', activeTab === 'card' ? 'bg-white dark:bg-gray-900 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
-                <CreditCard className="h-3.5 w-3.5" /> Cards ({cards.length})
+                <CreditCard className="h-3.5 w-3.5" /> {t('bankUpi.tabCards')} ({cards.length})
               </button>
               <button onClick={() => setActiveTab('netbanking')} className={cn('py-2 px-3 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap', activeTab === 'netbanking' ? 'bg-white dark:bg-gray-900 text-orange-600 dark:text-orange-400 shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
-                <Landmark className="h-3.5 w-3.5" /> Net Banking ({netbankingMethods.length})
+                <Landmark className="h-3.5 w-3.5" /> {t('bankUpi.tabNetBanking')} ({netbankingMethods.length})
               </button>
               <button onClick={() => setActiveTab('wallet')} className={cn('py-2 px-3 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap', activeTab === 'wallet' ? 'bg-white dark:bg-gray-900 text-pink-600 dark:text-pink-400 shadow-sm' : 'text-gray-500 dark:text-gray-400')}>
-                <Wallet className="h-3.5 w-3.5" /> Wallets ({wallets.length})
+                <Wallet className="h-3.5 w-3.5" /> {t('bankUpi.tabWallets')} ({wallets.length})
               </button>
             </div>
 
@@ -301,8 +303,8 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
                   {bankAccounts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4"><Landmark className="h-8 w-8 text-gray-300 dark:text-gray-600" /></div>
-                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No bank accounts added</p>
-                      <p className="text-xs text-gray-400 mt-1">Add a bank account for faster refunds</p>
+                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t('bankUpi.noBank')}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('bankUpi.noBankDesc')}</p>
                     </div>
                   ) : (
                     bankAccounts.map((method) => <BankCard key={method.id} method={method} />)
@@ -314,8 +316,8 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
                   {upiIds.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4"><Smartphone className="h-8 w-8 text-gray-300 dark:text-gray-600" /></div>
-                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No UPI IDs added</p>
-                      <p className="text-xs text-gray-400 mt-1">Add a UPI ID for faster checkout</p>
+                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t('bankUpi.noUpi')}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('bankUpi.noUpiDesc')}</p>
                     </div>
                   ) : (
                     upiIds.map((method) => <UpiCard key={method.id} method={method} />)
@@ -327,13 +329,13 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
                   {cards.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4"><CreditCard className="h-8 w-8 text-gray-300 dark:text-gray-600" /></div>
-                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No cards saved</p>
-                      <p className="text-xs text-gray-400 mt-1">Cards are saved automatically when you check 'Save payment method' during checkout</p>
+                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t('bankUpi.noCards')}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('bankUpi.noCardsDesc')}</p>
                     </div>
                   ) : (
                     cards.map((method) => (
                       <motion.div key={method.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 relative">
-                        {method.isDefault && <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full"><Star className="h-2.5 w-2.5 fill-emerald-500" /> Default</span>}
+                        {method.isDefault && <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full"><Star className="h-2.5 w-2.5 fill-emerald-500" /> {t('common.default')}</span>}
                         <div className="flex items-center gap-3 mb-2">
                           <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 flex-shrink-0"><CreditCard className="h-5 w-5" /></div>
                           <div>
@@ -343,8 +345,8 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
                         </div>
                         <p className="text-[10px] text-gray-400 mb-3">Saved automatically during checkout (RBI-compliant — only last 4 digits stored)</p>
                         <div className="flex items-center gap-2 pt-3 border-t border-gray-50 dark:border-gray-800">
-                          {!method.isDefault && <button onClick={() => handleSetDefault(method.id)} className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1"><Star className="h-3 w-3" /> Set Default</button>}
-                          <button onClick={() => setDeleteId(method.id)} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1 ml-auto"><Trash2 className="h-3 w-3" /> Remove</button>
+                          {!method.isDefault && <button onClick={() => handleSetDefault(method.id)} className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1"><Star className="h-3 w-3" /> {t('common.setDefault')}</button>}
+                          <button onClick={() => setDeleteId(method.id)} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1 ml-auto"><Trash2 className="h-3 w-3" /> {t('common.remove')}</button>
                         </div>
                       </motion.div>
                     ))
@@ -356,13 +358,13 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
                   {netbankingMethods.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4"><Landmark className="h-8 w-8 text-gray-300 dark:text-gray-600" /></div>
-                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No net banking accounts saved</p>
-                      <p className="text-xs text-gray-400 mt-1">Banks are saved automatically when you check 'Save payment method' during checkout</p>
+                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t('bankUpi.noNetBanking')}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('bankUpi.noNetBankingDesc')}</p>
                     </div>
                   ) : (
                     netbankingMethods.map((method) => (
                       <motion.div key={method.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 relative">
-                        {method.isDefault && <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full"><Star className="h-2.5 w-2.5 fill-emerald-500" /> Default</span>}
+                        {method.isDefault && <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full"><Star className="h-2.5 w-2.5 fill-emerald-500" /> {t('common.default')}</span>}
                         <div className="flex items-center gap-3 mb-2">
                           <div className="h-10 w-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400 flex-shrink-0"><Landmark className="h-5 w-5" /></div>
                           <div>
@@ -371,8 +373,8 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 pt-3 border-t border-gray-50 dark:border-gray-800">
-                          {!method.isDefault && <button onClick={() => handleSetDefault(method.id)} className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1"><Star className="h-3 w-3" /> Set Default</button>}
-                          <button onClick={() => setDeleteId(method.id)} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1 ml-auto"><Trash2 className="h-3 w-3" /> Remove</button>
+                          {!method.isDefault && <button onClick={() => handleSetDefault(method.id)} className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1"><Star className="h-3 w-3" /> {t('common.setDefault')}</button>}
+                          <button onClick={() => setDeleteId(method.id)} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1 ml-auto"><Trash2 className="h-3 w-3" /> {t('common.remove')}</button>
                         </div>
                       </motion.div>
                     ))
@@ -384,13 +386,13 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
                   {wallets.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4"><Wallet className="h-8 w-8 text-gray-300 dark:text-gray-600" /></div>
-                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No wallets saved</p>
-                      <p className="text-xs text-gray-400 mt-1">Wallets are saved automatically when you check 'Save payment method' during checkout</p>
+                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t('bankUpi.noWallets')}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('bankUpi.noWalletsDesc')}</p>
                     </div>
                   ) : (
                     wallets.map((method) => (
                       <motion.div key={method.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 relative">
-                        {method.isDefault && <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full"><Star className="h-2.5 w-2.5 fill-emerald-500" /> Default</span>}
+                        {method.isDefault && <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full"><Star className="h-2.5 w-2.5 fill-emerald-500" /> {t('common.default')}</span>}
                         <div className="flex items-center gap-3 mb-2">
                           <div className="h-10 w-10 rounded-xl bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center text-pink-600 dark:text-pink-400 flex-shrink-0"><Wallet className="h-5 w-5" /></div>
                           <div>
@@ -399,8 +401,8 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 pt-3 border-t border-gray-50 dark:border-gray-800">
-                          {!method.isDefault && <button onClick={() => handleSetDefault(method.id)} className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1"><Star className="h-3 w-3" /> Set Default</button>}
-                          <button onClick={() => setDeleteId(method.id)} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1 ml-auto"><Trash2 className="h-3 w-3" /> Remove</button>
+                          {!method.isDefault && <button onClick={() => handleSetDefault(method.id)} className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1"><Star className="h-3 w-3" /> {t('common.setDefault')}</button>}
+                          <button onClick={() => setDeleteId(method.id)} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1 ml-auto"><Trash2 className="h-3 w-3" /> {t('common.remove')}</button>
                         </div>
                       </motion.div>
                     ))
@@ -423,9 +425,9 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
         submitting={submitting}
         footer={
           <>
-            <Button variant="outline" onClick={() => setAddModalOpen(false)} className="rounded-xl">Cancel</Button>
+            <Button variant="outline" onClick={() => setAddModalOpen(false)} className="rounded-xl">{t('common.cancel')}</Button>
             <Button onClick={handleAdd} disabled={submitting} className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white">
-              {submitting ? 'Adding...' : 'Add'}
+              {submitting ? t('common.adding') : t('common.add')}
             </Button>
           </>
         }
@@ -457,8 +459,8 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
               <div>
                 <Label className="text-xs">Account Type</Label>
                 <select value={accountType} onChange={(e) => setAccountType(e.target.value)} className="mt-1 w-full h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm">
-                  <option value="savings">Savings</option>
-                  <option value="current">Current</option>
+                  <option value="savings">{t('bankUpi.savings')}</option>
+                  <option value="current">{t('bankUpi.current')}</option>
                 </select>
               </div>
             </>
@@ -487,8 +489,8 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
         description="Are you sure you want to remove this payment method?"
         footer={
           <>
-            <Button variant="outline" onClick={() => setDeleteId(null)} className="rounded-xl">Cancel</Button>
-            <Button onClick={handleDelete} className="rounded-xl bg-red-500 hover:bg-red-600 text-white">Remove</Button>
+            <Button variant="outline" onClick={() => setDeleteId(null)} className="rounded-xl">{t('common.cancel')}</Button>
+            <Button onClick={handleDelete} className="rounded-xl bg-red-500 hover:bg-red-600 text-white">{t('common.remove')}</Button>
           </>
         }
       >

@@ -38,6 +38,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PageHeader } from './page-header'
+import { useLanguage } from '@/components/providers/language-provider'
 
 interface WalletTransaction {
   id: string
@@ -57,6 +58,7 @@ interface WalletPageProps {
 }
 
 export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
+  const { t } = useLanguage()
   const [balance, setBalance] = useState(0)
   const [transactions, setTransactions] = useState<WalletTransaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -133,7 +135,7 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
       <PageHeader
-        title="RealCart Balance"
+        title={t('wallet.title')}
         onBack={onBack}
         onNavigate={onNavigate}
       />
@@ -152,8 +154,8 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-20 text-center px-4">
             <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error}</p>
-            <button onClick={fetchData} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">Retry</button>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error === 'Failed to load wallet data' ? t('wallet.loadFailed') : error}</p>
+            <button onClick={fetchData} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">{t('common.retry')}</button>
           </div>
         ) : (
           <div className="p-4 space-y-4 pb-8">
@@ -172,10 +174,10 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
                   <div className="h-8 w-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
                     <Wallet className="h-4 w-4" />
                   </div>
-                  <span className="text-xs font-semibold text-white/90 uppercase tracking-wider">RealCart Balance</span>
+                  <span className="text-xs font-semibold text-white/90 uppercase tracking-wider">{t('wallet.title')}</span>
                 </div>
                 <p className="text-3xl font-black tracking-tight">{formatPrice(balance)}</p>
-                <p className="text-[11px] text-white/70 mt-1">Available to spend on your next order</p>
+                <p className="text-[11px] text-white/70 mt-1">{t('wallet.availableToSpend')}</p>
               </div>
             </motion.div>
 
@@ -183,7 +185,7 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
             <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
               <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1.5">
                 <Sparkles className="h-4 w-4 text-amber-500" />
-                How You Earn Balance
+                {t('wallet.howYouEarn')}
               </h3>
               <div className="space-y-2.5">
                 <div className="flex gap-3">
@@ -191,8 +193,8 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
                     <Users className="h-4 w-4" />
                   </div>
                   <div className="flex-1 pt-0.5">
-                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Referral Rewards</p>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">Earn rewards when friends you invite place their first order</p>
+                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{t('wallet.referralRewards')}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">{t('wallet.referralRewardsDesc')}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -200,8 +202,8 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
                     <Tag className="h-4 w-4" />
                   </div>
                   <div className="flex-1 pt-0.5">
-                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Promotions & Cashback</p>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">Get cashback and bonuses from promotional offers</p>
+                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{t('wallet.promotionsCashback')}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">{t('wallet.promotionsCashbackDesc')}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -209,8 +211,8 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
                     <RotateCcw className="h-4 w-4" />
                   </div>
                   <div className="flex-1 pt-0.5">
-                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Refunds</p>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">Cancelled or returned order refunds are credited here</p>
+                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{t('wallet.refunds')}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">{t('wallet.refundsDesc')}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -218,8 +220,8 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
                     <ShoppingBag className="h-4 w-4" />
                   </div>
                   <div className="flex-1 pt-0.5">
-                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Shop & Pay</p>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">Use your balance at checkout for instant, hassle-free payments</p>
+                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{t('wallet.shopPay')}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">{t('wallet.shopPayDesc')}</p>
                   </div>
                 </div>
               </div>
@@ -232,14 +234,14 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
                   <ArrowDownLeft className="h-4 w-4" />
                 </div>
                 <p className="text-lg font-bold text-gray-800 dark:text-gray-200 leading-none">{formatPrice(totalCredited)}</p>
-                <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">Total Credited</p>
+                <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">{t('wallet.totalCredited')}</p>
               </div>
               <div className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-100 dark:border-gray-800">
                 <div className="h-8 w-8 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-2">
                   <ArrowUpRight className="h-4 w-4" />
                 </div>
                 <p className="text-lg font-bold text-gray-800 dark:text-gray-200 leading-none">{formatPrice(totalDebited)}</p>
-                <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">Total Spent</p>
+                <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">{t('wallet.totalSpent')}</p>
               </div>
             </div>
 
@@ -248,7 +250,7 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
               <div className="flex items-center justify-between p-4 border-b border-gray-50 dark:border-gray-800">
                 <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
                   <TrendingUp className="h-4 w-4 text-blue-500" />
-                  Transaction History
+                  {t('wallet.transactionHistory')}
                 </h3>
                 <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
                   {(['all', 'credit', 'debit'] as const).map((f) => (
@@ -262,7 +264,7 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
                           : 'text-gray-500 dark:text-gray-400'
                       )}
                     >
-                      {f === 'all' ? 'All' : f === 'credit' ? 'In' : 'Out'}
+                      {f === 'all' ? t('wallet.filterAll') : f === 'credit' ? t('wallet.filterIn') : t('wallet.filterOut')}
                     </button>
                   ))}
                 </div>
@@ -274,12 +276,12 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
                     <Wallet className="h-8 w-8 text-gray-300 dark:text-gray-600" />
                   </div>
                   <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                    {filter === 'all' ? 'No transactions yet' : filter === 'credit' ? 'No credits yet' : 'No debits yet'}
+                    {filter === 'all' ? t('wallet.noTransactions') : filter === 'credit' ? t('wallet.noCredits') : t('wallet.noDebits')}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
                     {filter === 'all'
-                      ? 'Earn referral rewards or get refunds to build your balance'
-                      : 'Transactions will appear here'}
+                      ? t('wallet.emptyDesc1')
+                      : t('wallet.emptyDesc2')}
                   </p>
                 </div>
               ) : (
@@ -302,7 +304,7 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
             <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/20">
               <Info className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
               <p className="text-[11px] text-blue-700 dark:text-blue-400 leading-relaxed">
-                RealCart Balance is earned through referral rewards, promotional cashback, and refunds — it cannot be loaded manually. Use it for purchases at checkout. Balance is non-transferable and cannot be withdrawn to bank accounts.
+                {t('wallet.infoNote')}
               </p>
             </div>
           </div>
