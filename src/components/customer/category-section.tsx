@@ -8,33 +8,61 @@ import { cn } from '@/lib/utils'
 
 interface CategorySectionProps {
   onCategoryClick?: (categoryName: string) => void
+  /**
+   * Cached categories from the parent (HomeContentWrapper). When provided,
+   * the section renders them instantly WITHOUT fetching — this is what
+   * makes the home tab feel "real-time" on re-visits because the data
+   * persists across tab switches at the parent level.
+   *
+   * When omitted (undefined), the section falls back to its own internal
+   * fetch — keeping it backward-compatible for any other usage.
+   */
+  categories?: CategoryItem[]
+  /**
+   * Loading flag from the parent. Only meaningful when `categories` is
+   * provided. When `categories` is provided AND `loading` is false, the
+   * skeleton is hidden and the data is shown immediately.
+   */
+  loading?: boolean
 }
 
-export function CategorySection({ onCategoryClick }: CategorySectionProps) {
-  const [categories, setCategories] = useState<CategoryItem[]>([])
-  const [loading, setLoading] = useState(true)
+export function CategorySection({ onCategoryClick, categories: propCategories, loading: propLoading }: CategorySectionProps = {}) {
+  // Local state — only used when no cached props are provided (fallback mode)
+  const [localCategories, setLocalCategories] = useState<CategoryItem[]>([])
+  const [localLoading, setLocalLoading] = useState(true)
 
+  // ── Fallback fetch — only runs when the parent does NOT supply cached data ──
   useEffect(() => {
+    // If the parent is managing categories, skip the internal fetch entirely
+    if (propCategories !== undefined) return
+
+    let cancelled = false
     async function fetchCategories() {
       try {
-        // cache: 'no-store' ensures the browser never serves a stale cached
-        // response — the admin's reorder is always reflected immediately.
         const res = await fetch('/api/categories', {
           signal: AbortSignal.timeout(10000),
           cache: 'no-store',
         })
         const data = await res.json()
-        if (res.ok && data.categories && Array.isArray(data.categories)) {
-          setCategories(data.categories)
+        if (!cancelled && res.ok && data.categories && Array.isArray(data.categories)) {
+          setLocalCategories(data.categories)
         }
       } catch (err) {
         console.error('Failed to fetch categories:', err)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLocalLoading(false)
       }
     }
     fetchCategories()
-  }, [])
+    return () => { cancelled = true }
+  }, [propCategories])
+
+  // Resolve which data + loading state to use:
+  //   • Parent-managed mode (propCategories !== undefined) → use props directly
+  //   • Fallback mode → use local state
+  const useParentCache = propCategories !== undefined
+  const categories = useParentCache ? propCategories! : localCategories
+  const loading = useParentCache ? (propLoading ?? false) : localLoading
 
   return (
     <div className="categories-bg w-full relative overflow-hidden">

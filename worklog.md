@@ -2744,3 +2744,32 @@ Stage Summary:
 - 10 locale files (602 keys each), 5 component files updated, 267 new keys added.
 - Lint: 0 errors. Dev server: stable, all pages HTTP 200, no console errors. Verified via Agent Browser across Hindi + Tamil + English.
 - No existing UI or code was damaged — only English string literals were replaced with t() calls; all styling, layout, icons, and logic are untouched.
+
+---
+Task ID: realtime-categories-home
+Agent: main-orchestrator
+Task: Fix slow category loading on customer panel home page — categories should show in real-time when customer clicks the Home tab, not re-fetch every time.
+
+Work Log:
+- Root cause analysis: The CategorySection component fetches /api/categories in a useEffect with [] deps. Because the home tab content is conditionally rendered (`{activeTab === 'home' && (...)}`), the CategorySection UNMOUNTS when the customer navigates to another tab and REMOUNTS when they return — triggering a fresh fetch + loading skeleton every single time. The server-side cache (30s TTL) makes the API fast (~7ms on cache hit), but the client-side re-fetch + skeleton still causes a visible delay on every home tab re-visit.
+- Verified the API: 11 parent categories + 197 subcategories, 56KB response. Server cache works well (7ms on hit, ~700-900ms on miss). The problem was purely client-side: unnecessary re-fetching on component remount.
+- Solution: Lifted the categories fetch from CategorySection up to HomeContentWrapper (the parent that manages all tabs and persists across tab switches).
+  * Added `cachedCategories` + `categoriesLoaded` state to HomeContentWrapper.
+  * Added a useEffect that fetches /api/categories ONCE on mount (empty deps) — the data then lives in parent state for the entire customer session.
+  * Passed `categories={cachedCategories}` and `loading={!categoriesLoaded}` as props to CategorySection.
+  * Modified CategorySection to accept optional `categories` and `loading` props. When `categories` is provided (not undefined), it renders the cached data directly WITHOUT fetching — showing categories instantly. When omitted, it falls back to its own internal fetch (backward compatible for any other usage). Added a cleanup flag (`cancelled`) to prevent state updates after unmount.
+- No other files were touched. No styling, layout, icons, or logic changed — only the data flow was optimized.
+- Ran `bun run lint`: 0 errors, 24 warnings (all pre-existing, none new).
+- Agent Browser verification (with test customer login):
+  * First visit to Home: 11 categories loaded (fetch happens once).
+  * Home → Cart → Home: 11 categories instantly, 0 skeletons (no re-fetch).
+  * Home → Account → Home: 11 categories instantly, 0 skeletons.
+  * Home → Orders → Home: 11 categories instantly, 0 skeletons.
+  * No console errors during any tab switch.
+  * Categories appear the instant the Home tab is clicked — true real-time behavior.
+
+Stage Summary:
+- Categories now load in real-time on the home tab. The data is fetched ONCE when the customer panel mounts and cached in HomeContentWrapper's state. All subsequent Home tab visits show categories instantly from the cache — no loading skeleton, no re-fetch, no delay.
+- The CategorySection component is now backward-compatible: it uses cached props when provided, and falls back to its own fetch when used standalone.
+- Lint: 0 errors. Dev server: stable, no console errors. Verified via Agent Browser across 3+ tab switches.
+- No existing UI or code was damaged — only the data flow was optimized to eliminate redundant re-fetching.

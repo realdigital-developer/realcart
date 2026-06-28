@@ -13,7 +13,7 @@ import { useBackToExit } from '@/hooks/use-back-to-exit'
 import { ExitToast } from './exit-toast'
 import { ImageSearchDialog } from './image-search-dialog'
 import { useLanguage } from '@/components/providers/language-provider'
-import type { Product } from './types'
+import type { Product, CategoryItem } from './types'
 
 // Dynamic imports with ssr: false
 const CategorySection = dynamic(() => import('./category-section').then(m => ({ default: m.CategorySection })), { ssr: false })
@@ -191,6 +191,38 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
   // Payment success notification (from redirect callback)
   const [paymentSuccessInfo, setPaymentSuccessInfo] = useState<{ orderNumber: string } | null>(null)
   const [paymentErrorInfo, setPaymentErrorInfo] = useState<string | null>(null)
+
+  // ── Categories cache (client-side) ──────────────────────────────────
+  // Fetch ONCE when the customer panel mounts, then keep the data in state
+  // so that every subsequent visit to the Home tab shows categories
+  // INSTANTLY — no loading skeleton, no re-fetch.  This is the key
+  // optimisation that makes the home tab feel "real-time": the
+  // CategorySection component unmounts/remounts on every tab switch, but
+  // the data lives here in the parent and is passed down as props.
+  const [cachedCategories, setCachedCategories] = useState<CategoryItem[]>([])
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function fetchCategories() {
+      try {
+        const res = await fetch('/api/categories', {
+          signal: AbortSignal.timeout(10000),
+          cache: 'no-store',
+        })
+        const data = await res.json()
+        if (!cancelled && res.ok && data.categories && Array.isArray(data.categories)) {
+          setCachedCategories(data.categories)
+        }
+      } catch (err) {
+        console.error('Failed to fetch categories:', err)
+      } finally {
+        if (!cancelled) setCategoriesLoaded(true)
+      }
+    }
+    fetchCategories()
+    return () => { cancelled = true }
+  }, [])
 
   // Check for payment callback URL params on mount
   const searchParams = useSearchParams()
@@ -487,7 +519,10 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
               }}
               initialQuery=""
             />
-            <CategorySection onCategoryClick={(categoryName) => {
+            <CategorySection
+              categories={cachedCategories}
+              loading={!categoriesLoaded}
+              onCategoryClick={(categoryName) => {
               setSearchQuery('')
               setProductsSubcategoryFilter(undefined)
               setProductsCategoryFilter(categoryName)
