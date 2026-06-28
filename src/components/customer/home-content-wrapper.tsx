@@ -632,7 +632,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
             exit="exit"
             className="flex-1 overflow-y-auto"
           >
-            <CategoriesPage onBack={pageOnBack} onNavigate={(tab, params) => {
+            <CategoriesPage categories={cachedCategories} loading={!categoriesLoaded} onBack={pageOnBack} onNavigate={(tab, params) => {
               if (tab === 'products' && (params?.category || params?.subcategory)) {
                 setSearchQuery('')
                 setImageSearchResults(null)

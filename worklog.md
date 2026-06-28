@@ -2942,3 +2942,36 @@ Stage Summary:
 - Local and remote SHAs match exactly: fc37e3cad8040810c0bab3b375abee173d127c5b (IN SYNC).
 - All 10 locale files confirmed present on GitHub.
 - No sensitive files tracked. No errors. No damage to existing UI or code.
+
+---
+Task ID: realtime-categories-page
+Agent: main-orchestrator
+Task: Fix slow loading of categories and subcategories on the customer panel Categories PAGE (dedicated Categories tab). All categories and subcategories should show in real-time with existing motion effects when customer clicks the Categories tab.
+
+Work Log:
+- Root cause analysis: The CategoriesPage component (categories-page.tsx) fetched /api/categories in its own useEffect on mount. Because the categories tab content is conditionally rendered (`{activeTab === 'categories' && (...)}`), the component UNMOUNTED when navigating away and REMOUNTED when returning — triggering a fresh fetch + loading skeleton every single time the customer clicked the Categories tab. The server cache made the API fast (~7ms on hit), but the client-side re-fetch + skeleton still caused a visible delay.
+- Solution: Reused the existing cachedCategories from HomeContentWrapper (already fetched once on mount for the home page CategorySection). Passed it to CategoriesPage as props — same proven pattern used for CategorySection, HeroSlider, and HomeContentSections.
+  * Modified CategoriesPage to accept optional `categories` and `loading` props (backward compatible).
+  * When props are provided (useParentCache=true), the component uses the cached data directly WITHOUT fetching.
+  * When omitted, falls back to its own internal fetch (backward compatible for standalone use).
+  * Extracted the activeCategoryId initialization logic into a separate useEffect that runs when cached data is available — respects URL categoryId param, validates it exists, and syncs the URL. This runs in BOTH parent-managed and fallback modes.
+  * Added a cleanup flag (`cancelled`) to the fallback fetch to prevent state updates after unmount.
+  * Passed `categories={cachedCategories}` and `loading={!categoriesLoaded}` from HomeContentWrapper to CategoriesPage.
+- ALL existing functionality preserved: two-panel layout (sidebar + content), highlight sections grouping, subcategory display, search, URL categoryId syncing, framer-motion animations, cart/wishlist badges, language translations.
+- No other files were touched. No styling, layout, icons, or motion logic changed — only the data-fetching was optimized.
+- Ran `bun run lint`: 0 errors, 24 warnings (all pre-existing, none new).
+- Agent Browser verification (with test customer login):
+  * First visit to Categories tab: all content loaded (h1="All Categories", 53 images, 6 section headers: Topwears/Bottomwear/Ethnic Wear, 62 sidebar items, 0 skeletons).
+  * Categories → Cart → Categories: INSTANT (53 images, 0 skeletons, h1="All Categories").
+  * Categories → Account → Categories: INSTANT (53 images, 0 skeletons).
+  * Categories → Orders → Categories: INSTANT (53 images, 0 skeletons).
+  * 14 framer-motion animated elements confirmed (existing motion effects preserved).
+  * Subcategory interaction works: clicking a category in the sidebar updates the highlight sections.
+  * No console errors during any tab switch.
+
+Stage Summary:
+- Categories and subcategories now load in real-time on the Categories page. The data is fetched ONCE when the customer panel mounts (already cached in HomeContentWrapper for the home page CategorySection) and reused for the CategoriesPage. All subsequent Categories tab visits show all categories and subcategories instantly from the cache — no loading skeleton, no re-fetch, no delay.
+- All existing motion effects and functionality are fully preserved: two-panel layout, highlight sections, subcategory display, search, URL syncing, framer-motion animations.
+- The CategoriesPage component is backward-compatible: uses cached props when provided, falls back to its own fetch when used standalone.
+- Lint: 0 errors. Dev server: stable, no console errors. Verified via Agent Browser across 3+ tab switches.
+- No existing UI or code was damaged — only the data flow was optimized to reuse the existing cache.

@@ -25,11 +25,23 @@ interface HighlightSection {
 interface CategoriesPageProps {
   onNavigate?: (tab: string, params?: Record<string, string>) => void
   onBack?: () => void
+  /**
+   * Cached categories from the parent (HomeContentWrapper). When provided,
+   * the page renders them instantly WITHOUT fetching — making the
+   * Categories tab feel "real-time" on re-visits because the data
+   * persists across tab switches at the parent level.
+   *
+   * When omitted (undefined), the page falls back to its own internal
+   * fetch — keeping it backward-compatible for any other usage.
+   */
+  categories?: CategoryItem[]
+  loading?: boolean
 }
 
-export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {}) {
-  const [categories, setCategories] = useState<CategoryItem[]>([])
-  const [loading, setLoading] = useState(true)
+export function CategoriesPage({ onNavigate, onBack, categories: propCategories, loading: propLoading }: CategoriesPageProps = {}) {
+  // Local state — only used when no cached props are provided (fallback mode)
+  const [localCategories, setLocalCategories] = useState<CategoryItem[]>([])
+  const [localLoading, setLocalLoading] = useState(true)
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearch, setShowSearch] = useState(false)
@@ -50,40 +62,58 @@ export function CategoriesPage({ onNavigate, onBack }: CategoriesPageProps = {})
     window.history.replaceState({}, '', url.toString())
   }, [])
 
-  // Fetch categories from the public API
+  // ── Resolve which data + loading state to use ──
+  //   • Parent-managed mode (propCategories !== undefined) → use props directly
+  //   • Fallback mode → use local state (fetched internally)
+  const useParentCache = propCategories !== undefined
+  const categories = useParentCache ? propCategories! : localCategories
+  const loading = useParentCache ? (propLoading ?? false) : localLoading
+
+  // ── Initialize activeCategoryId from URL when data is available ──
+  // This runs both in parent-managed mode (when cached categories arrive)
+  // AND in fallback mode (after the internal fetch completes). It ensures
+  // the URL's categoryId param is respected and synced.
   useEffect(() => {
+    if (loading || categories.length === 0) return
+
+    // Read categoryId from URL first; fall back to first category
+    let initialCategoryId: string | null = null
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      initialCategoryId = params.get('categoryId')
+    }
+    // Validate that the URL categoryId exists in the fetched categories
+    const validId = initialCategoryId && categories.some((c: CategoryItem) => c._id === initialCategoryId)
+      ? initialCategoryId
+      : categories[0]._id
+    setActiveCategoryId(validId)
+    // Sync URL with the resolved categoryId
+    updateUrlCategoryId(validId)
+  }, [categories, loading, updateUrlCategoryId])
+
+  // ── Fallback fetch — only runs when the parent does NOT supply cached data ──
+  useEffect(() => {
+    if (useParentCache) return
+
+    let cancelled = false
     async function fetchCategories() {
       try {
         // cache: 'no-store' ensures the browser never serves a stale cached
         // response — the admin's reorder is always reflected immediately.
         const res = await fetch('/api/categories', { cache: 'no-store' })
         const data = await res.json()
-        if (res.ok && data.categories) {
-          setCategories(data.categories)
-          if (data.categories.length > 0) {
-            // Read categoryId from URL first; fall back to first category
-            let initialCategoryId: string | null = null
-            if (typeof window !== 'undefined') {
-              const params = new URLSearchParams(window.location.search)
-              initialCategoryId = params.get('categoryId')
-            }
-            // Validate that the URL categoryId exists in the fetched categories
-            const validId = initialCategoryId && data.categories.some((c: CategoryItem) => c._id === initialCategoryId)
-              ? initialCategoryId
-              : data.categories[0]._id
-            setActiveCategoryId(validId)
-            // Sync URL with the resolved categoryId
-            updateUrlCategoryId(validId)
-          }
+        if (!cancelled && res.ok && data.categories) {
+          setLocalCategories(data.categories)
         }
       } catch (err) {
         console.error('Failed to fetch categories:', err)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLocalLoading(false)
       }
     }
     fetchCategories()
-  }, [updateUrlCategoryId])
+    return () => { cancelled = true }
+  }, [useParentCache])
 
   // Auto-focus search input when opened
   useEffect(() => {
