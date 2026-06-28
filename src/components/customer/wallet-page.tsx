@@ -22,7 +22,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
-  ArrowLeft,
   Wallet,
   ArrowDownLeft,
   ArrowUpRight,
@@ -38,6 +37,7 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PageHeader } from './page-header'
 
 interface WalletTransaction {
   id: string
@@ -53,9 +53,10 @@ interface WalletTransaction {
 
 interface WalletPageProps {
   onBack?: () => void
+  onNavigate?: (tab: string, params?: Record<string, string>) => void
 }
 
-export function WalletPage({ onBack }: WalletPageProps) {
+export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
   const [balance, setBalance] = useState(0)
   const [transactions, setTransactions] = useState<WalletTransaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -131,20 +132,16 @@ export function WalletPage({ onBack }: WalletPageProps) {
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-3 px-3 h-12">
-          {onBack && (
-            <button onClick={onBack} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Go back">
-              <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-            </button>
-          )}
-          <h1 className="text-base font-bold text-gray-800 dark:text-gray-200">RealCart Balance</h1>
-          <button onClick={fetchData} className="ml-auto h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Refresh">
+      <PageHeader
+        title="RealCart Balance"
+        onBack={onBack}
+        onNavigate={onNavigate}
+        headerExtra={
+          <button onClick={fetchData} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Refresh">
             <RefreshCw className={cn('h-4 w-4 text-gray-500', loading && 'animate-spin')} />
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">

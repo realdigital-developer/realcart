@@ -18,7 +18,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  ArrowLeft,
   Store,
   Star,
   Package,
@@ -35,6 +34,7 @@ import {
 import { cn } from '@/lib/utils'
 import AdminModal from '@/components/admin/admin-modal'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from './page-header'
 
 interface FollowedSeller {
   id: string
@@ -52,10 +52,11 @@ interface FollowedSeller {
 
 interface FollowedSellersPageProps {
   onBack?: () => void
+  onNavigate?: (tab: string, params?: Record<string, string>) => void
   onNavigateToProducts?: (sellerId?: string, storeName?: string) => void
 }
 
-export function FollowedSellersPage({ onBack }: FollowedSellersPageProps) {
+export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageProps) {
   const router = useRouter()
   const [sellers, setSellers] = useState<FollowedSeller[]>([])
   const [loading, setLoading] = useState(true)
@@ -116,20 +117,16 @@ export function FollowedSellersPage({ onBack }: FollowedSellersPageProps) {
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-3 px-3 h-12">
-          {onBack && (
-            <button onClick={onBack} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Go back">
-              <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-            </button>
-          )}
-          <h1 className="text-base font-bold text-gray-800 dark:text-gray-200">Followed Sellers</h1>
-          <button onClick={fetchSellers} className="ml-auto h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Refresh">
+      <PageHeader
+        title="Followed Sellers"
+        onBack={onBack}
+        onNavigate={onNavigate}
+        headerExtra={
+          <button onClick={fetchSellers} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Refresh">
             <RefreshCw className={cn('h-4 w-4 text-gray-500', loading && 'animate-spin')} />
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">

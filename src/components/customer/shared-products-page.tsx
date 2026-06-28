@@ -13,7 +13,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Share2, Package, RefreshCw } from 'lucide-react'
+import { Share2, Package, RefreshCw } from 'lucide-react'
+import { PageHeader } from './page-header'
 
 interface SharedProduct {
   _id: string
@@ -30,9 +31,10 @@ interface SharedProduct {
 
 interface SharedProductsPageProps {
   onBack?: () => void
+  onNavigate?: (tab: string, params?: Record<string, string>) => void
 }
 
-export function SharedProductsPage({ onBack }: SharedProductsPageProps) {
+export function SharedProductsPage({ onBack, onNavigate }: SharedProductsPageProps) {
   const router = useRouter()
   const [products, setProducts] = useState<SharedProduct[]>([])
   const [loading, setLoading] = useState(true)
@@ -80,24 +82,16 @@ export function SharedProductsPage({ onBack }: SharedProductsPageProps) {
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-3 px-3 h-12">
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-            </button>
-          )}
-          <h1 className="text-base font-bold text-gray-800 dark:text-gray-200">Shared Products</h1>
-          {products.length > 0 && (
-            <span className="text-xs text-gray-400 ml-auto">{products.length} item{products.length !== 1 ? 's' : ''}</span>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Shared Products"
+        onBack={onBack}
+        onNavigate={onNavigate}
+        headerExtra={
+          products.length > 0 ? (
+            <span className="text-xs text-gray-400 mr-1">{products.length} item{products.length !== 1 ? 's' : ''}</span>
+          ) : undefined
+        }
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">

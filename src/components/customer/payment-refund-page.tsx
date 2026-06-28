@@ -10,9 +10,10 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, CreditCard, RotateCcw, RefreshCw, Package, CheckCircle2, Clock, XCircle, Banknote, Smartphone, Wallet, ShoppingBag } from 'lucide-react'
+import { CreditCard, RotateCcw, RefreshCw, Package, CheckCircle2, Clock, XCircle, Banknote, Smartphone, Wallet, ShoppingBag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import AdminModal from '@/components/admin/admin-modal'
+import { PageHeader } from './page-header'
 
 interface PaymentItem {
   name: string
@@ -63,9 +64,10 @@ interface Refund {
 
 interface PaymentRefundPageProps {
   onBack?: () => void
+  onNavigate?: (tab: string, params?: Record<string, string>) => void
 }
 
-export function PaymentRefundPage({ onBack }: PaymentRefundPageProps) {
+export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps) {
   const [activeTab, setActiveTab] = useState<'payments' | 'refunds'>('payments')
   const [payments, setPayments] = useState<Payment[]>([])
   const [refunds, setRefunds] = useState<Refund[]>([])
@@ -163,17 +165,7 @@ export function PaymentRefundPage({ onBack }: PaymentRefundPageProps) {
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-3 px-3 h-12">
-          {onBack && (
-            <button onClick={onBack} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Go back">
-              <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-            </button>
-          )}
-          <h1 className="text-base font-bold text-gray-800 dark:text-gray-200">Payment & Refund</h1>
-        </div>
-      </div>
+      <PageHeader title="Payment & Refund" onBack={onBack} onNavigate={onNavigate} />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">

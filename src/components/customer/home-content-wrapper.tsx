@@ -30,7 +30,7 @@ const HomeSections = dynamic(() => import('./home-sections'), { ssr: false })
 const ProfilePage = dynamic(() => import('./profile-page').then(m => ({ default: m.ProfilePage })), { ssr: false })
 const AddressesPage = dynamic(() => import('./addresses-page').then(m => ({ default: m.AddressesPage })), { ssr: false })
 const OrdersPage = dynamic(() => import('./orders-page').then(m => ({ default: m.OrdersPage })), { ssr: false })
-const BlankPage = dynamic(() => import('./blank-page').then(m => ({ default: m.BlankPage })), { ssr: false })
+const LanguagePage = dynamic(() => import('./language-page').then(m => ({ default: m.LanguagePage })), { ssr: false })
 const SharedProductsPage = dynamic(() => import('./shared-products-page').then(m => ({ default: m.SharedProductsPage })), { ssr: false })
 const PaymentRefundPage = dynamic(() => import('./payment-refund-page').then(m => ({ default: m.PaymentRefundPage })), { ssr: false })
 const BankUpiPage = dynamic(() => import('./bank-upi-page').then(m => ({ default: m.BankUpiPage })), { ssr: false })
@@ -671,42 +671,42 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
         {/* ── New account sub-tabs (blank pages) ── */}
         {activeTab === 'payment-refund' && (
           <motion.div key="payment-refund-tab" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="flex-1 overflow-y-auto">
-            <PaymentRefundPage onBack={pageOnBack} />
+            <PaymentRefundPage onBack={pageOnBack} onNavigate={handleAccountNavigate} />
           </motion.div>
         )}
         {activeTab === 'bank-upi' && (
           <motion.div key="bank-upi-tab" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="flex-1 overflow-y-auto">
-            <BankUpiPage onBack={pageOnBack} />
+            <BankUpiPage onBack={pageOnBack} onNavigate={handleAccountNavigate} />
           </motion.div>
         )}
         {activeTab === 'language' && (
           <motion.div key="language-tab" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="flex-1 overflow-y-auto">
-            <BlankPage title="Change Language" description="Select your preferred language for the app interface." onBack={pageOnBack} />
+            <LanguagePage onBack={pageOnBack} onNavigate={handleAccountNavigate} />
           </motion.div>
         )}
         {activeTab === 'shared-products' && (
           <motion.div key="shared-products-tab" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="flex-1 overflow-y-auto">
-            <SharedProductsPage onBack={pageOnBack} />
+            <SharedProductsPage onBack={pageOnBack} onNavigate={handleAccountNavigate} />
           </motion.div>
         )}
         {activeTab === 'followed-shop' && (
           <motion.div key="followed-shop-tab" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="flex-1 overflow-y-auto">
-            <FollowedSellersPage onBack={pageOnBack} />
+            <FollowedSellersPage onBack={pageOnBack} onNavigate={handleAccountNavigate} />
           </motion.div>
         )}
         {activeTab === 'wallet' && (
           <motion.div key="wallet-tab" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="flex-1 overflow-y-auto">
-            <WalletPage onBack={pageOnBack} />
+            <WalletPage onBack={pageOnBack} onNavigate={handleAccountNavigate} />
           </motion.div>
         )}
         {activeTab === 'referral' && (
           <motion.div key="referral-tab" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="flex-1 overflow-y-auto">
-            <ReferralPage onBack={pageOnBack} />
+            <ReferralPage onBack={pageOnBack} onNavigate={handleAccountNavigate} />
           </motion.div>
         )}
         {activeTab === 'help' && (
           <motion.div key="help-tab" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="flex-1 overflow-y-auto">
-            <HelpSupportPage onBack={pageOnBack} />
+            <HelpSupportPage onBack={pageOnBack} onNavigate={handleAccountNavigate} />
           </motion.div>
         )}
 

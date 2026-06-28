@@ -11,7 +11,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  ArrowLeft,
   HelpCircle,
   Phone,
   Mail,
@@ -29,6 +28,7 @@ import {
   Search,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PageHeader } from './page-header'
 
 interface FAQQuestion {
   id: string
@@ -46,6 +46,7 @@ interface FAQCategory {
 
 interface HelpSupportPageProps {
   onBack?: () => void
+  onNavigate?: (tab: string, params?: Record<string, string>) => void
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -67,7 +68,7 @@ const colorMap: Record<string, { bg: string; text: string }> = {
   cyan: { bg: 'bg-cyan-50 dark:bg-cyan-900/20', text: 'text-cyan-600 dark:text-cyan-400' },
 }
 
-export function HelpSupportPage({ onBack }: HelpSupportPageProps) {
+export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
   const [faqCategories, setFaqCategories] = useState<FAQCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -110,20 +111,16 @@ export function HelpSupportPage({ onBack }: HelpSupportPageProps) {
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-3 px-3 h-12">
-          {onBack && (
-            <button onClick={onBack} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Go back">
-              <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-            </button>
-          )}
-          <h1 className="text-base font-bold text-gray-800 dark:text-gray-200">Help & Support</h1>
-          <button onClick={fetchData} className="ml-auto h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Refresh">
+      <PageHeader
+        title="Help & Support"
+        onBack={onBack}
+        onNavigate={onNavigate}
+        headerExtra={
+          <button onClick={fetchData} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Refresh">
             <RefreshCw className={cn('h-4 w-4 text-gray-500', loading && 'animate-spin')} />
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">

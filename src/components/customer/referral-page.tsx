@@ -15,7 +15,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  ArrowLeft,
   Gift,
   Copy,
   Check,
@@ -38,6 +37,7 @@ import AdminModal from '@/components/admin/admin-modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from './page-header'
 
 interface InvitedFriend {
   id: string
@@ -81,9 +81,10 @@ interface ReferralData {
 
 interface ReferralPageProps {
   onBack?: () => void
+  onNavigate?: (tab: string, params?: Record<string, string>) => void
 }
 
-export function ReferralPage({ onBack }: ReferralPageProps) {
+export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
   const [data, setData] = useState<ReferralData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -212,17 +213,7 @@ export function ReferralPage({ onBack }: ReferralPageProps) {
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-3 px-3 h-12">
-          {onBack && (
-            <button onClick={onBack} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Go back">
-              <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-            </button>
-          )}
-          <h1 className="text-base font-bold text-gray-800 dark:text-gray-200">Refer & Earn</h1>
-        </div>
-      </div>
+      <PageHeader title="Refer & Earn" onBack={onBack} onNavigate={onNavigate} />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
