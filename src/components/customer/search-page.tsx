@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, TrendingUp, Clock, X, Sparkles, Search, Mic, Camera } from 'lucide-react'
+import { useLanguage } from '@/components/providers/language-provider'
 
 interface SearchPageProps {
   onBack: () => void
@@ -21,6 +22,7 @@ const POPULAR_SEARCHES = [
 ]
 
 export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' }: SearchPageProps) {
+  const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState(initialQuery)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
@@ -100,7 +102,7 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
   const startListening = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) {
-      setVoiceError('Voice search is not supported in this browser. Please try Chrome or Safari.')
+      setVoiceError(t('search.voiceNotSupported'))
       setTimeout(() => setVoiceError(''), 3000)
       return
     }
@@ -145,13 +147,13 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
 
     recognition.onerror = (event: any) => {
       if (event.error === 'no-speech') {
-        setVoiceError('No speech detected. Please try again.')
+        setVoiceError(t('search.noSpeech'))
       } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        setVoiceError('Microphone access denied. Please allow microphone permission.')
+        setVoiceError(t('search.micDenied'))
       } else if (event.error === 'aborted') {
         // User cancelled — no error needed
       } else {
-        setVoiceError(`Voice search error: ${event.error}`)
+        setVoiceError(t('search.voiceError', { error: event.error }))
       }
       setIsListening(false)
       setTimeout(() => setVoiceError(''), 3000)
@@ -197,7 +199,7 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
         <button
           onClick={onBack}
           className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          aria-label="Back"
+          aria-label={t('common.back')}
         >
           <ArrowLeft className="text-gray-700 dark:text-gray-300" style={{ width: 18, height: 18 }} />
         </button>
@@ -224,7 +226,7 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
               }}
               autoFocus
               className="flex-1 min-w-0 h-full bg-transparent text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none"
-              placeholder="Search by Keyword or Product Name"
+              placeholder={t('header.searchPlaceholder')}
             />
 
             {/* Clear button */}
@@ -244,7 +246,7 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
             <button
               onClick={isListening ? stopListening : startListening}
               className="flex items-center justify-center px-2.5 py-2 hover:opacity-70 transition-opacity flex-shrink-0"
-              aria-label={isListening ? 'Stop voice search' : 'Voice search'}
+              aria-label={isListening ? t('search.stopVoice') : t('search.voiceSearch')}
             >
               <Mic className={`h-5 w-5 transition-colors ${isListening ? 'text-red-500' : 'text-gray-400'}`} />
             </button>
@@ -254,7 +256,7 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
             <button
               onClick={() => onImageSearch?.()}
               className={`flex items-center justify-center pr-3 pl-2.5 py-2 transition-opacity flex-shrink-0 ${onImageSearch ? 'hover:opacity-70 cursor-pointer' : ''}`}
-              aria-label="Search by image"
+              aria-label={t('header.searchByImage')}
             >
               <Camera className={`h-5 w-5 ${onImageSearch ? 'text-emerald-600' : 'text-gray-400'}`} />
             </button>
@@ -277,13 +279,13 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
                 <Clock className="h-4 w-4 text-gray-400" />
-                <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Recent Searches</h3>
+                <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">{t('search.recentSearches')}</h3>
               </div>
               <button
                 onClick={clearRecentSearches}
                 className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
-                Clear All
+                {t('search.clearAll')}
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -313,7 +315,7 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
         <div className="px-4 pt-5">
           <div className="flex items-center gap-1.5 mb-2">
             <TrendingUp className="h-4 w-4 text-gray-400" />
-            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Popular Searches</h3>
+            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">{t('search.popularSearches')}</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             {POPULAR_SEARCHES.map((term, idx) => (
@@ -337,10 +339,9 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
           <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30">
             <Search className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">Search Tips</p>
+              <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">{t('search.searchTips')}</p>
               <p className="text-[11px] text-blue-600/70 dark:text-blue-400/70 mt-0.5">
-                Use voice search (mic icon) for hands-free shopping.
-                Try searching by product name, brand, or category.
+                {t('search.tipBody')}
               </p>
             </div>
           </div>
@@ -382,7 +383,7 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
             </div>
             <div className="text-center">
               <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                {interimText ? 'Heard:' : 'Listening...'}
+                {interimText ? t('search.heard') : t('search.listening')}
               </h3>
               {interimText ? (
                 <motion.p
@@ -394,7 +395,7 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
                   &ldquo;{interimText}&rdquo;
                 </motion.p>
               ) : (
-                <p className="text-sm text-gray-400 mt-1">Say a product name or keyword</p>
+                <p className="text-sm text-gray-400 mt-1">{t('search.sayProduct')}</p>
               )}
             </div>
             <div className="flex items-center gap-1.5 h-8">
@@ -419,7 +420,7 @@ export function SearchPage({ onBack, onSearch, onImageSearch, initialQuery = '' 
               onClick={stopListening}
               className="px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </motion.div>
         </motion.div>

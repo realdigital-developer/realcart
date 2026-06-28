@@ -27,13 +27,13 @@ import { cn } from '@/lib/utils'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
 import { Notification, NotificationType } from './types'
 import { PageHeader } from './page-header'
-import { useLanguage } from '@/components/providers/language-provider'
+import { useLanguage, type LocaleCode } from '@/components/providers/language-provider'
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-function getRelativeTime(dateStr: string, t: (key: string, params?: Record<string, string | number>) => string): string {
+function getRelativeTime(dateStr: string, t: (key: string, params?: Record<string, string | number>) => string, locale: LocaleCode): string {
   try {
     const date = new Date(dateStr)
     const now = new Date()
@@ -48,7 +48,7 @@ function getRelativeTime(dateStr: string, t: (key: string, params?: Record<strin
     if (diffHours < 24) return diffHours === 1 ? t('notifications.hourAgo', { count: diffHours }) : t('notifications.hoursAgo', { count: diffHours })
     if (diffDays === 1) return t('common.yesterday')
     if (diffDays < 7) return t('notifications.daysAgo', { count: diffDays })
-    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    return date.toLocaleDateString(`${locale}-IN`, { day: 'numeric', month: 'short', year: 'numeric' })
   } catch {
     return ''
   }
@@ -120,7 +120,7 @@ function NotificationCard({
   notification: Notification
   onMarkRead: (id: string) => void
 }) {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
   const { icon, bgColor, iconColor } = getNotificationIcon(notification.type)
 
   const handleClick = () => {
@@ -168,7 +168,7 @@ function NotificationCard({
             </p>
           </div>
           <span className="text-[10px] text-gray-400 flex-shrink-0 mt-0.5">
-            {getRelativeTime(notification.createdAt, t)}
+            {getRelativeTime(notification.createdAt, t, locale)}
           </span>
         </div>
 
@@ -189,7 +189,7 @@ function NotificationCard({
 /* ------------------------------------------------------------------ */
 
 export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void; onNavigate?: (tab: string, params?: Record<string, string>) => void }) {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
   const { authenticated } = useCustomerAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
@@ -381,7 +381,7 @@ export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void;
                 <BellOff className="h-8 w-8 text-gray-300 dark:text-gray-600" />
               </div>
               <h2 className="text-base font-bold text-gray-700 dark:text-gray-300">
-                {activeFilter === 'all' ? 'No notifications yet' : t('notifications.emptyTitle', { category: t(categoryConfig[activeFilter]?.labelKey || '') })}
+                {activeFilter === 'all' ? t('notifications.emptyTitleAll') : t('notifications.emptyTitle', { category: t(categoryConfig[activeFilter]?.labelKey || '') })}
               </h2>
               <p className="text-sm text-gray-400 text-center max-w-[250px]">
                 {activeFilter === 'all'

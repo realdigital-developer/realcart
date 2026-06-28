@@ -34,6 +34,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useCart } from '@/components/providers/cart-provider'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
+import { useLanguage } from '@/components/providers/language-provider'
 import { Address } from './types'
 import { CartDeliveryEstimate } from '@/components/customer/delivery-checker'
 
@@ -121,6 +122,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
   onSave: (address: Omit<Address, '_id'>) => void
   editAddress?: Address | null
 }) {
+  const { t } = useLanguage()
   const [form, setForm] = useState({
     name: '',
     mobile: '',
@@ -187,7 +189,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-950 z-10">
             <h2 className="text-base font-bold text-gray-800 dark:text-gray-200">
-              {editAddress ? 'Edit Address' : 'Add New Address'}
+              {editAddress ? t('addresses.editAddress') : t('addresses.addNewAddress')}
             </h2>
             <button onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
               <X className="h-5 w-5 text-gray-500" />
@@ -199,9 +201,9 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
             {/* Address Type */}
             <div className="flex gap-2">
               {([
-                { id: 'home', label: 'Home', icon: Home },
-                { id: 'work', label: 'Work', icon: Building2 },
-                { id: 'other', label: 'Other', icon: Briefcase },
+                { id: 'home', label: t('addresses.home'), icon: Home },
+                { id: 'work', label: t('addresses.work'), icon: Building2 },
+                { id: 'other', label: t('common.other'), icon: Briefcase },
               ] as const).map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -224,13 +226,13 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
               <input
                 value={form.name}
                 onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Full Name *"
+                placeholder={t('addresses.fullNamePlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
               <input
                 value={form.mobile}
                 onChange={(e) => setForm(f => ({ ...f, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-                placeholder="Mobile Number *"
+                placeholder={t('addresses.mobileNumberPlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -239,7 +241,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
             <input
               value={form.addressLine1}
               onChange={(e) => setForm(f => ({ ...f, addressLine1: e.target.value }))}
-              placeholder="Address Line 1 (House No, Building, Street) *"
+              placeholder={t('addresses.addressLine1Placeholder')}
               className="w-full h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
             />
 
@@ -247,7 +249,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
             <input
               value={form.addressLine2}
               onChange={(e) => setForm(f => ({ ...f, addressLine2: e.target.value }))}
-              placeholder="Address Line 2 (Area, Colony)"
+              placeholder={t('addresses.addressLine2Placeholder')}
               className="w-full h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
             />
 
@@ -256,13 +258,13 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
               <input
                 value={form.city}
                 onChange={(e) => setForm(f => ({ ...f, city: e.target.value }))}
-                placeholder="City *"
+                placeholder={t('addresses.cityPlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
               <input
                 value={form.state}
                 onChange={(e) => setForm(f => ({ ...f, state: e.target.value }))}
-                placeholder="State *"
+                placeholder={t('addresses.statePlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -272,13 +274,13 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
               <input
                 value={form.pincode}
                 onChange={(e) => setForm(f => ({ ...f, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                placeholder="Pincode *"
+                placeholder={t('addresses.pincodePlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
               <input
                 value={form.landmark}
                 onChange={(e) => setForm(f => ({ ...f, landmark: e.target.value }))}
-                placeholder="Landmark (Optional)"
+                placeholder={t('addresses.landmarkPlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -293,7 +295,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
               )}>
                 {form.isDefault && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
               </div>
-              <span className="text-sm text-gray-600 dark:text-gray-400">Set as default address</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('addresses.setAsDefault')}</span>
             </label>
           </div>
 
@@ -310,7 +312,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
               )}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              {editAddress ? 'UPDATE ADDRESS' : 'SAVE ADDRESS'}
+              {editAddress ? t('addresses.updateAddress') : t('addresses.saveAddress')}
             </button>
           </div>
         </motion.div>
@@ -330,6 +332,7 @@ function AddressCard({ address, isSelected, onSelect, onDelete, onEdit }: {
   onDelete: () => void
   onEdit: () => void
 }) {
+  const { t } = useLanguage()
   const typeIcon = address.type === 'home' ? Home : address.type === 'work' ? Building2 : Briefcase
 
   return (
@@ -359,13 +362,13 @@ function AddressCard({ address, isSelected, onSelect, onDelete, onEdit }: {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{address.name}</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 uppercase font-medium">{address.type}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 uppercase font-medium">{address.type === 'home' ? t('addresses.home') : address.type === 'work' ? t('addresses.work') : t('common.other')}</span>
           </div>
           <p className="text-xs text-gray-500 mt-0.5">{address.mobile}</p>
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
             {address.addressLine1}
             {address.addressLine2 ? `, ${address.addressLine2}` : ''}
-            {address.landmark ? `, Near ${address.landmark}` : ''}
+            {address.landmark ? t('addresses.nearLandmark', { landmark: address.landmark }) : ''}
           </p>
           <p className="text-xs text-gray-600 dark:text-gray-400">
             {address.city}, {address.state} - {address.pincode}
@@ -373,10 +376,10 @@ function AddressCard({ address, isSelected, onSelect, onDelete, onEdit }: {
 
           <div className="flex items-center gap-3 mt-2">
             <button onClick={(e) => { e.stopPropagation(); onEdit() }} className="text-[11px] font-semibold text-blue-500 hover:text-blue-600">
-              EDIT
+              {t('addresses.edit')}
             </button>
             <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="text-[11px] font-semibold text-red-500 hover:text-red-600">
-              DELETE
+              {t('addresses.delete')}
             </button>
           </div>
         </div>
@@ -408,6 +411,7 @@ export function CheckoutPage({
   const router = useRouter()
   const { user, authenticated } = useCustomerAuth()
   const { items, totalPrice, totalSavings, clearCart } = useCart()
+  const { t } = useLanguage()
 
   const [step, setStep] = useState<CheckoutStep>(initialStep || 'address')
 
@@ -774,10 +778,10 @@ export function CheckoutPage({
       } else {
         setCouponDiscount(0)
         setCouponApplied(false)
-        setCouponError(data.error || 'Invalid coupon code')
+        setCouponError(data.error || t('checkout.invalidCoupon'))
       }
     } catch {
-      setCouponError('Failed to validate coupon. Please try again.')
+      setCouponError(t('checkout.couponValidateFailed'))
     } finally {
       setCouponLoading(false)
     }
@@ -926,13 +930,13 @@ export function CheckoutPage({
       <div className="space-y-2 text-sm">
         {/* Row 1: Subtotal (MRP) — sum of all items' original prices */}
         <div className="flex justify-between">
-          <span className="text-gray-500">Price (MRP, {totalItems} {totalItems === 1 ? 'item' : 'items'})</span>
+          <span className="text-gray-500">{t('checkout.priceMrp', { count: totalItems })}</span>
           <span className="text-gray-800 dark:text-gray-200">{formatPrice(priceWithoutDiscount)}</span>
         </div>
         {/* Row 2: Product Discount — regular markdown (MRP → sellingPrice) */}
         {productDisc > 0 && (
           <div className="flex justify-between">
-            <span className="text-gray-500">Product Discount</span>
+            <span className="text-gray-500">{t('cart.productDiscount')}</span>
             <span className="text-green-600 font-medium">- {formatPrice(productDisc)}</span>
           </div>
         )}
@@ -941,7 +945,7 @@ export function CheckoutPage({
           <div className="flex justify-between bg-amber-50 dark:bg-amber-900/20 -mx-1 px-2 py-1 rounded">
             <span className="text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
               <Sparkles className="h-3 w-3" />
-              Special Offer
+              {t('cart.specialOffer')}
             </span>
             <span className="text-amber-700 dark:text-amber-400 font-semibold">- {formatPrice(specialDisc)}</span>
           </div>
@@ -951,7 +955,7 @@ export function CheckoutPage({
           <div className="flex justify-between">
             <span className="text-gray-500 flex items-center gap-1">
               <Tag className="h-3 w-3" />
-              Coupon ({couponCode})
+              {t('checkout.couponLabel', { code: couponCode })}
             </span>
             <span className="text-green-600 font-medium">- {formatPrice(couponDisc)}</span>
           </div>
@@ -959,21 +963,21 @@ export function CheckoutPage({
         {/* Row 5: Total Savings — highlighted summary of ALL discounts */}
         {totalAllSavings > 0 && (
           <div className="flex justify-between bg-green-50 dark:bg-green-900/20 -mx-1 px-2 py-1 rounded">
-            <span className="text-green-700 dark:text-green-400 font-semibold">Total Savings</span>
+            <span className="text-green-700 dark:text-green-400 font-semibold">{t('checkout.totalSavings')}</span>
             <span className="text-green-700 dark:text-green-400 font-bold">- {formatPrice(totalAllSavings)}</span>
           </div>
         )}
         {/* Row 6: Price After Discount — intermediate subtotal after all discounts (tax-inclusive) */}
         {totalAllSavings > 0 && (
           <div className="flex justify-between border-t border-dashed border-gray-200 dark:border-gray-700 pt-2">
-            <span className="text-gray-600 dark:text-gray-300 font-medium">Price After Discount</span>
+            <span className="text-gray-600 dark:text-gray-300 font-medium">{t('checkout.priceAfterDiscount')}</span>
             <span className="text-gray-700 dark:text-gray-300 font-medium">{formatPrice(priceAfterAllDiscounts)}</span>
           </div>
         )}
         {/* Row 7: Delivery Fee — additive. Shows the chosen option's label + ETA */}
         <div className="flex justify-between">
           <span className="text-gray-500 flex items-center gap-1.5">
-            Delivery Charge
+            {t('checkout.deliveryCharge')}
             {selectedOptionSnapshot && (
               <span
                 className={cn(
@@ -989,7 +993,7 @@ export function CheckoutPage({
             )}
           </span>
           {deliveryCharge === 0 ? (
-            <span className="text-green-600 font-medium">FREE</span>
+            <span className="text-green-600 font-medium">{t('cart.free')}</span>
           ) : (
             <span className="text-gray-800 dark:text-gray-200">{formatPrice(deliveryCharge)}</span>
           )}
@@ -999,7 +1003,7 @@ export function CheckoutPage({
             Mirrors Flipkart/Amazon where the ETA sits under the label. */}
         {selectedOptionSnapshot && selectedOptionSnapshot.etaLabel && (
           <p className="text-[11px] text-gray-400 -mt-1">
-            Estimated delivery{' '}
+            {t('checkout.estimatedDelivery')}{' '}
             <span className="text-emerald-600 dark:text-emerald-400 font-medium">
               {selectedOptionSnapshot.etaLabel}
             </span>
@@ -1008,18 +1012,18 @@ export function CheckoutPage({
         {/* Row 8: COD Fee — additive (only for COD orders) */}
         {isCod && codFee > 0 && (
           <div className="flex justify-between">
-            <span className="text-gray-500">COD Convenience Fee</span>
+            <span className="text-gray-500">{t('checkout.codConvenienceFee')}</span>
             <span className="text-gray-800 dark:text-gray-200">{formatPrice(codFee)}</span>
           </div>
         )}
         {/* Row 9: Platform Fee — additive */}
         <div className="flex justify-between">
-          <span className="text-gray-500">Platform Fee</span>
+          <span className="text-gray-500">{t('checkout.platformFee')}</span>
           <span className="text-gray-800 dark:text-gray-200">{formatPrice(platformFee)}</span>
         </div>
         {/* Row 10: Total Payable */}
         <div className="border-t border-dashed border-gray-300 dark:border-gray-600 pt-2 flex justify-between">
-          <span className="font-bold text-gray-800 dark:text-gray-200">Total Payable</span>
+          <span className="font-bold text-gray-800 dark:text-gray-200">{t('checkout.totalPayable')}</span>
           <span className="font-bold text-gray-800 dark:text-gray-200">{formatPrice(finalTotal)}</span>
         </div>
         {/* Row 11: RealCart Balance credit (Meesho-style split payment) */}
@@ -1028,19 +1032,19 @@ export function CheckoutPage({
             <div className="flex justify-between">
               <span className="text-violet-600 dark:text-violet-400 flex items-center gap-1">
                 <Wallet className="h-3 w-3" />
-                RealCart Balance
+                {t('wallet.title')}
               </span>
               <span className="text-violet-600 dark:text-violet-400 font-semibold">−{formatPrice(walletAppliedAmount)}</span>
             </div>
             {!walletCoversFull && (
               <div className="border-t border-dashed border-gray-300 dark:border-gray-600 pt-2 flex justify-between">
-                <span className="font-bold text-gray-800 dark:text-gray-200">Amount to Pay</span>
+                <span className="font-bold text-gray-800 dark:text-gray-200">{t('checkout.amountToPay')}</span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatPrice(amountPayable)}</span>
               </div>
             )}
           </>
         )}
-        <p className="text-[11px] text-gray-400 text-right">inclusive of all taxes</p>
+        <p className="text-[11px] text-gray-400 text-right">{t('checkout.inclusiveOfTaxes')}</p>
       </div>
     )
   }
@@ -1291,7 +1295,7 @@ export function CheckoutPage({
               upiPollIntervalRef.current = null
               setUpiPolling(false)
               setPaymentProcessing(false)
-              setError('Payment failed. Please try again.')
+              setError(t('checkout.paymentFailed'))
             }
           } catch (err) {
             console.error('[Payment Poll Error]', err)
@@ -1445,9 +1449,9 @@ export function CheckoutPage({
     } catch (err) {
       setUpiPolling(false)
       setPaymentProcessing(false)
-      setError(err instanceof Error ? err.message : 'Payment failed. Please try again.')
+      setError(err instanceof Error ? err.message : t('checkout.paymentFailed'))
     }
-  }, [finalTotal, items, user, upiId, cardNumber, cardName, cardExpiry, cardCvv, selectedBank, selectedWallet, paymentSubMethod, isCod, couponApplied, couponCode, couponDiscount, totalSavings, clearCart, detectCardBrand, selectedDeliveryOption, deliveryCharge, selectedSavedCard, savedCardCvv, selectedSavedMethodId, useWalletBalance, walletCoversFull, amountPayable, walletAppliedAmount])
+  }, [finalTotal, items, user, upiId, cardNumber, cardName, cardExpiry, cardCvv, selectedBank, selectedWallet, paymentSubMethod, isCod, couponApplied, couponCode, couponDiscount, totalSavings, clearCart, detectCardBrand, selectedDeliveryOption, deliveryCharge, selectedSavedCard, savedCardCvv, selectedSavedMethodId, useWalletBalance, walletCoversFull, amountPayable, walletAppliedAmount, t])
 
   // Apply RealCart Balance partially to an already-created order (Meesho-style
   // split payment). Called after the online payment succeeds + order is created.
@@ -1509,12 +1513,12 @@ export function CheckoutPage({
   // Place order — creates order via API
   const handlePlaceOrder = async () => {
     if (!selectedAddressId) {
-      setError('Please select a delivery address')
+      setError(t('checkout.selectAddress'))
       return
     }
 
     if (items.length === 0) {
-      setError('Your cart is empty. Add items before placing an order.')
+      setError(t('checkout.cartIsEmpty'))
       return
     }
 
@@ -1522,7 +1526,7 @@ export function CheckoutPage({
 
     const selectedAddress = addresses.find(a => a._id === selectedAddressId)
     if (!selectedAddress) {
-      setError('Selected address not found')
+      setError(t('checkout.selectedAddressNotFound'))
       return
     }
 
@@ -1531,21 +1535,21 @@ export function CheckoutPage({
       // Wallet covers full amount — always valid (handled above), so if we're
       // here with useWalletBalance, it means partial wallet needs another method
       if (useWalletBalance && !walletCoversFull) {
-        setError(`Please select a payment method for the remaining ${formatPrice(amountPayable)}`)
+        setError(t('checkout.selectPaymentForRemaining', { amount: formatPrice(amountPayable) }))
       } else if (selectedSavedCard) {
-        setError('Please enter the CVV for your saved card')
+        setError(t('checkout.enterSavedCardCvv'))
       } else if (paymentSubMethod === 'upi' && !upiId.includes('@')) {
-        setError('Please enter a valid UPI ID (must contain @)')
+        setError(t('checkout.invalidUpiId'))
       } else if (paymentSubMethod === 'card') {
         const cleanCard = cardNumber.replace(/\s/g, '')
-        if (cleanCard.length < 13) setError('Please enter a valid card number')
-        else if (!cardName.trim()) setError('Please enter the cardholder name')
-        else if (cardExpiry.length !== 5) setError('Please enter a valid expiry date (MM/YY)')
-        else if (cardCvv.length < 3) setError('Please enter a valid CVV')
+        if (cleanCard.length < 13) setError(t('checkout.invalidCardNumber'))
+        else if (!cardName.trim()) setError(t('checkout.enterCardholderName'))
+        else if (cardExpiry.length !== 5) setError(t('checkout.invalidExpiry'))
+        else if (cardCvv.length < 3) setError(t('checkout.invalidCvv'))
       } else if (paymentSubMethod === 'netbanking' && !selectedBank) {
-        setError('Please select a bank for Net Banking')
+        setError(t('checkout.selectBank'))
       } else if (paymentSubMethod === 'wallet' && !selectedWallet) {
-        setError('Please select a wallet')
+        setError(t('checkout.selectWallet'))
       }
       return
     }
@@ -1606,7 +1610,7 @@ export function CheckoutPage({
         setStep('success')
       } catch (err) {
         setPaymentProcessing(false)
-        setError(err instanceof Error ? err.message : 'Wallet payment failed. Please try again.')
+        setError(err instanceof Error ? err.message : t('checkout.walletPaymentFailed'))
       }
       return
     }
@@ -1671,7 +1675,7 @@ export function CheckoutPage({
         clearCart()
         setStep('success')
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to place order. Please try again.')
+        setError(err instanceof Error ? err.message : t('checkout.failedToPlaceOrder'))
       } finally {
         setLoading(false)
       }
@@ -1703,20 +1707,20 @@ export function CheckoutPage({
           </div>
 
           <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">
-            Waiting for Payment
+            {t('checkout.waitingForPayment')}
           </h2>
           <p className="text-sm text-gray-500 mb-4">
-            Open your UPI app and approve the payment request
+            {t('checkout.openUpiApp')}
           </p>
 
           {/* Payment details */}
           <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Amount</span>
+              <span className="text-gray-500">{t('checkout.amount')}</span>
               <span className="font-bold text-gray-800 dark:text-gray-200">{formatPrice(finalTotal)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">UPI ID</span>
+              <span className="text-gray-500">{t('bankUpi.upiId')}</span>
               <span className="font-medium text-gray-700 dark:text-gray-300">{upiId}</span>
             </div>
           </div>
@@ -1724,13 +1728,13 @@ export function CheckoutPage({
           {/* Pulsing status indicator */}
           <div className="flex items-center justify-center gap-2 mb-4">
             <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-            <span className="text-sm text-emerald-600 font-medium">Checking payment status...</span>
+            <span className="text-sm text-emerald-600 font-medium">{t('checkout.checkingPaymentStatus')}</span>
           </div>
 
           {/* Security notice */}
           <div className="flex items-center justify-center gap-1 text-[11px] text-gray-400 mb-4">
             <Lock className="h-3 w-3" />
-            Secured by 256-bit SSL encryption
+            {t('checkout.securedBySsl')}
           </div>
 
           {/* Cancel button */}
@@ -1745,7 +1749,7 @@ export function CheckoutPage({
             }}
             className="w-full h-11 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            Cancel Payment
+            {t('checkout.cancelPayment')}
           </button>
         </motion.div>
       </div>
@@ -1765,14 +1769,14 @@ export function CheckoutPage({
           <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
             <Check className="h-10 w-10 text-green-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">Order Placed Successfully!</h2>
-          <p className="text-sm text-gray-500 mb-1">Your order has been confirmed</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400 font-semibold mb-2">Order ID: {orderNumber}</p>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">{t('checkout.orderPlacedSuccess')}</h2>
+          <p className="text-sm text-gray-500 mb-1">{t('checkout.orderConfirmed')}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 font-semibold mb-2">{t('checkout.orderId')} {orderNumber}</p>
           {paymentMethodName && (
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full mb-4">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
               <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                {paymentMethodName === 'Cash on Delivery' ? 'Payment: Cash on Delivery' : `Paid via ${paymentMethodName}`}
+                {paymentMethodName === 'Cash on Delivery' ? t('checkout.paymentCod') : t('checkout.paidVia', { method: paymentMethodName })}
               </span>
             </div>
           )}
@@ -1782,13 +1786,13 @@ export function CheckoutPage({
               onClick={() => { onClose(); router.push('/customer') }}
               className="flex-1 h-11 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
-              Continue Shopping
+              {t('checkout.continueShopping')}
             </button>
             <button
               onClick={() => { onClose() }}
               className="flex-1 h-11 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors"
             >
-              View Orders
+              {t('checkout.viewOrders')}
             </button>
           </div>
         </motion.div>
@@ -1808,7 +1812,7 @@ export function CheckoutPage({
             <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
           </button>
           <h1 className="flex-1 text-center text-base font-bold text-gray-800 dark:text-gray-200">
-            {step === 'address' ? 'Select Delivery Address' : step === 'summary' ? 'Order Summary' : 'Payment'}
+            {step === 'address' ? t('checkout.selectDeliveryAddress') : step === 'summary' ? t('checkout.orderSummary') : t('checkout.payment')}
           </h1>
           <div className="w-9" />
         </div>
@@ -1842,7 +1846,7 @@ export function CheckoutPage({
               {/* Existing addresses */}
               {addresses.length > 0 ? (
                 <div className="space-y-3">
-                  <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Saved Addresses</h3>
+                  <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">{t('checkout.savedAddresses')}</h3>
                   {addresses.map((addr, idx) => (
                     <AddressCard
                       key={addr._id || `addr-${idx}`}
@@ -1857,7 +1861,7 @@ export function CheckoutPage({
               ) : (
                 <div className="text-center py-8">
                   <MapPin className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500">No saved addresses. Add one to continue.</p>
+                  <p className="text-sm text-gray-500">{t('checkout.noSavedAddresses')}</p>
                 </div>
               )}
 
@@ -1867,7 +1871,7 @@ export function CheckoutPage({
                 className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl text-sm font-semibold text-gray-500 hover:border-emerald-400 hover:text-emerald-600 transition-colors"
               >
                 <Plus className="h-4 w-4" />
-                Add New Address
+                {t('checkout.addNewAddress')}
               </button>
 
               {/* Continue button */}
@@ -1881,7 +1885,7 @@ export function CheckoutPage({
                     : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                 )}
               >
-                CONTINUE
+                {t('checkout.continue')}
                 <ChevronRight className="h-4 w-4" />
               </button>
             </motion.div>
@@ -1901,16 +1905,16 @@ export function CheckoutPage({
               {addresses.find(a => a._id === selectedAddressId) && (
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">Delivery Address</h3>
-                    <button onClick={() => setStep('address')} className="text-[11px] font-semibold text-blue-500">CHANGE</button>
+                    <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('checkout.deliveryAddress')}</h3>
+                    <button onClick={() => setStep('address')} className="text-[11px] font-semibold text-blue-500">{t('checkout.change')}</button>
                   </div>
                   {(() => {
                     const addr = addresses.find(a => a._id === selectedAddressId)!
                     return (
                       <div>
-                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{addr.name} <span className="font-normal text-gray-400 text-xs">{addr.type.toUpperCase()}</span></p>
+                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{addr.name} <span className="font-normal text-gray-400 text-xs">{addr.type === 'home' ? t('addresses.home') : addr.type === 'work' ? t('addresses.work') : t('common.other')}</span></p>
                         <p className="text-xs text-gray-500 mt-0.5">{addr.addressLine1}{addr.addressLine2 ? `, ${addr.addressLine2}` : ''}, {addr.city}, {addr.state} - {addr.pincode}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Mobile: {addr.mobile}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{t('checkout.mobile')} {addr.mobile}</p>
                         {/* Delivery estimate for the selected address pincode */}
                         <CartDeliveryEstimate
                           pincode={addr.pincode}
@@ -1928,7 +1932,7 @@ export function CheckoutPage({
               {/* Order Items */}
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4">
                 <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">
-                  Order Items ({totalItems})
+                  {t('checkout.orderItems', { count: totalItems })}
                 </h3>
                 <div className="space-y-3">
                   {items.map((item) => (
@@ -1944,7 +1948,7 @@ export function CheckoutPage({
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-200 line-clamp-1">{item.name}</p>
-                        <p className="text-xs text-gray-400">Qty: {item.quantity} {item.seller ? `• Seller: ${item.seller}` : ''}</p>
+                        <p className="text-xs text-gray-400">{t('checkout.qty')} {item.quantity} {item.seller ? t('checkout.seller') + ` ${item.seller}` : ''}</p>
                         <div className="flex items-baseline gap-1.5 mt-0.5">
                           <span className="text-sm font-bold">{formatPrice(item.effectivePrice * item.quantity)}</span>
                           {item.hasDiscount && <span className="text-[10px] text-gray-400 line-through">{formatPrice(item.price * item.quantity)}</span>}
@@ -1960,7 +1964,7 @@ export function CheckoutPage({
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
                     <Truck className="h-4 w-4 text-emerald-500" />
-                    Delivery Option
+                    {t('checkout.deliveryOption')}
                   </h3>
                   {deliveryOptionLoading && (
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
@@ -1971,8 +1975,8 @@ export function CheckoutPage({
                   /* No address selected yet, or pincode not serviceable */
                   <p className="text-xs text-gray-400">
                     {addresses.find((a) => a._id === selectedAddressId)
-                      ? 'Select a valid delivery address to see delivery options.'
-                      : 'Please select a delivery address first.'}
+                      ? t('checkout.selectValidAddress')
+                      : t('checkout.pleaseSelectAddress')}
                   </p>
                 ) : deliveryOptions.length === 0 ? (
                   /* Loading placeholder */
@@ -2030,13 +2034,13 @@ export function CheckoutPage({
                                   </p>
                                   {isExpress && (
                                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400">
-                                      Faster
+                                      {t('checkout.faster')}
                                     </span>
                                   )}
                                 </div>
                                 <div className="text-right">
                                   {opt.charge === 0 ? (
-                                    <span className="text-sm font-semibold text-green-600">FREE</span>
+                                    <span className="text-sm font-semibold text-green-600">{t('cart.free')}</span>
                                   ) : (
                                     <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                                       {formatPrice(opt.charge)}
@@ -2050,7 +2054,7 @@ export function CheckoutPage({
                               {opt.etaLabel && (
                                 <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5 flex items-center gap-1">
                                   <Truck className="h-2.5 w-2.5" />
-                                  Delivery by {opt.etaLabel}
+                                  {t('checkout.deliveryBy', { eta: opt.etaLabel })}
                                 </p>
                               )}
                               {!opt.available && opt.unavailableReason && (
@@ -2065,7 +2069,7 @@ export function CheckoutPage({
                     })}
                     <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
                       <ShieldCheck className="h-2.5 w-2.5" />
-                      Delivery fee is verified server-side at order placement.
+                      {t('checkout.deliveryFeeNote')}
                     </p>
                   </div>
                 )}
@@ -2073,7 +2077,7 @@ export function CheckoutPage({
 
               {/* Price Summary */}
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4">
-                <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">Price Details</h3>
+                <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">{t('cart.priceDetails')}</h3>
                 {renderPriceBreakup()}
               </div>
 
@@ -2082,7 +2086,7 @@ export function CheckoutPage({
                 onClick={() => setStep('payment')}
                 className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors"
               >
-                CONTINUE TO PAYMENT
+                {t('checkout.continueToPayment')}
                 <ChevronRight className="h-4 w-4" />
               </button>
             </motion.div>
@@ -2128,15 +2132,15 @@ export function CheckoutPage({
                       <Wallet className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800 dark:text-gray-200">RealCart Balance</p>
+                      <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('wallet.title')}</p>
                       {walletLoading ? (
-                        <p className="text-[11px] text-gray-400">Loading balance...</p>
+                        <p className="text-[11px] text-gray-400">{t('checkout.loadingBalance')}</p>
                       ) : (
                         <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                          Available: <span className="font-semibold text-violet-600 dark:text-violet-400">₹{walletBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                          {t('checkout.available')} <span className="font-semibold text-violet-600 dark:text-violet-400">₹{walletBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                           {useWalletBalance && (
                             <span className="ml-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
-                              • ₹{walletAppliedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })} applied
+                              {t('checkout.balanceApplied', { amount: walletAppliedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 }) })}
                             </span>
                           )}
                         </p>
@@ -2157,10 +2161,10 @@ export function CheckoutPage({
                         <Wallet className="h-3.5 w-3.5 text-violet-500 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           <p className="text-[10px] text-violet-700 dark:text-violet-400 font-semibold">
-                            ₹{walletAppliedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })} from balance + ₹{amountPayable.toLocaleString('en-IN', { maximumFractionDigits: 0 })} via payment method
+                            {t('checkout.balanceSplit', { applied: walletAppliedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 }), payable: amountPayable.toLocaleString('en-IN', { maximumFractionDigits: 0 }) })}
                           </p>
                           <p className="text-[10px] text-violet-600/70 dark:text-violet-500/70 mt-0.5">
-                            Select a payment method below to pay the remaining amount
+                            {t('checkout.selectPaymentMethod')}
                           </p>
                         </div>
                       </div>
@@ -2185,7 +2189,7 @@ export function CheckoutPage({
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
                   <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 px-4 pt-4 pb-2 flex items-center gap-1.5">
                     <Zap className="h-4 w-4 text-amber-500" />
-                    Saved Payment Methods
+                    {t('checkout.savedPaymentMethods')}
                   </h3>
                   <div className="px-4 pb-3 space-y-2">
                     {savedMethods.map((m) => {
@@ -2238,11 +2242,11 @@ export function CheckoutPage({
                               className="overflow-hidden"
                             >
                               <div className="mt-2 ml-12">
-                                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">Enter CVV</label>
+                                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t('checkout.enterCvv')}</label>
                                 <input
                                   value={savedCardCvv}
                                   onChange={(e) => { setSavedCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4)); setError('') }}
-                                  placeholder="•••"
+                                  placeholder={t('checkout.cvvPlaceholder')}
                                   type="password"
                                   className={cn(
                                     'w-full h-11 px-3 rounded-lg border bg-white dark:bg-gray-800 text-sm font-mono tracking-widest focus:outline-none transition-colors',
@@ -2255,7 +2259,7 @@ export function CheckoutPage({
                                 <div className="flex items-start gap-1.5 mt-1.5">
                                   <Lock className="h-3 w-3 text-emerald-600 flex-shrink-0 mt-0.5" />
                                   <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                                    RBI-compliant tokenization — your full card number is never stored. Only CVV is required to authorize this payment.
+                                    {t('checkout.rbiNote')}
                                   </p>
                                 </div>
                               </div>
@@ -2279,8 +2283,8 @@ export function CheckoutPage({
                           <Plus className="h-4 w-4" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Use new payment method</p>
-                          <p className="text-[10px] text-gray-400">Pay with a new UPI / Card / Net Banking / Wallet / COD</p>
+                          <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t('checkout.useNewPaymentMethod')}</p>
+                          <p className="text-[10px] text-gray-400">{t('checkout.useNewPaymentMethodDesc')}</p>
                         </div>
                       </button>
                     )}
@@ -2293,16 +2297,16 @@ export function CheckoutPage({
               {/* Shown for COD, "use new method", or when no saved methods.    */}
               {(isCod || useNewMethod || savedMethods.length === 0) && !walletCoversFull && (
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-                <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 px-4 pt-4 pb-2">Choose Payment Method</h3>
+                <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 px-4 pt-4 pb-2">{t('checkout.choosePaymentMethod')}</h3>
 
                 {/* Horizontal tab buttons */}
                 <div className="flex border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-hide">
                   {([
-                    { id: 'upi' as const, label: 'UPI', icon: Smartphone },
-                    { id: 'card' as const, label: 'Card', icon: CreditCard },
-                    { id: 'netbanking' as const, label: 'Net Banking', icon: Landmark },
-                    { id: 'wallet' as const, label: 'Wallet', icon: Wallet },
-                    { id: 'cod' as const, label: 'COD', icon: Banknote },
+                    { id: 'upi' as const, label: t('checkout.tabUpi'), icon: Smartphone },
+                    { id: 'card' as const, label: t('checkout.tabCard'), icon: CreditCard },
+                    { id: 'netbanking' as const, label: t('checkout.tabNetBanking'), icon: Landmark },
+                    { id: 'wallet' as const, label: t('checkout.tabWallet'), icon: Wallet },
+                    { id: 'cod' as const, label: t('checkout.tabCod'), icon: Banknote },
                   ]).map((tab) => {
                     const isActive = tab.id === 'cod' ? isCod : !isCod && paymentSubMethod === tab.id
                     return (
@@ -2351,11 +2355,11 @@ export function CheckoutPage({
                     >
                       {/* UPI ID Input */}
                       <div>
-                        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">Enter UPI ID</label>
+                        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t('checkout.enterUpiId')}</label>
                         <input
                           value={upiId}
                           onChange={(e) => { setUpiId(e.target.value.trim()); setError('') }}
-                          placeholder="e.g. yourname@okicici or yourname@ybl"
+                          placeholder={t('checkout.upiIdPlaceholder')}
                           className={cn(
                             'w-full h-11 px-3 rounded-lg border bg-white dark:bg-gray-800 text-sm focus:outline-none transition-colors',
                             upiId && !upiId.includes('@')
@@ -2364,16 +2368,16 @@ export function CheckoutPage({
                           )}
                         />
                         {upiId && !upiId.includes('@') && (
-                          <p className="text-[11px] text-red-500 mt-1">UPI ID must contain @ (e.g. name@bank)</p>
+                          <p className="text-[11px] text-red-500 mt-1">{t('checkout.upiIdInvalid')}</p>
                         )}
                         {upiId.includes('@') && (
-                          <p className="text-[11px] text-emerald-600 mt-1">✓ Valid UPI ID format</p>
+                          <p className="text-[11px] text-emerald-600 mt-1">{t('checkout.upiIdValid')}</p>
                         )}
                       </div>
 
                       {/* Popular UPI Apps — clicking fills the UPI handle suffix */}
                       <div>
-                        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Quick Fill UPI Handle</p>
+                        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">{t('checkout.quickFillUpi')}</p>
                         <div className="grid grid-cols-4 gap-2">
                           {([
                             { name: 'Google Pay', suffix: '@okicici', color: '#4285F4' },
@@ -2424,7 +2428,7 @@ export function CheckoutPage({
                     >
                       {/* Card Brand Detection */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Accepted Cards:</span>
+                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">{t('checkout.acceptedCards')}</span>
                         {['Visa', 'Mastercard', 'RuPay'].map((brand) => {
                           const cleanCard = cardNumber.replace(/\s/g, '')
                           const detected = detectCardBrand(cleanCard)
@@ -2442,12 +2446,12 @@ export function CheckoutPage({
 
                       {/* Card Number */}
                       <div>
-                        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">Card Number</label>
+                        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t('checkout.cardNumber')}</label>
                         <div className="relative">
                           <input
                             value={cardNumber}
                             onChange={(e) => { setCardNumber(formatCardNumber(e.target.value)); setError('') }}
-                            placeholder="1234 5678 9012 3456"
+                            placeholder={t('checkout.cardNumberPlaceholder')}
                             className={cn(
                               'w-full h-11 px-3 pr-12 rounded-lg border bg-white dark:bg-gray-800 text-sm font-mono tracking-wider focus:outline-none transition-colors',
                               cardNumber && cardNumber.replace(/\s/g, '').length < 13
@@ -2466,11 +2470,11 @@ export function CheckoutPage({
 
                       {/* Cardholder Name */}
                       <div>
-                        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">Cardholder Name</label>
+                        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t('checkout.cardholderName')}</label>
                         <input
                           value={cardName}
                           onChange={(e) => { setCardName(e.target.value); setError('') }}
-                          placeholder="Name on card"
+                          placeholder={t('checkout.nameOnCardPlaceholder')}
                           className={cn(
                             'w-full h-11 px-3 rounded-lg border bg-white dark:bg-gray-800 text-sm focus:outline-none transition-colors',
                             cardName && !cardName.trim()
@@ -2483,11 +2487,11 @@ export function CheckoutPage({
                       {/* Expiry & CVV */}
                       <div className="flex gap-3">
                         <div className="flex-1">
-                          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">Expiry</label>
+                          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t('checkout.expiry')}</label>
                           <input
                             value={cardExpiry}
                             onChange={(e) => { setCardExpiry(formatExpiry(e.target.value)); setError('') }}
-                            placeholder="MM/YY"
+                            placeholder={t('checkout.expiryPlaceholder')}
                             className={cn(
                               'w-full h-11 px-3 rounded-lg border bg-white dark:bg-gray-800 text-sm font-mono focus:outline-none transition-colors',
                               cardExpiry && cardExpiry.length === 5
@@ -2500,11 +2504,11 @@ export function CheckoutPage({
                           />
                         </div>
                         <div className="w-28">
-                          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">CVV</label>
+                          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t('checkout.cvv')}</label>
                           <input
                             value={cardCvv}
                             onChange={(e) => { setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4)); setError('') }}
-                            placeholder="\u2022\u2022\u2022"
+                            placeholder={t('checkout.cvvPlaceholder')}
                             type="password"
                             className={cn(
                               'w-full h-11 px-3 rounded-lg border bg-white dark:bg-gray-800 text-sm font-mono tracking-widest focus:outline-none transition-colors',
@@ -2521,7 +2525,7 @@ export function CheckoutPage({
                       <div className="flex items-start gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-800/20">
                         <Lock className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                         <p className="text-[11px] text-emerald-700 dark:text-emerald-400 leading-relaxed">
-                          Your card details are encrypted and processed securely. We never store your full card information.
+                          {t('checkout.cardSecurityNote')}
                         </p>
                       </div>
                     </motion.div>
@@ -2535,7 +2539,7 @@ export function CheckoutPage({
                       transition={{ duration: 0.2 }}
                       className="space-y-3"
                     >
-                      <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">Popular Banks</p>
+                      <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">{t('checkout.popularBanks')}</p>
                       <div className="grid grid-cols-2 gap-2">
                         {([
                           { name: 'SBI', code: 'SBIN', fullName: 'State Bank of India' },
@@ -2588,7 +2592,7 @@ export function CheckoutPage({
                       transition={{ duration: 0.2 }}
                       className="space-y-3"
                     >
-                      <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">Popular Wallets</p>
+                      <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">{t('checkout.popularWallets')}</p>
                       <div className="grid grid-cols-2 gap-2">
                         {([
                           { name: 'Paytm Wallet', code: 'paytm', color: '#00BAF2' },
@@ -2637,12 +2641,12 @@ export function CheckoutPage({
                       <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800/20">
                         <Banknote className="h-10 w-10 text-amber-600 flex-shrink-0" />
                         <div>
-                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Cash on Delivery</p>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Pay when your order is delivered at your doorstep</p>
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{t('paymentRefund.cashOnDelivery')}</p>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('checkout.codDesc')}</p>
                         </div>
                       </div>
                       <p className="text-[11px] text-gray-400 text-center">
-                        Please keep the exact amount ready for a smooth delivery experience
+                        {t('checkout.codNote')}
                       </p>
                     </motion.div>
                   )}
@@ -2659,7 +2663,7 @@ export function CheckoutPage({
                 >
                   <Lock className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                   <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
-                    Your payment is secured with 256-bit SSL encryption. We never store your card details.
+                    {t('checkout.securePaymentNote')}
                   </p>
                 </motion.div>
               )}
@@ -2668,7 +2672,7 @@ export function CheckoutPage({
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4">
                 <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1.5">
                   <Tag className="h-4 w-4 text-orange-500" />
-                  Apply Coupon
+                  {t('checkout.applyCoupon')}
                 </h3>
                 {couponApplied ? (
                   <motion.div
@@ -2680,7 +2684,7 @@ export function CheckoutPage({
                       <Tag className="h-4 w-4 text-emerald-600" />
                       <div>
                         <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{couponCode}</p>
-                        <p className="text-[11px] text-emerald-600 dark:text-emerald-500">You save {formatPrice(couponDiscount)}!</p>
+                        <p className="text-[11px] text-emerald-600 dark:text-emerald-500">{t('checkout.youSaveAmount', { amount: formatPrice(couponDiscount) })}</p>
                       </div>
                     </div>
                     <button
@@ -2695,7 +2699,7 @@ export function CheckoutPage({
                     <input
                       value={couponCode}
                       onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError('') }}
-                      placeholder="Enter coupon code"
+                      placeholder={t('checkout.enterCouponCode')}
                       className="flex-1 h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium uppercase tracking-wider focus:outline-none focus:border-emerald-500 transition-colors"
                     />
                     <button
@@ -2708,7 +2712,7 @@ export function CheckoutPage({
                           : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                       )}
                     >
-                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'APPLY'}
+                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('checkout.apply')}
                     </button>
                   </div>
                 )}
@@ -2730,7 +2734,7 @@ export function CheckoutPage({
                     >
                       <span className="flex items-center gap-1.5">
                         <Tag className="h-3.5 w-3.5" />
-                        {availableCoupons.filter((c) => c.applicable).length} coupon{availableCoupons.filter((c) => c.applicable).length !== 1 ? 's' : ''} available
+                        {t('checkout.couponsAvailable', { count: availableCoupons.filter((c) => c.applicable).length })}
                       </span>
                       <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', showAvailableCoupons && 'rotate-90')} />
                     </button>
@@ -2775,7 +2779,7 @@ export function CheckoutPage({
                                     disabled={couponLoading}
                                     className="shrink-0 px-2.5 py-1 rounded-md bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-bold disabled:opacity-50 transition-colors"
                                   >
-                                    APPLY
+                                    {t('checkout.apply')}
                                   </button>
                                 )}
                               </div>
@@ -2789,14 +2793,14 @@ export function CheckoutPage({
                 {availableCouponsLoading && !couponApplied && (
                   <p className="text-[11px] text-gray-400 mt-2 flex items-center gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    Checking available coupons…
+                    {t('checkout.checkingCoupons')}
                   </p>
                 )}
               </div>
 
               {/* Price Summary in Payment Step */}
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4">
-                <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">Price Details</h3>
+                <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">{t('cart.priceDetails')}</h3>
                 {renderPriceBreakup()}
               </div>
 
@@ -2804,11 +2808,11 @@ export function CheckoutPage({
               <div className="flex items-center justify-center gap-6 py-2">
                 <div className="flex items-center gap-1 text-[11px] text-gray-400">
                   <ShieldCheck className="h-4 w-4" />
-                  Safe Payment
+                  {t('checkout.safePayment')}
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-gray-400">
                   <Truck className="h-4 w-4" />
-                  Free Delivery
+                  {t('common.freeDelivery')}
                 </div>
               </div>
 
@@ -2830,7 +2834,7 @@ export function CheckoutPage({
                     className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                   <span className="text-xs text-gray-600 dark:text-gray-400">
-                    Save this payment method for faster checkout next time
+                    {t('checkout.savePaymentMethod')}
                   </span>
                 </label>
               )}
@@ -2851,18 +2855,18 @@ export function CheckoutPage({
                 {loading || paymentProcessing ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    {paymentProcessing ? 'Processing Payment...' : 'Placing Order...'}
+                    {paymentProcessing ? t('checkout.processingPayment') : t('checkout.placingOrder')}
                   </>
                 ) : (
                   <>
                     {isCod ? (
                       <>
-                        PLACE ORDER • {formatPrice(finalTotal)}
+                        {t('checkout.placeOrderAmount', { amount: formatPrice(finalTotal) })}
                       </>
                     ) : (
                       <>
                         <Lock className="h-4 w-4" />
-                        PAY {formatPrice(useWalletBalance && !walletCoversFull ? amountPayable : finalTotal)}
+                        {t('checkout.payAmount', { amount: formatPrice(useWalletBalance && !walletCoversFull ? amountPayable : finalTotal) })}
                       </>
                     )}
                   </>

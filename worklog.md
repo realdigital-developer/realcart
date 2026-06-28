@@ -2206,3 +2206,541 @@ Stage Summary:
 - The Change Language page is now fully functional — selecting a language instantly translates the entire customer panel UI.
 - Lint: 0 errors. Dev server: stable, all 15 tabs HTTP 200, no console errors. Verified via Agent Browser across 3 languages (English, Hindi, Tamil).
 - No existing UI or code was damaged — only English string literals were replaced with t() calls; all styling, layout, icons, and logic are untouched.
+
+## Task: translate-new-pa-gu — Add NEW i18n keys to Punjabi (pa) & Gujarati (gu) locales
+
+### Scope
+Translate the NEW ~267 keys (from `notifications.emptyTitleAll` through `checkout.failedToPlaceOrder`)
+in `src/locales/en.json` into Punjabi (ਪੰਜਾਬੀ) and Gujarati (ગુજરાતી), appending them to the existing
+335-key `src/locales/pa.json` and `src/locales/gu.json` files. Existing keys were preserved unchanged.
+
+### Key sections translated (267 keys total)
+- `notifications.emptyTitleAll` (1)
+- `search.*` (14) — recent/popular searches, voice search mic states & errors
+- `productDetail.*` (75) — product page: ratings, EMI, seller, variants, image alt text, reviews CTA, share text
+- `reviews.*` (33) — rating scale (terrible→excellent), review form fields, photo/video upload limits & errors
+- `addresses.*` (30) — address book: form placeholders, default address management, search & empty states
+- `checkout.*` (114) — checkout flow: delivery address, order summary, payment methods (UPI/Card/NetBanking/Wallet/COD),
+  coupon application, balance split, CVV/card security, payment status, success/failure states & validation errors
+
+### Rules honored
+- All 602 JSON keys present (335 existing + 267 new) in each file.
+- All keys (including `_plural` suffix) preserved exactly.
+- All interpolation placeholders preserved exactly: `{count}`, `{name}`, `{price}`, `{amount}`, `{percent}`,
+  `{attribute}`, `{seller}`, `{index}`, `{current}`, `{total}`, `{remaining}`, `{error}`, `{eta}`, `{code}`,
+  `{method}`, `{applied}`, `{payable}`, `{landmark}`, `{type}`, `{size}`, `{query}`, `{category}`, `{date}`,
+  `{page}` — verified via Node.js placeholder diff (0 mismatches in either file).
+- Brand "RealCart" left untranslated (8 occurrences in each file, matching en.json).
+- Special characters preserved: bullet (•), checkmark (✓), em-dash (—), ellipsis (…), ₹ symbol, MM/YY, etc.
+- JSON validity confirmed via `require()`.
+
+### Verification results (Node.js)
+| File  | Total keys | Missing vs en | Extra vs en | Placeholder mismatches | _plural keys | RealCart occurrences |
+|-------|------------|---------------|-------------|------------------------|--------------|----------------------|
+| en.json | 602      | —             | —           | —                      | 13           | 8                    |
+| pa.json | 602      | 0             | 0           | 0                      | 13           | 8                    |
+| gu.json | 602      | 0             | 0           | 0                      | 13           | 8                    |
+
+### Files modified
+- `src/locales/pa.json` — added 267 Punjabi translations (file now 629 lines, 602 keys)
+- `src/locales/gu.json` — added 267 Gujarati translations (file now 629 lines, 602 keys)
+
+No existing keys were touched; both files remain valid JSON parseable by `require()`.
+
+---
+
+## Task ID: translate-new-te-mr — Translate new i18n keys for Telugu (te) & Marathi (mr)
+
+### Scope
+Added translations for the 267 NEW i18n keys (spanning
+`notifications.emptyTitleAll` → `checkout.failedToPlaceOrder`) to the two
+existing locale files:
+
+- `src/locales/te.json` (Telugu / తెలుగు)
+- `src/locales/mr.json` (Marathi / मराठी)
+
+The files previously held the first 335 keys (matched `en.json`). All 335
+existing keys were preserved unchanged; only the 267 new keys were appended
+in the same order as `src/locales/en.json`.
+
+### What changed
+- `src/locales/te.json`: 335 keys → **602 keys**
+- `src/locales/mr.json`: 335 keys → **602 keys**
+- Helper script: `/home/z/translate_new.py` (load → validate → merge → write)
+
+### Validation performed
+- `json.load()` succeeds for both files (valid JSON, no trailing commas).
+- Both files have **exactly 602 keys**, matching `en.json`.
+- Key order in both files is identical to `en.json` (verified via list equality).
+- All 602 keys present in both files (no missing / extra keys).
+- **Placeholder parity**: regex-swept every value for `{…}` interpolations
+  (`{count}`, `{name}`, `{price}`, `{amount}`, `{percent}`, `{attribute}`,
+  `{seller}`, `{index}`, `{current}`, `{total}`, `{remaining}`, `{error}`,
+  `{eta}`, `{code}`, `{method}`, `{applied}`, `{payable}`, `{landmark}`,
+  `{type}`, `{size}`, `{query}`, `{category}`, `{date}`, `{page}`,
+  `{total}`) — **0 mismatches** across all 602 keys for both languages.
+- Brand name "RealCart" preserved verbatim (e.g. in `productDetail.shareText`).
+- `_plural` suffix keys preserved (e.g. `productDetail.ratingsCount_plural`,
+  `addresses.savedCount_plural`, `checkout.couponsAvailable_plural`,
+  `checkout.priceMrp_plural`, `productDetail.reviewsCount_plural`).
+
+### Notes
+- Output formatting uses 2-space indent (valid JSON); the previous
+  blank-line section separators from the original files are not preserved
+  by `json.dump` — content/keys/values are 100% preserved.
+- All translations are native, context-appropriate translations (not
+  transliterations) for an e-commerce customer panel UX.
+
+### Next actions
+- Optional: run the app's i18n linter / Next.js build to confirm the
+  updated locale bundles load cleanly.
+- Optional: restore blank-line section separators in the JSON if the
+  project's lint rules require that style.
+
+---
+
+## Task ID: translate-new-kn-ml — Translate NEW i18n keys (Kannada & Malayalam)
+
+### Scope
+Added translations for the 267 new i18n keys (spanning `notifications.emptyTitleAll`
+through `checkout.failedToPlaceOrder`) into the two existing South-Indic locale files:
+- `src/locales/kn.json` — Kannada (ಕನ್ನಡ)
+- `src/locales/ml.json` — Malayalam (മലയാളം)
+
+Each file already held the first 335 keys (unchanged). The English source
+`src/locales/en.json` defines 602 keys total — both updated files now match that
+count exactly.
+
+### Process
+1. Read `en.json` and the existing `kn.json` / `ml.json` (335 keys each) to
+   identify the 267 keys missing from each (verified identical for both locales).
+2. Authored native-script translations for every new key in `scripts/translate_kn_ml.py`,
+   with in-script assertions enforcing:
+   - New-key set exactly equals `en_set − existing_set` for each locale.
+   - All existing key values are preserved unchanged in the merged output.
+   - Every interpolation placeholder (`{count}`, `{name}`, `{price}`, `{amount}`,
+     `{percent}`, `{attribute}`, `{seller}`, `{index}`, `{current}`, `{total}`,
+     `{remaining}`, `{error}`, `{eta}`, `{code}`, `{method}`, `{applied}`,
+     `{payable}`, `{landmark}`, `{size}`, etc.) in the English value is present in
+     the translated value.
+   - Every `_plural` key from `en.json` is present in both merged files.
+   - Final merged key count == 602 for each locale.
+3. Wrote each file via `json.dump(..., ensure_ascii=False, indent=2)` so the native
+   Kannada/Malayalam script is stored as UTF-8 (not escaped), matching the format
+   of the existing files.
+
+### New key groups added
+- `notifications.emptyTitleAll` (1 key)
+- `search.*` (14 keys — recent/popular searches, voice search, mic errors)
+- `productDetail.*` (75 keys — product page, ratings, reviews, image alt, share)
+- `reviews.*` (33 keys — write/edit review form, ratings labels, video/photo limits)
+- `addresses.*` (30 keys — add/edit address, default, pincode, landmark, search)
+- `checkout.*` (114 keys — delivery address, order summary, payment methods UPI/
+  Card/NetBanking/Wallet/COD, coupons, balance split, validation errors, success/
+  failure states)
+
+### Result
+- `src/locales/kn.json`: 602 keys (335 existing + 267 new), 604 lines, valid JSON.
+- `src/locales/ml.json`: 602 keys (335 existing + 267 new), 604 lines, valid JSON.
+- Key-set parity with `en.json` verified for both files.
+- 13 `_plural` keys present in both files (matches en.json).
+- 0 placeholder mismatches across the full 602-key set for either locale.
+- Brand name "RealCart" preserved (kn: `brand: "RealCart"`, ml: `brand: "RealCart"`).
+
+### Files touched
+- `src/locales/kn.json` (rewritten with 602 keys)
+- `src/locales/ml.json` (rewritten with 602 keys)
+- `scripts/translate_kn_ml.py` (added — reproducible merge script with assertions)
+
+### Next actions
+- Optional: visually review a few high-traffic strings (cart/checkout flow) with a
+  native speaker before release.
+- Optional: if `next-intl` or a build-time lint checks for missing-key / missing-
+  translation parity, run it to confirm no other locale files (hi, ta, te, etc.)
+  are still missing these 267 keys.
+
+---
+
+## Task: apply-i18n-search-notifications
+
+### Scope
+Applied the lightweight `useLanguage()` / `t(key, params)` i18n system to the last two
+untranslated customer-panel screens:
+
+- `src/components/customer/search-page.tsx` — had **no** translations before this task.
+- `src/components/customer/notifications-page.tsx` — was already mostly translated; this
+  task closed the two remaining gaps (hardcoded empty-state title + locale-aware date
+  formatting).
+
+### File 1 — `search-page.tsx`
+- Added `import { useLanguage } from '@/components/providers/language-provider'` (line 6)
+  and `const { t } = useLanguage()` at the top of the `SearchPage` component (line 25).
+- Replaced 16 hardcoded English strings with `t()` calls (keys verified present in
+  `src/locales/en.json`):
+  | UI element | Key used |
+  |---|---|
+  | Back button `aria-label` | `common.back` |
+  | Search input `placeholder` | `header.searchPlaceholder` |
+  | Mic button `aria-label` (both states) | `search.stopVoice` / `search.voiceSearch` |
+  | Camera button `aria-label` | `header.searchByImage` |
+  | "Recent Searches" heading | `search.recentSearches` |
+  | "Clear All" button | `search.clearAll` |
+  | "Popular Searches" heading | `search.popularSearches` |
+  | "Search Tips" label | `search.searchTips` |
+  | Tip body paragraph | `search.tipBody` |
+  | Voice overlay "Heard:" / "Listening..." | `search.heard` / `search.listening` |
+  | "Say a product name or keyword" | `search.sayProduct` |
+  | Voice overlay "Cancel" button | `common.cancel` |
+  | 4 voice error strings (`setVoiceError(...)` calls) | `search.voiceNotSupported`, `search.noSpeech`, `search.micDenied`, `search.voiceError` (with `{ error }` interpolation) |
+- No styling, layout, icon, or logic changes. Inline comments ("Recent Searches",
+  "Popular Searches") were intentionally left as-is since they are not user-facing.
+
+### File 2 — `notifications-page.tsx`
+1. **Locale-aware date formatting.** The `getRelativeTime` helper (top of file) was
+   using the hardcoded `'en-IN'` locale in its `toLocaleDateString` fallback branch.
+   - Added a `locale: LocaleCode` parameter to `getRelativeTime` and imported the
+     `LocaleCode` type alongside `useLanguage` from the provider.
+   - Replaced `'en-IN'` with `` `${locale}-IN` `` so dates like "5 Jan 2025" render
+     in the active locale's calendar/script.
+   - Updated the one call site (inside `NotificationCard`) to pass `locale` through.
+2. **Empty-state title.** In `NotificationsPage`'s empty-state, the
+   `activeFilter === 'all'` branch was showing the hardcoded `'No notifications yet'`
+   string. Replaced with `t('notifications.emptyTitleAll')`. The other branch was
+   already using `t('notifications.emptyTitle', { category })` and was left untouched.
+3. Both `NotificationCard` and `NotificationsPage` now destructure
+   `const { t, locale } = useLanguage()` (per the task spec — `locale` is consumed by
+   `NotificationCard`'s `getRelativeTime` call; the project's ESLint config has
+   `no-unused-vars` disabled so the unused binding in `NotificationsPage` is harmless
+   and matches the requested diff exactly).
+
+### Verification
+- `npx tsc --noEmit` — no errors reported in either edited file (only pre-existing
+  errors in unrelated API route handlers / Next.js generated validator types remain).
+- Visual scan via Grep confirms no remaining hardcoded English UI strings in either
+  file (only code comments remain, which are not user-facing).
+- All translation keys referenced were confirmed present in `src/locales/en.json`.
+
+---
+
+## Task ID: apply-i18n-addresses
+
+### Scope
+Apply the project's lightweight `useLanguage()` / `t(key, params)` i18n system to
+`src/components/customer/addresses-page.tsx` (3 components: `AddressFormModal`,
+`AddressCard`, `AddressesPage`). No styling, layout, icon, or logic changes —
+only English string literals replaced with `t()` calls.
+
+### Status on arrival
+Inspection of the file (574 lines, 3 components) showed that **all** of the
+requested substitutions had already been applied in a prior pass. No edits were
+required. This section documents the verification performed so the task can be
+closed with confidence.
+
+### Verification performed
+1. **Imports & hook usage** — Confirmed via Read + Grep:
+   - Line 22: `import { useLanguage } from '@/components/providers/language-provider'`
+   - Line 35: `const { t } = useLanguage()` inside `AddressFormModal`
+   - Line 244: `const { t } = useLanguage()` inside `AddressCard`
+   - Line 320: `const { t } = useLanguage()` inside `AddressesPage`
+2. **All 30 translation sites** — Confirmed present via Grep
+   (`t\('addresses\.|t\('common\.other'` against the file). Every site listed in
+   the task spec resolves to the correct key, including:
+   - Modal title `editAddress ? t('addresses.editAddress') : t('addresses.addNewAddress')`
+   - Address-type chips `t('addresses.home' | 'addresses.work' | 'common.other')`
+   - All 9 form `placeholder={t(...)}` inputs (full name, mobile, address lines,
+     city, state, pincode, landmark)
+   - "Set as default" label, save/update button labels
+   - Card: DEFAULT badge, type chip, `nearLandmark` interpolation
+     (`t('addresses.nearLandmark', { landmark: address.landmark })`),
+     EDIT / DELETE / SET DEFAULT buttons
+   - `confirm(t('addresses.deleteConfirm'))` in `handleDeleteAddress`
+   - Page: `t('addresses.myAddresses')` h1, `t('addresses.searchPlaceholder')`,
+     `t('addresses.savedCount', { count: filteredAddresses.length })` (uses
+     `_plural` form via the provider's pluralization rule),
+     `noMatching` / `tryDifferentSearch` empty-search state,
+     `noSavedAddresses` / `noSavedAddressesDesc` / `addAddress` zero-state
+3. **No leftover English literals** — Grep for the original English phrases
+   (`Edit Address`, `Full Name *`, `UPDATE ADDRESS`, `My Addresses`,
+   `Search addresses...`, `No Matching Addresses`, `ADD ADDRESS`,
+   `Are you sure you want to delete this address?`, etc.) returns matches only in
+   code comments (`{/* Address Line 1 */}`, `{/* Address Line 2 */}`) and one
+   header comment that mentions "My Addresses" — none of which are user-facing.
+   A second Grep for `placeholder="[A-Z]`, `>Word<`, and `confirm('` patterns
+   found zero untranslated call sites.
+4. **Keys exist in `en.json`** — All 29 distinct `addresses.*` keys (plus
+   `addresses.savedCount_plural`) plus the reused `common.other` key are present
+   in `src/locales/en.json` (lines 484–513). The interpolation placeholders
+   (`{landmark}`, `{count}`) match the params passed at the call sites.
+
+### Files touched
+- `src/components/customer/addresses-page.tsx` — **no changes** (already fully
+  translated; verification only).
+- `/home/z/my-project/worklog.md` — this appended section.
+
+### Next actions
+None — task is complete. The component is fully wired to the i18n system and will
+render in the user's selected locale with proper fallback to English when a
+locale file is incomplete.
+
+---
+
+## Task ID: apply-i18n-product-detail
+
+### Scope
+Wire the project's lightweight `useLanguage()` / `t(key, params)` i18n system
+into `src/components/customer/product-detail-page.tsx` (~3310 lines, 11
+component definitions). Only English string literals were replaced with `t()`
+calls — no styling, layout, icon, or logic changes.
+
+### Changes performed
+
+1. **Imports & hooks**
+   - Added `import { useLanguage } from '@/components/providers/language-provider'`
+     next to the other provider imports at the top of the file.
+   - Added `const { t } = useLanguage()` to **6** components:
+     `StarRatingSelector`, `ReviewCard`, `ReviewFormModal`, `ImageGallery`
+     (newly wired to translate its alt texts), `MagnifierImage`, `Lightbox`,
+     and the main exported `ProductDetailPage`.
+
+2. **RATING_LABELS constant** — The module-level `RATING_LABELS` `Record`
+   mapped 1–5 → English words. Since it lived outside any component it could
+   not call `t()` directly. Replaced it with `RATING_LABEL_KEYS`, a
+   `Record<number, string>` of translation *keys* (`reviews.terrible`,
+   `reviews.poor`, `reviews.average`, `reviews.good`, `reviews.excellent`),
+   and `StarRatingSelector` now does `t(RATING_LABEL_KEYS[display])`.
+
+3. **String substitutions** — Replaced all user-visible English strings
+   listed in the task spec across the five required components plus the
+   `ImageGallery` alt-text bonus:
+
+   - **ReviewCard** (8 sites): avatar alt, Verified Purchase pill, edit/delete
+     `title`s, review video/media alts, `VIDEO` badge, helpful count, seller
+     reply label.
+   - **ReviewFormModal** (25 sites): 4 validation `setError(...)` calls
+     (maxPhotos, invalidVideoFormat, videoTooLarge, maxVideos), 2 submit
+     validation errors (selectRating, commentTooShort), modal title
+     (editReview vs writeReview), all 8 field labels + placeholders
+     (yourRating, reviewTitle, yourReview, pros, cons + their placeholders),
+     char counter, optional/upTo10/upTo5Videos hints, existing-photo and
+     new-preview alts, both "Saved" badges, both "Add" buttons,
+     supportedFormats line, and the three submit-button states
+     (updating/submitting/updateReview/submitReview).
+   - **MagnifierImage** (1 site): the `Image unavailable` fallback.
+   - **Lightbox** (5 sites): image counter, `aria-label="Close"`,
+     previous/next aria-labels, pinch-to-adjust indicator.
+   - **ImageGallery** (3 alt-text sites, bonus): thumbnail alt and the two
+     main-image alts now use `productDetail.thumbAlt` /
+     `productDetail.mainImageAlt` with `{name, index}` interpolation.
+   - **ProductDetailPage** (~50 sites): share text template, error-state
+     heading + sub-text + Browse Products button, ratings count (with
+     `_plural` form), no-ratings, % off, wishlist toggle title/aria-label
+     (remove/add), share button title/aria-label, inclusive-of-taxes, EMI
+     line, free-delivery badge, two "sold" counts, delivery-charge /
+     delivery-charge-applies / free-above hint, Select {attribute},
+     Size Chart, variant-out-of-stock, Qty:, only-left, view-seller-profile
+     aria-label, Sold by, New seller, Following / Follow, the four trust
+     badges (Lowest/Price, Cash on/Delivery, defaultReturnDays/Returns,
+     Warranty/Included), the Specifications / Product Description /
+     Ratings & Reviews headings, both Write-a-Review buttons, no-reviews +
+     be-first empty state, reviews count, Customer Images / Videos labels
+     (both inline and modal header), the two customer-photo / customer-video
+     alt interpolations (4 call sites total), the `All` filter tab,
+     no-reviews-match-filter, see-more-reviews, you-might-also-like + Ad
+     label, ADDED, GO TO CART / Add to Cart, Buy Now, gallery-modal image
+     counter, video-not-supported fallback text, and the final review-media
+     alt.
+
+   Filter-tab labels `Positive (4-5★)`, `Critical (1-2★)`, `📷 With Photos`,
+   `🎥 With Videos` were left as-is per the task spec (no exact keys exist
+   in `en.json`). The thrown `Error('Product not found')` /
+   `Error('Failed to load')` inside the fetch handler was also left as-is —
+   it is a developer-facing error string, not user-facing UI text, and was
+   not in the task spec.
+
+### Interpolation notes
+- Where the original code used `product.totalSold` (typed `number | undefined`)
+  inside JSX (rendering nothing when undefined), passing it as
+  `count: product.totalSold` to `t()` caused a TS2322 error because the
+  interpolation param type is `string | number`. Used `count: product.totalSold ?? 0`
+  at both sold-count sites — the surrounding `{(product.totalSold ?? 0) > 0 && …}`
+  guard already ensures the span only renders when there's a real count, so
+  behavior is unchanged.
+- All other interpolation params (`{count}`, `{percent}`, `{amount}`,
+  `{attribute}`, `{current}`, `{total}`, `{seller}`, `{name}`, `{index}`,
+  `{remaining}`, `{current}/{total}` for imageCounter) match the placeholder
+  names in `src/locales/en.json` exactly.
+
+### Verification
+- `npx tsc --noEmit` — zero errors in `product-detail-page.tsx` (after the
+  `totalSold ?? 0` fix). Pre-existing errors in unrelated API route handlers
+  / Next.js generated validator types remain.
+- `npx eslint src/components/customer/product-detail-page.tsx` — 0 errors,
+  1 pre-existing warning about an unused `eslint-disable` directive on line
+  905 (unrelated to this task; was there before).
+- Visual scan via Grep confirms no remaining hardcoded user-visible English
+  literals in the file (all remaining matches for English phrases are in
+  code comments, JS identifiers like `isFollowingSeller`/`SpecificationsTable`,
+  or the intentionally-untranslated filter-tab labels and thrown fetch
+  errors noted above).
+
+### Files touched
+- `src/components/customer/product-detail-page.tsx` — all changes per the
+  task spec.
+- `/home/z/my-project/worklog.md` — this appended section.
+
+### Next actions
+None — task is complete. The product detail page (and its 6 child
+components) is now fully wired to the i18n system and will render in the
+user's selected locale with proper fallback to English when a locale file
+is incomplete.
+
+---
+
+## Task: apply-i18n-checkout
+
+### Scope
+Applied i18n to `src/components/customer/checkout-page.tsx` (2,886 lines, 3
+components: `AddressFormModal`, `AddressCard`, `CheckoutPage`). Replaced all
+hardcoded English user-visible literals with `t()` calls keyed against the
+existing `checkout.*`, `addresses.*`, `cart.*`, `common.*`, `wallet.*`,
+`bankUpi.*`, and `paymentRefund.*` namespaces in `src/locales/en.json`.
+
+### Changes
+1. Added `import { useLanguage } from '@/components/providers/language-provider'`
+   at the top of the file.
+2. Added `const { t } = useLanguage()` inside all three components
+   (`AddressFormModal`, `AddressCard`, `CheckoutPage`).
+3. Translated `AddressFormModal` — header, type buttons (Home/Work/Other),
+   all input placeholders (Full Name, Mobile, Address Line 1/2, City, State,
+   Pincode, Landmark), default-address checkbox, save button.
+4. Translated `AddressCard` — type chip (translates `address.type` at display
+   time using `t('addresses.home' | 'addresses.work' | 'common.other')`),
+   landmark suffix via `t('addresses.nearLandmark', { landmark })`, and the
+   EDIT / DELETE buttons.
+5. Translated the `renderPriceBreakup` helper — Price (MRP), Product
+   Discount, Special Offer, Coupon label, Total Savings, Price After
+   Discount, Delivery Charge, FREE, Estimated delivery, COD Convenience Fee,
+   Platform Fee, Total Payable, RealCart Balance, Amount to Pay, inclusive
+   of all taxes. Uses `t('checkout.priceMrp', { count: totalItems })` so the
+   pluralization rule in `language-provider.tsx` handles "1 item" vs "N
+   items" automatically.
+6. Translated all `setError(...)` literal call sites in
+   `handleApplyCoupon`, `handlePlaceOrder` (COD + wallet + general flows),
+   and inside the `handleServerPayment` `useCallback` for the UPI polling
+   failure branch and the catch-all. Added `t` to the `handleServerPayment`
+   `useCallback` dependency array (only callback affected).
+7. Translated the UPI polling screen (Waiting for Payment, Open your UPI
+   app, Amount, UPI ID, Checking payment status, Secured by SSL, Cancel
+   Payment) and the success screen (Order Placed, Order confirmed, Order ID,
+   Payment: COD / Paid via {method}, Continue Shopping, View Orders).
+8. Translated the step header (Select Delivery Address / Order Summary /
+   Payment), address step (Saved Addresses, empty state, Add New Address,
+   CONTINUE), summary step (Delivery Address + CHANGE, address type chip,
+   Mobile:, Order Items ({count}), Qty/Seller, Delivery Option, no-options
+   fallbacks, Faster badge, FREE, Delivery by {eta}, delivery-fee note,
+   Price Details, CONTINUE TO PAYMENT).
+9. Translated the payment step — RealCart Balance toggle (title, loading,
+   available, applied, balanceSplit, selectPaymentMethod), Saved Payment
+   Methods section, saved-card CVV input (label, placeholder, RBI note),
+   "Use new payment method" tile, "Choose Payment Method" heading, the
+   5 tab labels (UPI/Card/Net Banking/Wallet/COD), UPI tab (Enter UPI ID,
+   placeholder, invalid/valid messages, Quick Fill UPI Handle), Card tab
+   (Accepted Cards, Card Number, Cardholder Name, Expiry, CVV placeholders
+   + labels, card-security note), Net Banking tab (Popular Banks), Wallet
+   tab (Popular Wallets), COD tab (Cash on Delivery, description, note),
+   secure-payment notice, Apply Coupon section (heading, you-save amount,
+   coupon-code input, APPLY button ×2, coupons-available count, checking
+   coupons), Price Details, security badges (Safe Payment, Free Delivery),
+   save-payment-method checkbox, and the PLACE ORDER / PAY {amount} button
+   including the Processing Payment / Placing Order loading states.
+
+### Strings intentionally NOT translated
+- `'DELETE'` at line 701 — HTTP method, not a UI string.
+- `'Wallet payment failed'` (line 1602) and `'Failed to place order'`
+  (line 1669) — these are `throw new Error(...)` fallback messages thrown
+  from API response handlers and surfaced to the user only via the catch
+  block's `err.message`. They are server-error fallbacks with no matching
+  key in `en.json` (the keys `checkout.walletPaymentFailed` /
+  `checkout.failedToPlaceOrder` are the longer "... Please try again."
+  variants used at the catch sites).
+- `'Cash on Delivery'` assigned to `paymentMethodName` at line 1674 and
+  compared at line 1779 — used as a sentinel value to pick the
+  `t('checkout.paymentCod')` vs `t('checkout.paidVia')` branch at display
+  time. The user-facing string is translated at the display site, but the
+  stored value must remain the literal so the comparison still works.
+
+### Interpolation / pluralization notes
+- `t('checkout.priceMrp', { count: totalItems })` — uses the `_plural`
+  suffix convention (`priceMrp` / `priceMrp_plural`) from the
+  `language-provider.tsx` resolver. Matches `cart.priceLabel` pattern.
+- `t('checkout.couponsAvailable', { count })` — same `_plural` pattern.
+- `t('checkout.orderItems', { count: totalItems })` — single-form key
+  only in en.json (`Order Items ({count})`); the resolver falls back to
+  the same key for both singular and plural, which is correct here.
+- `t('addresses.nearLandmark', { landmark: address.landmark })` — note
+  the en.json value is `", Near {landmark}"` (with leading comma+space),
+  matching the original `, Near ${address.landmark}` concatenation.
+- All other params (`{amount}`, `{code}`, `{eta}`, `{applied}`, `{payable}`,
+  `{method}`) match placeholder names in en.json exactly.
+
+### Verification
+- `npx tsc --noEmit -p tsconfig.json` — 1 pre-existing error in this file
+  (`Property 'toLowerCase' does not exist on type '{}'` at the
+  `body.cardNetwork` line inside `savePaymentMethodToBackend`). Confirmed
+  pre-existing by stashing the diff and re-running tsc — the same error
+  appears at the equivalent pre-change line. No new errors introduced by
+  the i18n changes.
+- `npx eslint src/components/customer/checkout-page.tsx` — 0 errors, 3
+  pre-existing warnings about unused `eslint-disable` directives on lines
+  553 / 578 / 640 (all in unrelated `useEffect` blocks that were already
+  there before this task). My addition of `t` to the `handleServerPayment`
+  deps array did NOT trigger any new `react-hooks/exhaustive-deps`
+  warnings.
+- Grep scan confirms no remaining hardcoded user-visible English literals
+  in placeholders or `>Label<` JSX (all such matches gone). The few
+  remaining English string literals in the file are: HTTP methods
+  (`'DELETE'`), `throw new Error(...)` server-fallback messages, the
+  `'Cash on Delivery'` sentinel string used for the
+  `paymentMethodName === 'Cash on Delivery'` comparison, and code
+  comments.
+
+### Files touched
+- `src/components/customer/checkout-page.tsx` — all changes per the task
+  spec.
+- `/home/z/my-project/worklog.md` — this appended section.
+
+### Next actions
+None — task is complete. The checkout page (and its two child components,
+`AddressFormModal` and `AddressCard`) is now fully wired to the i18n
+system and will render in the user's selected locale with proper fallback
+to English when a locale file is incomplete.
+
+---
+Task ID: i18n-extend-all-pages-master
+Agent: main-orchestrator
+Task: Extend multi-language support to all remaining customer panel pages — product detail, dedicated search, help & support, my addresses, checkout (select delivery address, order summary, payment, waiting for payment, order placed successfully), and notifications body. Customer must see all languages properly.
+
+Work Log:
+- Dispatched 3 parallel Explore agents to catalog ALL remaining English strings across: product-detail-page (3302 lines, ~95 strings, 11 components), search-page (430 lines, ~22 strings), checkout-page (2885 lines, ~115 strings, 3 components), addresses-page (569 lines, ~30 strings, 3 components), help-support-page (already fully translated), notifications-page (1 remaining string + date locale).
+- Added 267 new translation keys to src/locales/en.json (now 602 keys total) covering: search.*, productDetail.*, reviews.*, addresses.*, checkout.*, and notifications.emptyTitleAll.
+- Dispatched 3 parallel translation agents to add the 267 new keys to all 9 locale files (hi, bn, ta, te, mr, kn, ml, pa, gu). All 10 locale files now have 602 keys each, validated (no missing/extra keys, all placeholders preserved, valid JSON).
+- Applied translations to 5 component files via parallel agents:
+  * search-page.tsx: 16 strings translated (recent/popular searches, voice search, tips, overlay)
+  * notifications-page.tsx: 1 remaining string + date locale fix (now uses locale-aware date formatting)
+  * addresses-page.tsx: 30 strings translated (form, cards, empty states, all placeholders)
+  * product-detail-page.tsx: ~90 strings across 6 components (RATING_LABELS refactored, reviews, gallery, seller, trust badges, bottom bar)
+  * checkout-page.tsx: ~115 strings across 3 components (all 5 steps: address selection, order summary, payment, UPI polling, success screen, all validation errors, all payment method tabs)
+- help-support-page.tsx confirmed already fully translated (no changes needed).
+- Ran `bun run lint`: 0 errors, 24 warnings (all pre-existing, none new).
+- All customer tabs compile and return HTTP 200 (search, products, product detail, notifications, addresses, checkout, cart).
+- Agent Browser verification (with test customer login):
+  * Hindi: search page ("लोकप्रिय खोजें", "कीवर्ड या उत्पाद नाम से खोजें"), addresses ("मेरे पते", "पता जोड़ें"), product detail ("विशेषताएँ", "उत्पाद विवरण", "रेटिंग और समीक्षाएँ", "आपको यह भी पसंद आ सकता है", "कार्ट में जोड़ें", "अभी खरीदें"), checkout ("डिलीवरी पता चुनें").
+  * Tamil: addresses ("எனது முகவரிகள்"), checkout ("டெலிவரி முகவரியைத் தேர்ந்தெடு").
+  * English: restored correctly, localStorage persists.
+  * No console errors during any language switch or page navigation.
+
+Stage Summary:
+- Extended full multi-language support to ALL customer panel pages. The customer can now switch language and see proper translations on: product detail page, dedicated search page, help & support page, my addresses page, checkout flow (select delivery address, order summary, payment, waiting for payment, order placed successfully), and notifications page.
+- 10 locale files (602 keys each), 5 component files updated, 267 new keys added.
+- Lint: 0 errors. Dev server: stable, all pages HTTP 200, no console errors. Verified via Agent Browser across Hindi + Tamil + English.
+- No existing UI or code was damaged — only English string literals were replaced with t() calls; all styling, layout, icons, and logic are untouched.

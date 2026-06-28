@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
+import { useLanguage } from '@/components/providers/language-provider'
 import { Address } from './types'
 
 /* ------------------------------------------------------------------ */
@@ -31,6 +32,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
   onSave: (address: Omit<Address, '_id'>) => void
   editAddress?: Address | null
 }) {
+  const { t } = useLanguage()
   const [form, setForm] = useState({
     name: '',
     mobile: '',
@@ -97,7 +99,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-950 z-10">
             <h2 className="text-base font-bold text-gray-800 dark:text-gray-200">
-              {editAddress ? 'Edit Address' : 'Add New Address'}
+              {editAddress ? t('addresses.editAddress') : t('addresses.addNewAddress')}
             </h2>
             <button onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
               <X className="h-5 w-5 text-gray-500" />
@@ -109,9 +111,9 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
             {/* Address Type */}
             <div className="flex gap-2">
               {([
-                { id: 'home', label: 'Home', icon: Home },
-                { id: 'work', label: 'Work', icon: Building2 },
-                { id: 'other', label: 'Other', icon: Briefcase },
+                { id: 'home', label: t('addresses.home'), icon: Home },
+                { id: 'work', label: t('addresses.work'), icon: Building2 },
+                { id: 'other', label: t('common.other'), icon: Briefcase },
               ] as const).map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -134,13 +136,13 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
               <input
                 value={form.name}
                 onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Full Name *"
+                placeholder={t('addresses.fullNamePlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
               <input
                 value={form.mobile}
                 onChange={(e) => setForm(f => ({ ...f, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-                placeholder="Mobile Number *"
+                placeholder={t('addresses.mobileNumberPlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -149,7 +151,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
             <input
               value={form.addressLine1}
               onChange={(e) => setForm(f => ({ ...f, addressLine1: e.target.value }))}
-              placeholder="Address Line 1 (House No, Building, Street) *"
+              placeholder={t('addresses.addressLine1Placeholder')}
               className="w-full h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
             />
 
@@ -157,7 +159,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
             <input
               value={form.addressLine2}
               onChange={(e) => setForm(f => ({ ...f, addressLine2: e.target.value }))}
-              placeholder="Address Line 2 (Area, Colony)"
+              placeholder={t('addresses.addressLine2Placeholder')}
               className="w-full h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
             />
 
@@ -166,13 +168,13 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
               <input
                 value={form.city}
                 onChange={(e) => setForm(f => ({ ...f, city: e.target.value }))}
-                placeholder="City *"
+                placeholder={t('addresses.cityPlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
               <input
                 value={form.state}
                 onChange={(e) => setForm(f => ({ ...f, state: e.target.value }))}
-                placeholder="State *"
+                placeholder={t('addresses.statePlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -182,13 +184,13 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
               <input
                 value={form.pincode}
                 onChange={(e) => setForm(f => ({ ...f, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                placeholder="Pincode *"
+                placeholder={t('addresses.pincodePlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
               <input
                 value={form.landmark}
                 onChange={(e) => setForm(f => ({ ...f, landmark: e.target.value }))}
-                placeholder="Landmark (Optional)"
+                placeholder={t('addresses.landmarkPlaceholder')}
                 className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -203,7 +205,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
               )}>
                 {form.isDefault && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
               </div>
-              <span className="text-sm text-gray-600 dark:text-gray-400">Set as default address</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('addresses.setAsDefault')}</span>
             </label>
           </div>
 
@@ -220,7 +222,7 @@ function AddressFormModal({ isOpen, onClose, onSave, editAddress }: {
               )}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              {editAddress ? 'UPDATE ADDRESS' : 'SAVE ADDRESS'}
+              {editAddress ? t('addresses.updateAddress') : t('addresses.saveAddress')}
             </button>
           </div>
         </motion.div>
@@ -239,6 +241,7 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
   onDelete: () => void
   onSetDefault: () => void
 }) {
+  const { t } = useLanguage()
   const typeIcon = address.type === 'home' ? Home : address.type === 'work' ? Building2 : Briefcase
 
   return (
@@ -258,7 +261,7 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
       {address.isDefault && (
         <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 bg-emerald-500 rounded-full">
           <Star className="h-3 w-3 text-white fill-white" />
-          <span className="text-[10px] font-bold text-white">DEFAULT</span>
+          <span className="text-[10px] font-bold text-white">{t('addresses.default')}</span>
         </div>
       )}
 
@@ -274,14 +277,14 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{address.name}</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 uppercase font-medium">
-              {address.type}
+              {address.type === 'home' ? t('addresses.home') : address.type === 'work' ? t('addresses.work') : t('common.other')}
             </span>
           </div>
           <p className="text-xs text-gray-500 mt-0.5">{address.mobile}</p>
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
             {address.addressLine1}
             {address.addressLine2 ? `, ${address.addressLine2}` : ''}
-            {address.landmark ? `, Near ${address.landmark}` : ''}
+            {address.landmark ? t('addresses.nearLandmark', { landmark: address.landmark }) : ''}
           </p>
           <p className="text-xs text-gray-600 dark:text-gray-400">
             {address.city}, {address.state} - {address.pincode}
@@ -290,16 +293,16 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
           <div className="flex items-center gap-3 mt-3">
             <button onClick={onEdit} className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
               <Edit3 className="h-3 w-3" />
-              EDIT
+              {t('addresses.edit')}
             </button>
             <button onClick={onDelete} className="text-[11px] font-semibold text-red-500 hover:text-red-600 flex items-center gap-1">
               <Trash2 className="h-3 w-3" />
-              DELETE
+              {t('addresses.delete')}
             </button>
             {!address.isDefault && (
               <button onClick={onSetDefault} className="text-[11px] font-semibold text-orange-500 hover:text-orange-600 flex items-center gap-1">
                 <Star className="h-3 w-3" />
-                SET DEFAULT
+                {t('addresses.setDefault')}
               </button>
             )}
           </div>
@@ -314,6 +317,7 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
 /* ------------------------------------------------------------------ */
 
 export function AddressesPage({ onBack }: { onBack?: () => void }) {
+  const { t } = useLanguage()
   const { authenticated } = useCustomerAuth()
   const [addresses, setAddresses] = useState<Address[]>([])
   const [loading, setLoading] = useState(true)
@@ -373,7 +377,7 @@ export function AddressesPage({ onBack }: { onBack?: () => void }) {
   }
 
   const handleDeleteAddress = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this address?')) return
+    if (!confirm(t('addresses.deleteConfirm'))) return
     setDeletingId(id)
     try {
       await fetch('/api/customer/addresses', {
@@ -442,7 +446,7 @@ export function AddressesPage({ onBack }: { onBack?: () => void }) {
               </button>
             )}
             <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">
-              My Addresses
+              {t('addresses.myAddresses')}
             </h1>
           </div>
 
@@ -485,7 +489,7 @@ export function AddressesPage({ onBack }: { onBack?: () => void }) {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search addresses..."
+                  placeholder={t('addresses.searchPlaceholder')}
                   className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none"
                 />
                 {searchQuery && (
@@ -528,7 +532,7 @@ export function AddressesPage({ onBack }: { onBack?: () => void }) {
 
             {/* Summary */}
             <div className="text-center pt-2">
-              <p className="text-xs text-gray-400">{filteredAddresses.length} saved address{filteredAddresses.length !== 1 ? 'es' : ''}</p>
+              <p className="text-xs text-gray-400">{t('addresses.savedCount', { count: filteredAddresses.length })}</p>
             </div>
           </div>
         ) : searchQuery.trim() && addresses.length > 0 ? (
@@ -536,22 +540,22 @@ export function AddressesPage({ onBack }: { onBack?: () => void }) {
             <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
               <Search className="h-10 w-10 text-gray-300 dark:text-gray-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">No Matching Addresses</h3>
-            <p className="text-sm text-gray-500">Try a different search term</p>
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">{t('addresses.noMatching')}</h3>
+            <p className="text-sm text-gray-500">{t('addresses.tryDifferentSearch')}</p>
           </div>
         ) : (
           <div className="text-center py-16">
             <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
               <MapPin className="h-10 w-10 text-gray-300 dark:text-gray-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">No Saved Addresses</h3>
-            <p className="text-sm text-gray-500 mb-6">Add your first delivery address to get started</p>
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">{t('addresses.noSavedAddresses')}</h3>
+            <p className="text-sm text-gray-500 mb-6">{t('addresses.noSavedAddressesDesc')}</p>
             <button
               onClick={() => { setEditingAddress(null); setShowForm(true) }}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors"
             >
               <Plus className="h-4 w-4" />
-              ADD ADDRESS
+              {t('addresses.addAddress')}
             </button>
           </div>
         )}

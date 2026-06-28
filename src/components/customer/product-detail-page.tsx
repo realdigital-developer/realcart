@@ -46,6 +46,7 @@ import { useCustomerAuth } from '@/components/providers/customer-auth-provider'
 import { SizeChartModal } from '@/components/shared/size-chart-display'
 import { DeliveryChecker } from '@/components/customer/delivery-checker'
 import { ProductCard } from './product-card'
+import { useLanguage } from '@/components/providers/language-provider'
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
@@ -94,12 +95,12 @@ function StarRatingDisplay({ rating, size = 14 }: { rating: number; size?: numbe
 /*  Star Rating Selector                                                */
 /* ------------------------------------------------------------------ */
 
-const RATING_LABELS: Record<number, string> = {
-  1: 'Terrible',
-  2: 'Poor',
-  3: 'Average',
-  4: 'Good',
-  5: 'Excellent',
+const RATING_LABEL_KEYS: Record<number, string> = {
+  1: 'reviews.terrible',
+  2: 'reviews.poor',
+  3: 'reviews.average',
+  4: 'reviews.good',
+  5: 'reviews.excellent',
 }
 
 function StarRatingSelector({
@@ -109,6 +110,7 @@ function StarRatingSelector({
   value: number
   onChange: (r: number) => void
 }) {
+  const { t } = useLanguage()
   const [hover, setHover] = useState(0)
   const display = hover || value
 
@@ -137,7 +139,7 @@ function StarRatingSelector({
       </div>
       {display > 0 && (
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-          {RATING_LABELS[display]}
+          {t(RATING_LABEL_KEYS[display])}
         </span>
       )}
     </div>
@@ -196,6 +198,7 @@ function ReviewCard({
   helpfulLoading: string | null
   onImageClick: (url: string) => void
 }) {
+  const { t } = useLanguage()
   const initials = review.customerName?.charAt(0)?.toUpperCase() || '?'
   const [failedThumbnails, setFailedThumbnails] = useState<Set<string>>(new Set())
   const [avatarFailed, setAvatarFailed] = useState(false)
@@ -212,7 +215,7 @@ function ReviewCard({
           {showAvatarImage ? (
             <img
               src={avatarUrl!}
-              alt={review.customerName || 'Customer avatar'}
+              alt={review.customerName || t('productDetail.customerAvatar')}
               className="w-full h-full object-cover"
               onError={() => setAvatarFailed(true)}
             />
@@ -239,7 +242,7 @@ function ReviewCard({
             {review.verified && (
               <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
                 <Verified className="h-3 w-3" />
-                Verified Purchase
+                {t('productDetail.verifiedPurchase')}
               </span>
             )}
           </div>
@@ -258,14 +261,14 @@ function ReviewCard({
             <button
               onClick={() => onEdit(review)}
               className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              title="Edit review"
+              title={t('productDetail.editReviewTitle')}
             >
               <Edit2 className="h-3.5 w-3.5 text-gray-400" />
             </button>
             <button
               onClick={() => onDelete(review._id)}
               className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-              title="Delete review"
+              title={t('productDetail.deleteReviewTitle')}
             >
               <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
             </button>
@@ -306,7 +309,7 @@ function ReviewCard({
                     {m.thumbnailUrl && !failedThumbnails.has(key) ? (
                       <img
                         src={m.thumbnailUrl}
-                        alt="Review video thumbnail"
+                        alt={t('productDetail.reviewVideoThumb')}
                         className="w-full h-full object-cover"
                         onError={() => {
                           console.warn('[ReviewCard] Video thumbnail failed to load:', m.thumbnailUrl)
@@ -321,7 +324,7 @@ function ReviewCard({
                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
                       <Play className="h-5 w-5 text-white fill-white" />
                     </div>
-                    <span className="absolute bottom-0.5 right-0.5 text-[7px] bg-black/70 text-white px-1 rounded-sm font-medium pointer-events-none">VIDEO</span>
+                    <span className="absolute bottom-0.5 right-0.5 text-[7px] bg-black/70 text-white px-1 rounded-sm font-medium pointer-events-none">{t('productDetail.video')}</span>
                   </>
                 ) : failedThumbnails.has(key) ? (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700">
@@ -330,7 +333,7 @@ function ReviewCard({
                 ) : (
                   <img
                     src={thumbSrc}
-                    alt="Review media"
+                    alt={t('productDetail.reviewMedia')}
                     className="w-full h-full object-cover"
                     onError={() => {
                       console.warn('[ReviewCard] Image thumbnail failed to load:', thumbSrc)
@@ -379,7 +382,7 @@ function ReviewCard({
           ) : (
             <ThumbsUp className="h-3 w-3" />
           )}
-          Helpful ({review.helpful})
+          {t('productDetail.helpfulCount', { count: review.helpful })}
         </button>
       </div>
 
@@ -392,7 +395,7 @@ function ReviewCard({
                 <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300">
                   {reply.sellerName}
                 </span>
-                <span className="text-[10px] text-gray-400">• Seller</span>
+                <span className="text-[10px] text-gray-400">{t('productDetail.seller')}</span>
               </div>
               <p className="text-[12px] text-gray-600 dark:text-gray-400">{reply.replyText}</p>
             </div>
@@ -422,6 +425,7 @@ function ReviewFormModal({
   editingReview: Review | null
   productId: string
 }) {
+  const { t } = useLanguage()
   const [rating, setRating] = useState(editingReview?.rating ?? 0)
   const [title, setTitle] = useState(editingReview?.title ?? '')
   const [comment, setComment] = useState(editingReview?.comment ?? '')
@@ -497,7 +501,7 @@ function ReviewFormModal({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (totalImageCount + files.length > 10) {
-      setError('Maximum 10 photos allowed')
+      setError(t('reviews.maxPhotos'))
       return
     }
     const addedImages = [...newImages, ...files].slice(0, 10 - existingImages.length)
@@ -521,18 +525,18 @@ function ReviewFormModal({
     const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo']
     for (const f of files) {
       if (!validVideoTypes.includes(f.type)) {
-        setError('Invalid video format. Allowed: MP4, WebM, MOV, AVI')
+        setError(t('reviews.invalidVideoFormat'))
         e.target.value = ''
         return
       }
       if (f.size > 30 * 1024 * 1024) {
-        setError('Video too large. Maximum size: 30 MB')
+        setError(t('reviews.videoTooLarge'))
         e.target.value = ''
         return
       }
     }
     if (totalVideoCount + files.length > 5) {
-      setError('Maximum 5 videos allowed')
+      setError(t('reviews.maxVideos'))
       e.target.value = ''
       return
     }
@@ -579,11 +583,11 @@ function ReviewFormModal({
 
   const handleSubmit = () => {
     if (rating === 0) {
-      setError('Please select a rating')
+      setError(t('reviews.selectRating'))
       return
     }
     if (comment.trim().length < 10) {
-      setError('Comment must be at least 10 characters')
+      setError(t('reviews.commentTooShort'))
       return
     }
 
@@ -639,7 +643,7 @@ function ReviewFormModal({
         <div className="p-5">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-              {editingReview ? 'Edit Review' : 'Write a Review'}
+              {editingReview ? t('productDetail.editReview') : t('productDetail.writeReview')}
             </h3>
             <button
               onClick={onClose}
@@ -652,7 +656,7 @@ function ReviewFormModal({
           {/* Rating */}
           <div className="mb-5">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-              Your Rating *
+              {t('reviews.yourRating')}
             </label>
             <StarRatingSelector value={rating} onChange={setRating} />
           </div>
@@ -660,13 +664,13 @@ function ReviewFormModal({
           {/* Title */}
           <div className="mb-4">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
-              Review Title
+              {t('reviews.reviewTitle')}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Summarize your experience"
+              placeholder={t('reviews.summarizePlaceholder')}
               maxLength={100}
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400 transition-all"
             />
@@ -675,29 +679,29 @@ function ReviewFormModal({
           {/* Comment */}
           <div className="mb-4">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
-              Your Review *
+              {t('reviews.yourReview')}
             </label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Tell others about your experience (min 10 characters)"
+              placeholder={t('reviews.tellOthersPlaceholder')}
               rows={4}
               maxLength={2000}
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400 transition-all resize-none"
             />
-            <p className="text-[11px] text-gray-400 mt-1">{comment.length}/2000</p>
+            <p className="text-[11px] text-gray-400 mt-1">{t('reviews.charCounter', { count: comment.length })}</p>
           </div>
 
           {/* Pros */}
           <div className="mb-4">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
-              Pros <span className="text-gray-400 font-normal">(optional)</span>
+              {t('reviews.pros')} <span className="text-gray-400 font-normal">{t('reviews.optional')}</span>
             </label>
             <input
               type="text"
               value={pros}
               onChange={(e) => setPros(e.target.value)}
-              placeholder="What did you like?"
+              placeholder={t('reviews.prosPlaceholder')}
               maxLength={300}
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400 transition-all"
             />
@@ -706,13 +710,13 @@ function ReviewFormModal({
           {/* Cons */}
           <div className="mb-4">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
-              Cons <span className="text-gray-400 font-normal">(optional)</span>
+              {t('reviews.cons')} <span className="text-gray-400 font-normal">{t('reviews.optional')}</span>
             </label>
             <input
               type="text"
               value={cons}
               onChange={(e) => setCons(e.target.value)}
-              placeholder="What could be improved?"
+              placeholder={t('reviews.consPlaceholder')}
               maxLength={300}
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400 transition-all"
             />
@@ -722,13 +726,13 @@ function ReviewFormModal({
           <div className="mb-4">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
               <Camera className="h-3.5 w-3.5 inline mr-1 -mt-0.5" />
-              Photos <span className="text-gray-400 font-normal">(up to 10)</span>
+              {t('reviews.photos')} <span className="text-gray-400 font-normal">{t('reviews.upTo10')}</span>
             </label>
             <div className="flex gap-2 flex-wrap">
               {/* Existing review images (from edit) */}
               {existingImages.map((img, i) => (
                 <div key={`existing-img-${img._id}-${i}`} className="relative w-16 h-16 rounded-lg overflow-hidden border border-emerald-300 dark:border-emerald-700">
-                  <img src={img.url} alt={`Existing photo ${i + 1}`} className="w-full h-full object-cover" />
+                  <img src={img.url} alt={t('productDetail.existingPhoto', { index: i + 1 })} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removeExistingImage(i)}
@@ -736,13 +740,13 @@ function ReviewFormModal({
                   >
                     <X className="h-2.5 w-2.5" />
                   </button>
-                  <span className="absolute bottom-0.5 left-0.5 text-[7px] bg-emerald-500 text-white px-1 rounded-sm font-medium">Saved</span>
+                  <span className="absolute bottom-0.5 left-0.5 text-[7px] bg-emerald-500 text-white px-1 rounded-sm font-medium">{t('reviews.saved')}</span>
                 </div>
               ))}
               {/* Newly selected image previews */}
               {newImagePreviews.map((src, i) => (
                 <div key={`new-img-${i}`} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                  <img src={src} alt={`New preview ${i + 1}`} className="w-full h-full object-cover" />
+                  <img src={src} alt={t('productDetail.newPreview', { index: i + 1 })} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removeNewImage(i)}
@@ -759,7 +763,7 @@ function ReviewFormModal({
                   className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
                 >
                   <Camera className="h-4 w-4 text-gray-400" />
-                  <span className="text-[9px] text-gray-400 mt-0.5">Add</span>
+                  <span className="text-[9px] text-gray-400 mt-0.5">{t('reviews.add')}</span>
                 </button>
               )}
             </div>
@@ -777,7 +781,7 @@ function ReviewFormModal({
           <div className="mb-5">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
               <Video className="h-3.5 w-3.5 inline mr-1 -mt-0.5" />
-              Videos <span className="text-gray-400 font-normal">(up to 5, max 30 MB each)</span>
+              {t('reviews.videos')} <span className="text-gray-400 font-normal">{t('reviews.upTo5Videos')}</span>
             </label>
             <div className="flex gap-2 flex-wrap">
               {/* Existing review videos (from edit) */}
@@ -794,7 +798,7 @@ function ReviewFormModal({
                   >
                     <X className="h-2.5 w-2.5" />
                   </button>
-                  <span className="absolute bottom-0.5 left-0.5 text-[7px] bg-emerald-500 text-white px-1 rounded-sm font-medium">Saved</span>
+                  <span className="absolute bottom-0.5 left-0.5 text-[7px] bg-emerald-500 text-white px-1 rounded-sm font-medium">{t('reviews.saved')}</span>
                 </div>
               ))}
               {/* Newly selected video previews */}
@@ -820,11 +824,11 @@ function ReviewFormModal({
                   className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
                 >
                   <Video className="h-4 w-4 text-gray-400" />
-                  <span className="text-[9px] text-gray-400 mt-0.5">Add</span>
+                  <span className="text-[9px] text-gray-400 mt-0.5">{t('reviews.add')}</span>
                 </button>
               )}
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">Supported: MP4, WebM, MOV, AVI • Max 30 MB per video</p>
+            <p className="text-[10px] text-gray-400 mt-1">{t('reviews.supportedFormats')}</p>
             <input
               ref={videoInputRef}
               type="file"
@@ -854,12 +858,12 @@ function ReviewFormModal({
             {submitting ? (
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {editingReview ? 'Updating...' : 'Submitting...'}
+                {editingReview ? t('reviews.updating') : t('reviews.submitting')}
               </span>
             ) : editingReview ? (
-              'Update Review'
+              t('reviews.updateReview')
             ) : (
-              'Submit Review'
+              t('reviews.submitReview')
             )}
           </button>
         </div>
@@ -885,6 +889,7 @@ function ImageGallery({ images, productName, isWishlisted: _isWishlisted, onTogg
   isWishlisted: boolean
   onToggleWishlist: () => void
 }) {
+  const { t } = useLanguage()
   const [selected, setSelected] = useState(0)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set())
@@ -988,7 +993,7 @@ function ImageGallery({ images, productName, isWishlisted: _isWishlisted, onTogg
                 ) : (
                   <img
                     src={img.url}
-                    alt={img.alt || `${productName} thumb ${i + 1}`}
+                    alt={img.alt || t('productDetail.thumbAlt', { name: productName, index: i + 1 })}
                     className="w-full h-full object-cover"
                     loading="lazy"
                     onError={() => handleImageError(i)}
@@ -1008,7 +1013,7 @@ function ImageGallery({ images, productName, isWishlisted: _isWishlisted, onTogg
         <div className="flex-1 relative">
           <MagnifierImage
             src={currentImage?.url}
-            alt={currentImage?.alt || `${productName} - ${selected + 1}`}
+            alt={currentImage?.alt || t('productDetail.mainImageAlt', { name: productName, index: selected + 1 })}
             index={selected}
             isLoaded={loadedImages.has(selected)}
             isErrored={erroredImages.has(selected)}
@@ -1103,6 +1108,7 @@ function MagnifierImage({
   onTouchMove: (e: React.TouchEvent) => void
   onTouchEnd: () => void
 }) {
+  const { t } = useLanguage()
   const [isHovering, setIsHovering] = useState(false)
   const [lensPos, setLensPos] = useState({ x: 50, y: 50 })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -1120,7 +1126,7 @@ function MagnifierImage({
       <div className={cn('relative aspect-square w-full bg-gradient-to-br flex items-center justify-center rounded-2xl border border-gray-100 dark:border-gray-800', getProductGradient(productName))}>
         <div className="flex flex-col items-center gap-2 text-gray-400">
           <ImageIcon className="h-12 w-12" />
-          <span className="text-xs">Image unavailable</span>
+          <span className="text-xs">{t('productDetail.imageUnavailable')}</span>
         </div>
       </div>
     )
@@ -1203,6 +1209,7 @@ function Lightbox({
   onClose: () => void
   onIndexChange: (index: number) => void
 }) {
+  const { t } = useLanguage()
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [scale, setScale] = useState(1)
   const [translate, setTranslate] = useState({ x: 0, y: 0 })
@@ -1325,13 +1332,13 @@ function Lightbox({
       <div className="flex items-center justify-between px-4 py-3 text-white">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">
-            {currentIndex + 1} / {images.length}
+            {t('productDetail.imageCounter', { current: currentIndex + 1, total: images.length })}
           </span>
         </div>
         <button
           onClick={onClose}
           className="h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-          aria-label="Close"
+          aria-label={t('common.close')}
         >
           <X className="h-5 w-5" />
         </button>
@@ -1348,7 +1355,7 @@ function Lightbox({
           <motion.img
             key={currentIndex}
             src={currentImage?.url}
-            alt={currentImage?.alt || `${productName} - ${currentIndex + 1}`}
+            alt={currentImage?.alt || t('productDetail.mainImageAlt', { name: productName, index: currentIndex + 1 })}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -1371,7 +1378,7 @@ function Lightbox({
               <button
                 onClick={goToPrev}
                 className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-                aria-label="Previous image"
+                aria-label={t('productDetail.previousImage')}
               >
                 <ChevronLeft className="h-6 w-6 text-white" />
               </button>
@@ -1380,7 +1387,7 @@ function Lightbox({
               <button
                 onClick={goToNext}
                 className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-                aria-label="Next image"
+                aria-label={t('productDetail.nextImage')}
               >
                 <ChevronRight className="h-6 w-6 text-white" />
               </button>
@@ -1391,7 +1398,7 @@ function Lightbox({
         {/* Zoom indicator */}
         {scale > 1 && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/10 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
-            {Math.round(scale * 100)}% · pinch to adjust
+            {t('productDetail.pinchToAdjust', { percent: Math.round(scale * 100) })}
           </div>
         )}
       </div>
@@ -1493,6 +1500,7 @@ function SpecificationsTable({ specs }: { specs: SpecificationGroup[] }) {
 /* ------------------------------------------------------------------ */
 
 export function ProductDetailPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
@@ -2122,7 +2130,7 @@ export function ProductDetailPage() {
     const shareUrl = typeof window !== 'undefined'
       ? `${window.location.origin}/customer/product/${product._id}`
       : `/customer/product/${product._id}`
-    const shareText = `Check out ${product.name} on RealCart! Only ₹${product.effectivePrice.toLocaleString('en-IN')}`
+    const shareText = t('productDetail.shareText', { name: product.name, price: product.effectivePrice.toLocaleString('en-IN') })
 
     // Try native Web Share API (mobile)
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -2197,14 +2205,14 @@ export function ProductDetailPage() {
           <div className="text-center">
             <Package className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">
-              {error || 'Product not found'}
+              {error || t('productDetail.productNotFound')}
             </h2>
-            <p className="text-sm text-gray-500 mb-4">This product may have been removed or is unavailable.</p>
+            <p className="text-sm text-gray-500 mb-4">{t('productDetail.productUnavailable')}</p>
             <button
               onClick={() => router.push('/customer')}
               className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-colors"
             >
-              Browse Products
+              {t('common.browseProducts')}
             </button>
           </div>
         </div>
@@ -2312,12 +2320,12 @@ export function ProductDetailPage() {
                 </span>
                 <StarRatingDisplay rating={product.avgRating ?? reviewStats.averageRating} size={12} />
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {(product.totalReviews ?? reviewStats.totalReviews).toLocaleString()} rating{(product.totalReviews ?? reviewStats.totalReviews) !== 1 ? 's' : ''}
+                  {t('productDetail.ratingsCount', { count: (product.totalReviews ?? reviewStats.totalReviews) })}
                 </span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 mb-3">
-                <span className="text-xs text-gray-400 dark:text-gray-500">No ratings yet</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{t('productDetail.noRatings')}</span>
               </div>
             )}
 
@@ -2333,7 +2341,7 @@ export function ProductDetailPage() {
                       {formatPrice(currentMrp)}
                     </span>
                     <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                      {currentDiscountPercent}% off
+                      {t('productDetail.percentOff', { percent: currentDiscountPercent })}
                     </span>
                   </>
                 )}
@@ -2343,8 +2351,8 @@ export function ProductDetailPage() {
                   <button
                     onClick={handleToggleWishlist}
                     className="h-9 w-9 flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                    title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                    aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                    title={isWishlisted ? t('productDetail.removeFromWishlist') : t('productDetail.addToWishlist')}
+                    aria-label={isWishlisted ? t('productDetail.removeFromWishlist') : t('productDetail.addToWishlist')}
                     aria-pressed={isWishlisted}
                   >
                     <Heart className={cn('h-5 w-5 transition-colors', isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-500 hover:text-red-500')} />
@@ -2352,20 +2360,20 @@ export function ProductDetailPage() {
                   <button
                     onClick={handleShareProduct}
                     className="h-9 w-9 flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
-                    title="Share product"
-                    aria-label="Share product"
+                    title={t('productDetail.shareProduct')}
+                    aria-label={t('productDetail.shareProduct')}
                   >
                     <Share2 className="h-5 w-5 text-gray-500 hover:text-emerald-500 transition-colors" />
                   </button>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-400 dark:text-gray-500">inclusive of all taxes</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500">{t('productDetail.inclusiveOfTaxes')}</p>
 
               {/* EMI info */}
               {currentEffectivePrice >= 3000 && (
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
                   <CreditCard className="h-3 w-3 inline -mt-0.5 mr-0.5" />
-                  EMI from {formatPrice(Math.ceil(currentEffectivePrice / 6))}/month
+                  {t('productDetail.emiFrom', { amount: formatPrice(Math.ceil(currentEffectivePrice / 6)) })}
                 </p>
               )}
             </div>
@@ -2399,10 +2407,10 @@ export function ProductDetailPage() {
                   <div className="mb-3 flex items-center gap-2">
                     <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-full">
                       <Truck className="h-3.5 w-3.5" />
-                      Free Delivery
+                      {t('common.freeDelivery')}
                     </span>
                     {(product.totalSold ?? 0) > 0 && (
-                      <span className="text-xs text-gray-400">{product.totalSold} sold</span>
+                      <span className="text-xs text-gray-400">{t('productDetail.soldCount', { count: product.totalSold ?? 0 })}</span>
                     )}
                   </div>
                 )
@@ -2417,15 +2425,15 @@ export function ProductDetailPage() {
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       <Truck className="h-3.5 w-3.5 inline -mt-0.5 mr-0.5" />
                       {shipDeliveryCharge > 0
-                        ? <>Delivery: {formatPrice(shipDeliveryCharge)}</>
-                        : <>Delivery charge applies</>
+                        ? <>{t('productDetail.deliveryCharge', { amount: formatPrice(shipDeliveryCharge) })}</>
+                        : <>{t('productDetail.deliveryChargeApplies')}</>
                       }
                       {shipFreeDeliveryAbove > 0 && (
-                        <span className="text-emerald-600 dark:text-emerald-400"> (Free above {formatPrice(shipFreeDeliveryAbove)})</span>
+                        <span className="text-emerald-600 dark:text-emerald-400"> {t('productDetail.freeAbove', { amount: formatPrice(shipFreeDeliveryAbove) })}</span>
                       )}
                     </span>
                     {(product.totalSold ?? 0) > 0 && (
-                      <span className="text-xs text-gray-400">{product.totalSold} sold</span>
+                      <span className="text-xs text-gray-400">{t('productDetail.soldCount', { count: product.totalSold ?? 0 })}</span>
                     )}
                   </div>
                 )
@@ -2442,7 +2450,7 @@ export function ProductDetailPage() {
                   <div key={attribute}>
                     <div className="flex items-center justify-between mb-2.5">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Select {attribute}
+                        {t('productDetail.selectAttribute', { attribute })}
                         {selectedVariantAttrs[attribute] && (
                           <span className="text-gray-400 font-normal ml-1">: {selectedVariantAttrs[attribute]}</span>
                         )}
@@ -2452,7 +2460,7 @@ export function ProductDetailPage() {
                           onClick={() => setShowSizeChart(true)}
                           className="flex items-center gap-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700"
                         >
-                          Size Chart
+                          {t('productDetail.sizeChart')}
                           <ChevronDown className="h-3.5 w-3.5" />
                         </button>
                       )}
@@ -2500,7 +2508,7 @@ export function ProductDetailPage() {
 
                 {/* Stock status */}
                 {!currentInStock && Object.keys(selectedVariantAttrs).length > 0 && (
-                  <p className="text-xs text-red-500 font-medium mt-2">This variant is out of stock</p>
+                  <p className="text-xs text-red-500 font-medium mt-2">{t('productDetail.variantOutOfStock')}</p>
                 )}
               </div>
             )}
@@ -2508,7 +2516,7 @@ export function ProductDetailPage() {
             {/* 7. Quantity selector */}
             {currentInStock && (
               <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Qty:</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('productDetail.qty')}</span>
                 <div className="flex items-center gap-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
@@ -2529,7 +2537,7 @@ export function ProductDetailPage() {
                   </button>
                 </div>
                 {currentStock <= 5 && currentStock > 0 && (
-                  <span className="text-xs text-red-500 font-medium">Only {currentStock} left!</span>
+                  <span className="text-xs text-red-500 font-medium">{t('productDetail.onlyLeft', { count: currentStock })}</span>
                 )}
               </div>
             )}
@@ -2542,14 +2550,14 @@ export function ProductDetailPage() {
                   <button
                     onClick={() => router.push(`/customer/seller?storeName=${encodeURIComponent(product.seller)}`)}
                     className="flex items-center gap-2 min-w-0 flex-1 hover:opacity-80 transition-opacity text-left"
-                    aria-label={`View ${product.seller} seller profile`}
+                    aria-label={t('productDetail.viewSellerProfile', { seller: product.seller })}
                   >
                     {/* Store avatar */}
                     <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                       {product.seller.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500">Sold by</span>
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500">{t('productDetail.soldBy')}</span>
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{product.seller}</span>
                         <BadgeCheck className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
@@ -2580,7 +2588,7 @@ export function ProductDetailPage() {
                               <Star key={s} className="h-2.5 w-2.5 text-gray-200 dark:text-gray-700" />
                             ))}
                           </div>
-                          <span className="text-[10px] text-gray-400">New seller</span>
+                          <span className="text-[10px] text-gray-400">{t('productDetail.newSeller')}</span>
                         </div>
                       )}
                     </div>
@@ -2603,12 +2611,12 @@ export function ProductDetailPage() {
                       ) : isFollowingSeller ? (
                         <>
                           <UserCheck className="h-3 w-3" />
-                          Following
+                          {t('productDetail.following')}
                         </>
                       ) : (
                         <>
                           <UserPlus className="h-3 w-3" />
-                          Follow
+                          {t('productDetail.follow')}
                         </>
                       )}
                     </button>
@@ -2655,20 +2663,20 @@ export function ProductDetailPage() {
                   <div className="h-9 w-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
                     <BadgeCheck className="h-5 w-5 text-emerald-500" />
                   </div>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 text-center leading-tight">Lowest<br/>Price</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 text-center leading-tight">{t('productDetail.lowestPrice')}<br/>{t('productDetail.price')}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1.5">
                   <div className="h-9 w-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
                     <Truck className="h-5 w-5 text-emerald-500" />
                   </div>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 text-center leading-tight">Cash on<br/>Delivery</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 text-center leading-tight">{t('productDetail.cashOn')}<br/>{t('productDetail.delivery')}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1.5">
                   <div className="h-9 w-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
                     <RefreshCw className="h-5 w-5 text-emerald-500" />
                   </div>
                   <span className="text-[10px] text-gray-500 dark:text-gray-400 text-center leading-tight">
-                    {product.returnPolicy ? product.returnPolicy.split(' ')[0] : '7-day'}<br/>Returns
+                    {product.returnPolicy ? product.returnPolicy.split(' ')[0] : t('productDetail.defaultReturnDays')}<br/>{t('productDetail.returnsLabel')}
                   </span>
                 </div>
                 {product.warranty && (
@@ -2676,7 +2684,7 @@ export function ProductDetailPage() {
                     <div className="h-9 w-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
                       <Shield className="h-5 w-5 text-emerald-500" />
                     </div>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 text-center leading-tight">Warranty<br/>Included</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 text-center leading-tight">{t('productDetail.warranty')}<br/>{t('productDetail.included')}</span>
                   </div>
                 )}
               </div>
@@ -2688,7 +2696,7 @@ export function ProductDetailPage() {
         {product.specifications && product.specifications.length > 0 && (
           <div className="bg-white dark:bg-gray-900 mt-2 p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">Specifications</h3>
+              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('productDetail.specifications')}</h3>
             </div>
             <SpecificationsTable specs={product.specifications} />
           </div>
@@ -2696,7 +2704,7 @@ export function ProductDetailPage() {
 
         {/* ── Product Description ── */}
         <div className="bg-white dark:bg-gray-900 mt-2 p-4">
-          <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">Product Description</h3>
+          <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">{t('productDetail.productDescription')}</h3>
           <p className="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed whitespace-pre-line">
             {product.description}
           </p>
@@ -2706,14 +2714,14 @@ export function ProductDetailPage() {
         <div id="reviews-section" className="bg-white dark:bg-gray-900 mt-2 p-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">Ratings & Reviews</h3>
+            <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('productDetail.ratingsAndReviews')}</h3>
             {canReview && !hasExistingReview && (
               <button
                 onClick={openWriteReview}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
               >
                 <Edit2 className="h-3 w-3" />
-                Write a Review
+                {t('productDetail.writeReview')}
               </button>
             )}
           </div>
@@ -2729,14 +2737,14 @@ export function ProductDetailPage() {
                 /* Empty state */
                 <div className="text-center py-8">
                   <MessageSquare className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">No reviews yet</p>
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500">Be the first to share your experience</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('productDetail.noReviews')}</p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500">{t('productDetail.beFirstToReview')}</p>
                   {canReview && !hasExistingReview && (
                     <button
                       onClick={openWriteReview}
                       className="mt-3 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-xl transition-colors"
                     >
-                      Write a Review
+                      {t('productDetail.writeReview')}
                     </button>
                   )}
                 </div>
@@ -2749,7 +2757,7 @@ export function ProductDetailPage() {
                     </span>
                     <StarRatingDisplay rating={reviewStats.averageRating} size={14} />
                     <span className="text-[11px] text-gray-400 mt-1">
-                      {reviewStats.totalReviews.toLocaleString()} review{reviewStats.totalReviews !== 1 ? 's' : ''}
+                      {t('productDetail.reviewsCount', { count: reviewStats.totalReviews })}
                     </span>
                   </div>
 
@@ -2782,7 +2790,7 @@ export function ProductDetailPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-2">
                           <ImageIcon className="h-3.5 w-3.5 text-gray-500" />
-                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Customer Images</span>
+                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{t('productDetail.customerImages')}</span>
                           <span className="text-[10px] text-gray-400">({imageMedia.length})</span>
                         </div>
                         <div className="flex gap-2">
@@ -2807,7 +2815,7 @@ export function ProductDetailPage() {
                                 ) : (
                                   <img
                                     src={item.thumbnailUrl || item.mediaUrl}
-                                    alt={`Customer photo ${idx + 1}`}
+                                    alt={t('productDetail.customerPhoto', { index: idx + 1 })}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                     onError={() => { console.warn('[Gallery] Image failed to load:', item.thumbnailUrl || item.mediaUrl); setFailedGalleryImages(prev => new Set(prev).add(`gal-img-${idx}`)) }}
                                   />
@@ -2829,7 +2837,7 @@ export function ProductDetailPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-2">
                           <Video className="h-3.5 w-3.5 text-gray-500" />
-                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Customer Videos</span>
+                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{t('productDetail.customerVideos')}</span>
                           <span className="text-[10px] text-gray-400">({videoMedia.length})</span>
                         </div>
                         <div className="flex gap-2">
@@ -2850,7 +2858,7 @@ export function ProductDetailPage() {
                                 {item.thumbnailUrl && !failedVideoThumbnails.has(`gal-vid-${idx}`) ? (
                                   <img
                                     src={item.thumbnailUrl}
-                                    alt={`Customer video ${idx + 1}`}
+                                    alt={t('productDetail.customerVideo', { index: idx + 1 })}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                     onError={() => {
                                       console.warn('[Gallery] Video thumbnail failed to load:', item.thumbnailUrl || item.mediaUrl)
@@ -2889,7 +2897,7 @@ export function ProductDetailPage() {
                   {/* Filter Tabs */}
                   <div className="flex gap-2 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                     {[
-                      { key: 'all' as const, label: 'All' },
+                      { key: 'all' as const, label: t('common.all') },
                       { key: 'positive' as const, label: 'Positive (4-5★)' },
                       { key: 'critical' as const, label: 'Critical (1-2★)' },
                       { key: 'photos' as const, label: '📷 With Photos' },
@@ -2917,7 +2925,7 @@ export function ProductDetailPage() {
                   <div>
                     {filteredReviews.length === 0 ? (
                       <div className="text-center py-6">
-                        <p className="text-sm text-gray-400">No reviews match this filter</p>
+                        <p className="text-sm text-gray-400">{t('productDetail.noReviewsMatchFilter')}</p>
                       </div>
                     ) : (
                       <>
@@ -2940,7 +2948,7 @@ export function ProductDetailPage() {
                             onClick={() => setVisibleReviews((prev) => prev + 5)}
                             className="w-full py-3 text-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 transition-colors"
                           >
-                            See More Reviews ({filteredReviews.length - visibleReviews} remaining)
+                            {t('productDetail.seeMoreReviews', { remaining: filteredReviews.length - visibleReviews })}
                           </button>
                         )}
                       </>
@@ -2956,8 +2964,8 @@ export function ProductDetailPage() {
         {relatedProducts.length > 0 && (
           <div className="bg-white dark:bg-gray-900 mt-2 p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">You might also like</h3>
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Ad</span>
+              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('productDetail.youMightAlsoLike')}</h3>
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider">{t('productDetail.ad')}</span>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
               {relatedProducts.map((rp, rpIdx) => (
@@ -2991,12 +2999,12 @@ export function ProductDetailPage() {
             {addedToCart ? (
               <>
                 <Check className="h-5 w-5" />
-                ADDED
+                {t('productDetail.added')}
               </>
             ) : (
               <>
                 <ShoppingCart className="h-5 w-5" />
-                {inCart ? 'GO TO CART' : 'Add to Cart'}
+                {inCart ? t('productDetail.goToCart') : t('productDetail.addToCart')}
               </>
             )}
           </button>
@@ -3013,7 +3021,7 @@ export function ProductDetailPage() {
             )}
           >
             <Zap className="h-5 w-5" />
-            Buy Now
+            {t('productDetail.buyNow')}
           </button>
         </div>
       </div>
@@ -3075,13 +3083,13 @@ export function ProductDetailPage() {
                   {galleryModal.type === 'image' ? (
                     <>
                       <ImageIcon className="h-5 w-5 text-gray-500" />
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Customer Images</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t('productDetail.customerImages')}</h3>
                       <span className="text-sm text-gray-400">({galleryModal.items.length})</span>
                     </>
                   ) : (
                     <>
                       <Video className="h-5 w-5 text-gray-500" />
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Customer Videos</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t('productDetail.customerVideos')}</h3>
                       <span className="text-sm text-gray-400">({galleryModal.items.length})</span>
                     </>
                   )}
@@ -3110,7 +3118,7 @@ export function ProductDetailPage() {
                           {item.thumbnailUrl && !failedGalleryModalThumbs.has(`modal-${idx}`) ? (
                             <img
                               src={item.thumbnailUrl}
-                              alt={`Customer video ${idx + 1}`}
+                              alt={t('productDetail.customerVideo', { index: idx + 1 })}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                               onError={() => {
                                 console.warn('[GalleryModal] Video thumbnail failed to load:', item.thumbnailUrl || item.mediaUrl)
@@ -3135,7 +3143,7 @@ export function ProductDetailPage() {
                       ) : (
                         <img
                           src={item.thumbnailUrl || item.mediaUrl}
-                          alt={`Customer photo ${idx + 1}`}
+                          alt={t('productDetail.customerPhoto', { index: idx + 1 })}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           onError={() => {
                             console.warn('[GalleryModal] Image failed to load:', item.thumbnailUrl || item.mediaUrl)
@@ -3228,7 +3236,7 @@ export function ProductDetailPage() {
                 {/* Counter badge */}
                 {galleryModal && galleryModal.items.length > 1 && (
                   <div className="absolute top-2 left-2 z-10 bg-black/40 text-white text-[11px] font-medium px-2.5 py-1 rounded-full">
-                    {lightboxIndex + 1} / {galleryModal.items.length}
+                    {t('productDetail.imageCounter', { current: lightboxIndex + 1, total: galleryModal.items.length })}
                   </div>
                 )}
 
@@ -3273,13 +3281,13 @@ export function ProductDetailPage() {
                         autoPlay
                         className="w-full max-h-[70vh]"
                       >
-                        Your browser does not support the video tag.
+                        {t('productDetail.videoNotSupported')}
                       </video>
                     ) : (
                       <img
                         key={lightboxImage}
                         src={lightboxImage}
-                        alt="Review media"
+                        alt={t('productDetail.reviewMedia')}
                         className="w-full max-h-[70vh] object-contain"
                         onError={() => {
                           // If image fails to load, try showing as video if URL looks like a video
