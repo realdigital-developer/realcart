@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { ChevronRight, Truck, RotateCcw, ShieldCheck, Headphones, Star, Clock, Zap } from 'lucide-react'
 import { Product } from './types'
 import { ProductCard } from './product-card'
@@ -23,6 +24,39 @@ import { ProductCard } from './product-card'
 
 interface HomeContentSectionsProps {
   onNavigateToProducts?: (params?: { sort?: string; category?: string }) => void
+  /**
+   * Cached product/vendor data from the parent (HomeContentWrapper).
+   * When provided, the sections render instantly WITHOUT fetching —
+   * making the home tab feel "real-time" on re-visits.
+   * When omitted (undefined), the component falls back to its own
+   * internal fetch (backward compatible).
+   */
+  flashDeals?: Product[]
+  newArrivals?: Product[]
+  featured?: Product[]
+  mostLoved?: Product[]
+  trending?: Product[]
+  vendors?: Vendor[]
+  loading?: boolean
+}
+
+// ── Motion variants for attractive section animations ──
+const sectionVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const },
+  },
+}
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, delay: i * 0.06, ease: [0.25, 0.46, 0.45, 0.94] as const },
+  }),
 }
 
 // Benefit cards data
@@ -34,7 +68,7 @@ const BENEFITS = [
 ]
 
 // Vendor interface (fetched from database)
-interface Vendor {
+export interface Vendor {
   id: string
   name: string
   sellerName: string
@@ -97,17 +131,30 @@ function SectionHeader({ title, onViewAll }: { title: string; onViewAll?: () => 
   )
 }
 
-export function HomeContentSections({ onNavigateToProducts }: HomeContentSectionsProps = {}) {
+export function HomeContentSections({
+  onNavigateToProducts,
+  flashDeals: propFlashDeals,
+  newArrivals: propNewArrivals,
+  featured: propFeatured,
+  mostLoved: propMostLoved,
+  trending: propTrending,
+  vendors: propVendors,
+  loading: propLoading,
+}: HomeContentSectionsProps = {}) {
   const router = useRouter()
-  const [flashDeals, setFlashDeals] = useState<Product[]>([])
-  const [newArrivals, setNewArrivals] = useState<Product[]>([])
-  const [featured, setFeatured] = useState<Product[]>([])
-  const [mostLoved, setMostLoved] = useState<Product[]>([])
-  const [trending, setTrending] = useState<Product[]>([])
-  const [vendors, setVendors] = useState<Vendor[]>([])
-  const [loading, setLoading] = useState(true)
+  // Local state — only used when no cached props are provided (fallback mode)
+  const [localFlashDeals, setLocalFlashDeals] = useState<Product[]>([])
+  const [localNewArrivals, setLocalNewArrivals] = useState<Product[]>([])
+  const [localFeatured, setLocalFeatured] = useState<Product[]>([])
+  const [localMostLoved, setLocalMostLoved] = useState<Product[]>([])
+  const [localTrending, setLocalTrending] = useState<Product[]>([])
+  const [localVendors, setLocalVendors] = useState<Vendor[]>([])
+  const [localLoading, setLocalLoading] = useState(true)
 
+  // ── Fallback fetch — only runs when the parent does NOT supply cached data ──
+  const hasPropData = propFlashDeals !== undefined || propNewArrivals !== undefined || propFeatured !== undefined || propTrending !== undefined || propVendors !== undefined
   useEffect(() => {
+    if (hasPropData) return
     let cancelled = false
     async function fetchAll() {
       try {
@@ -122,18 +169,29 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
         if (cancelled) return
         const get = (r: PromiseSettledResult<{ products: Product[] }>) => r.status === 'fulfilled' ? r.value.products || [] : []
         const getVendors = (r: PromiseSettledResult<{ vendors: Vendor[] }>) => r.status === 'fulfilled' ? r.value.vendors || [] : []
-        setFlashDeals(get(deals))
-        setNewArrivals(get(newest))
-        setFeatured(get(rated))
-        setMostLoved(get(discount))
-        setTrending(get(popular))
-        setVendors(getVendors(vendorsRes))
+        setLocalFlashDeals(get(deals))
+        setLocalNewArrivals(get(newest))
+        setLocalFeatured(get(rated))
+        setLocalMostLoved(get(discount))
+        setLocalTrending(get(popular))
+        setLocalVendors(getVendors(vendorsRes))
       } catch { /* non-fatal */ }
-      finally { if (!cancelled) setLoading(false) }
+      finally { if (!cancelled) setLocalLoading(false) }
     }
     fetchAll()
     return () => { cancelled = true }
-  }, [])
+  }, [hasPropData])
+
+  // Resolve which data + loading state to use:
+  //   • Parent-managed mode (props provided) → use props directly
+  //   • Fallback mode → use local state
+  const flashDeals = propFlashDeals ?? localFlashDeals
+  const newArrivals = propNewArrivals ?? localNewArrivals
+  const featured = propFeatured ?? localFeatured
+  const mostLoved = propMostLoved ?? localMostLoved
+  const trending = propTrending ?? localTrending
+  const vendors = propVendors ?? localVendors
+  const loading = hasPropData ? (propLoading ?? false) : localLoading
 
   const navigate = (product: Product) => {
     router.push(`/customer/product/${product._id}`)
@@ -173,7 +231,7 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
         {flashDeals.length > 0 && (
           <>
           {/* Modern gradient wrapper around the entire Flash Deals section */}
-          <div
+          <motion.div
             className="flash-deals-bg"
             style={{
               marginTop: 24,
@@ -183,6 +241,10 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
               position: 'relative',
               overflow: 'hidden',
             }}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={sectionVariants}
           >
             {/* Local style block — scoped, only injects once per render */}
             <style>{`
@@ -308,13 +370,13 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
             <div className="flash-deals-row flex gap-3 overflow-x-auto mt-3 pb-2" style={{ scrollbarWidth: 'none' }}>
               {flashDeals.map((p, i) => <ProductCard key={p._id || `fd-${i}`} product={p} size="compact" onClick={() => navigate(p)} />)}
             </div>
-          </div>
+          </motion.div>
           </>
         )}
 
         {/* ════════ 3. NEW ARRIVALS ════════ */}
         {newArrivals.length > 0 && (
-          <div
+          <motion.div
             className="new-arrivals-bg"
             style={{
               marginTop: 24,
@@ -324,6 +386,10 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
               position: 'relative',
               overflow: 'hidden',
             }}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={sectionVariants}
           >
             {/* Local style block — scoped, only injects when New Arrivals renders */}
             <style>{`
@@ -424,12 +490,12 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
             <div className="na-desktop-row hidden sm:flex gap-3 overflow-x-auto mt-3 pb-2" style={{ scrollbarWidth: 'none' }}>
               {newArrivals.map((p, i) => <ProductCard key={p._id || `na-${i}`} product={p} size="compact" onClick={() => navigate(p)} />)}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ════════ 4. FEATURED PRODUCTS ════════ */}
         {featured.length > 0 && (
-          <div
+          <motion.div
             className="featured-bg"
             style={{
               marginTop: 24,
@@ -439,6 +505,10 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
               position: 'relative',
               overflow: 'hidden',
             }}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={sectionVariants}
           >
             <style>{`
               .featured-bg {
@@ -515,12 +585,12 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
             <div className="sec-grid grid grid-cols-2 gap-3 mt-3 sm:grid-cols-3 lg:grid-cols-4">
               {featured.map((p, i) => <ProductCard key={p._id || `fp-${i}`} product={p} size="full" onClick={() => navigate(p)} />)}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ════════ 5. MOST LOVED ════════ */}
         {mostLoved.length > 0 && (
-          <div
+          <motion.div
             className="most-loved-bg"
             style={{
               marginTop: 24,
@@ -530,6 +600,10 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
               position: 'relative',
               overflow: 'hidden',
             }}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={sectionVariants}
           >
             <style>{`
               .most-loved-bg {
@@ -606,12 +680,12 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
             <div className="sec-grid grid grid-cols-2 gap-3 mt-3 sm:grid-cols-3 lg:grid-cols-4">
               {mostLoved.map((p, i) => <ProductCard key={p._id || `ml-${i}`} product={p} size="full" onClick={() => navigate(p)} />)}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ════════ 6. TRENDING NOW ════════ */}
         {trending.length > 0 && (
-          <div
+          <motion.div
             className="trending-bg"
             style={{
               marginTop: 24,
@@ -621,6 +695,10 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
               position: 'relative',
               overflow: 'hidden',
             }}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={sectionVariants}
           >
             <style>{`
               .trending-bg {
@@ -698,11 +776,11 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
             <div className="sec-row flex gap-3 overflow-x-auto mt-3 pb-2" style={{ scrollbarWidth: 'none' }}>
               {trending.map((p, i) => <ProductCard key={p._id || `tn-${i}`} product={p} size="compact" onClick={() => navigate(p)} />)}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ════════ 7. WHY SHOP WITH US (soft light gradient background, compact cards) ════════ */}
-        <div
+        <motion.div
           className="why-shop-bg"
           style={{
             marginTop: 24,
@@ -711,6 +789,10 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
             position: 'relative',
             overflow: 'hidden',
           }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={sectionVariants}
         >
           <style>{`
             .why-shop-bg {
@@ -767,11 +849,11 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
               )
             })}
           </div>
-        </div>
+        </motion.div>
 
         {/* ════════ 8. TOP VENDORS (header + cards inside one gradient background, like Trending Now) ════════ */}
         {vendors.length > 0 && (
-          <div
+          <motion.div
             className="top-vendors-bg"
             style={{
               marginTop: 24,
@@ -780,6 +862,10 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
               position: 'relative',
               overflow: 'hidden',
             }}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={sectionVariants}
           >
             <style>{`
               .top-vendors-bg {
@@ -899,7 +985,7 @@ export function HomeContentSections({ onNavigateToProducts }: HomeContentSection
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
       </div>

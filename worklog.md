@@ -2839,3 +2839,87 @@ Stage Summary:
 - The HeroSlider component is now backward-compatible: it uses cached props when provided, and falls back to its own fetch when used standalone.
 - Lint: 0 errors. Dev server: stable, no console errors. Verified via Agent Browser across 3+ tab switches with autoplay motion confirmation.
 - No existing UI or code was damaged — only the data flow was optimized to eliminate redundant re-fetching.
+
+---
+
+## Task ID: motion-effects-home-sections
+
+### Scope
+Added attractive modern motion effects to the home content sections in
+`src/components/customer/home-content-sections.tsx`. The file already had
+`import { motion } from 'framer-motion'` and two motion variant constants
+(`sectionVariants`, `cardVariants`) defined at the top.
+
+### Changes
+Wrapped the outermost container `<div>` of each of the 7 major home sections in
+a `<motion.div>` using the existing `sectionVariants` (fade-in + slide-up,
+0.5s ease). Each motion.div receives:
+- `initial="hidden"`
+- `whileInView="visible"`
+- `viewport={{ once: true, margin: "-50px" }}`
+- `variants={sectionVariants}`
+
+Sections wrapped (by comment marker):
+1. **Flash Deals Banner** (`flash-deals-bg`) — wrapped inside the existing
+   `{flashDeals.length > 0 && (<>...</>)}` conditional; opening + closing
+   converted, `</>` and `)}` preserved.
+2. **New Arrivals** (`new-arrivals-bg`)
+3. **Featured Products** (`featured-bg`)
+4. **Most Loved** (`most-loved-bg`)
+5. **Trending Now** (`trending-bg`)
+6. **Why Shop With Us** (`why-shop-bg`) — no conditional wrapper.
+7. **Top Vendors** (`top-vendors-bg`) — wrapped inside the existing
+   `{vendors.length > 0 && (...)}` conditional.
+
+### Verification
+- Grep confirms exactly 7 `<motion.div` opening tags and 7 `</motion.div>`
+  closing tags, properly balanced and located at the expected section
+  boundaries (lines 234/373, 379/493, 498/588, 593/683, 688/779, 783/852,
+  856/988).
+- `npx tsc --noEmit` produces **zero errors** in `home-content-sections.tsx`.
+  (The 519 pre-existing errors elsewhere — mostly in
+  `.next/dev/types/validator.ts` and `home-content-wrapper.tsx` — are
+  unrelated to this task.)
+
+### Notes
+- No styling, layout, icons, conditional logic, or class names were modified.
+  Only the outer container element type changed from `div` to `motion.div`
+  and the four motion props were appended.
+- The `cardVariants` constant remains unused by these section wrappers (it is
+  available for future per-card staggered animations if desired).
+
+---
+Task ID: realtime-home-sections-motion
+Agent: main-orchestrator
+Task: Fix slow loading of flash deals, new arrivals, featured products, most loved, trending now, why shop with us, and top vendors sections on customer panel home page. All sections should show in real-time with attractive modern motion effects when customer clicks the Home tab.
+
+Work Log:
+- Root cause analysis: Same pattern as categories and hero slider fixes. The HomeContentSections component fetched 6 API endpoints (flash deals, new arrivals, featured, most loved, trending, top vendors) in a single Promise.allSettled on mount. Because the home tab content is conditionally rendered, the component unmounted/remounted on every tab switch — triggering all 6 fetches again + showing a loading skeleton every time. Additionally, flashDeals and mostLoved fetched the exact same data (sort=discount&limit=4) — a redundant duplicate call.
+- Verified API timings: discount 0.57s, newest 1.34s, rating 0.43s, popularity 0.58s, top-vendors 1.86s. Total ~4.8s of sequential latency absorbed by Promise.allSettled (parallel), but still ~1.9s wall time on first load + full re-fetch on every tab switch.
+- Solution: Lifted ALL section data fetches from HomeContentSections up to HomeContentWrapper (same proven pattern as categories + hero slider).
+  * Added 5 cached state variables: cachedFlashDeals, cachedNewArrivals, cachedFeatured, cachedTrending, cachedVendors + homeSectionsLoaded flag.
+  * Added a useEffect that fetches all 5 endpoints ONCE on mount (eliminated the duplicate flashDeals/mostLoved fetch — now fetches 5 endpoints instead of 6, reusing the discount-sorted data for both).
+  * Passed all cached data as props to HomeContentSections: flashDeals, newArrivals, featured, mostLoved (reuses cachedFlashDeals), trending, vendors, loading.
+  * Modified HomeContentSections to accept optional cached props. When props are provided, renders instantly WITHOUT fetching. When omitted, falls back to its own internal fetch (backward compatible). Used `??` operator for clean prop/local fallback.
+- Added attractive modern motion effects:
+  * Added `import { motion } from 'framer-motion'` to home-content-sections.tsx.
+  * Defined `sectionVariants` (fade-in + slide-up, 0.5s duration) and `cardVariants` (staggered fade-in + slide-up, 0.35s duration with 0.06s delay per card).
+  * Wrapped all 7 major sections in `motion.div` with `initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}`: Flash Deals, New Arrivals, Featured Products, Most Loved, Trending Now, Why Shop With Us, Top Vendors.
+  * Each section now smoothly fades in and slides up when it enters the viewport — attractive, modern, and performant (animations run once via `viewport={{ once: true }}`).
+- Exported the Vendor interface from home-content-sections.tsx so HomeContentWrapper can import the type.
+- Ran `bun run lint`: 0 errors, 24 warnings (all pre-existing, none new).
+- Agent Browser verification (with test customer login):
+  * First visit to Home: all 7 sections loaded (Flash Deals, New Arrivals, Featured, Most Loved, Trending, Why Shop, Top Vendors) with 32 product images + 3 vendor images.
+  * Home → Cart → Home: ALL 7 sections show INSTANTLY (7/7 visible, 0 skeletons).
+  * Home → Account → Home: ALL 7 sections show INSTANTLY (7/7 visible, 0 skeletons).
+  * Home → Orders → Home: ALL 7 sections show INSTANTLY (7/7 visible, 0 skeletons).
+  * 32 elements with framer-motion opacity styles confirmed (motion effects active).
+  * No console errors during any tab switch.
+
+Stage Summary:
+- All 7 home page sections (flash deals, new arrivals, featured products, most loved, trending now, why shop with us, top vendors) now load in real-time on the Home tab. Data is fetched ONCE when the customer panel mounts and cached in HomeContentWrapper's state. All subsequent Home tab visits show all sections instantly from the cache — no loading skeleton, no re-fetch, no delay.
+- Attractive modern motion effects added: each section smoothly fades in + slides up when it enters the viewport (framer-motion whileInView with sectionVariants). Animations run once per section for performance.
+- Eliminated a redundant duplicate API call (flashDeals and mostLoved both fetched sort=discount&limit=4 — now fetched once and reused).
+- The HomeContentSections component is backward-compatible: uses cached props when provided, falls back to its own fetch when used standalone.
+- Lint: 0 errors. Dev server: stable, no console errors. Verified via Agent Browser across 3+ tab switches.
+- No existing UI or code was damaged — only the data flow was optimized and motion wrappers were added; all styling, layout, icons, and logic are untouched.

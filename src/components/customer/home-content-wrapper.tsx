@@ -15,6 +15,7 @@ import { ImageSearchDialog } from './image-search-dialog'
 import { useLanguage } from '@/components/providers/language-provider'
 import type { Product, CategoryItem } from './types'
 import type { HeroSlide } from './hero-slider'
+import type { Vendor } from './home-content-sections'
 
 // Dynamic imports with ssr: false
 const CategorySection = dynamic(() => import('./category-section').then(m => ({ default: m.CategorySection })), { ssr: false })
@@ -251,6 +252,48 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
       }
     }
     fetchHeroSlides()
+    return () => { cancelled = true }
+  }, [])
+
+  // ── Home content sections cache (client-side) ──────────────────────
+  // Same pattern: fetch ONCE on mount, keep in parent state, pass down to
+  // HomeContentSections as props so all product/vendor sections show
+  // INSTANTLY on every Home tab visit without re-fetching.
+  // NOTE: flashDeals and mostLoved both used sort=discount&limit=4 — we
+  // fetch it ONCE and reuse for both, eliminating a duplicate API call.
+  const [cachedFlashDeals, setCachedFlashDeals] = useState<Product[]>([])
+  const [cachedNewArrivals, setCachedNewArrivals] = useState<Product[]>([])
+  const [cachedFeatured, setCachedFeatured] = useState<Product[]>([])
+  const [cachedTrending, setCachedTrending] = useState<Product[]>([])
+  const [cachedVendors, setCachedVendors] = useState<Vendor[]>([])
+  const [homeSectionsLoaded, setHomeSectionsLoaded] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function fetchHomeSections() {
+      try {
+        const [deals, newest, rated, popular, vendorsRes] = await Promise.allSettled([
+          fetch('/api/products?sort=discount&limit=4&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/products?sort=newest&limit=8&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/products?sort=rating&limit=4&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/products?sort=popularity&limit=8&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/customer/top-vendors', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { vendors: [] }),
+        ])
+        if (cancelled) return
+        const get = (r: PromiseSettledResult<{ products: Product[] }>) => r.status === 'fulfilled' ? r.value.products || [] : []
+        const getVendors = (r: PromiseSettledResult<{ vendors: Vendor[] }>) => r.status === 'fulfilled' ? r.value.vendors || [] : []
+        setCachedFlashDeals(get(deals))
+        setCachedNewArrivals(get(newest))
+        setCachedFeatured(get(rated))
+        setCachedTrending(get(popular))
+        setCachedVendors(getVendors(vendorsRes))
+      } catch (err) {
+        console.error('Failed to fetch home sections:', err)
+      } finally {
+        if (!cancelled) setHomeSectionsLoaded(true)
+      }
+    }
+    fetchHomeSections()
     return () => { cancelled = true }
   }, [])
 
@@ -561,7 +604,15 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
               setNavHistory(prev => [...prev, { tab: 'products' as ExtendedTab, fromBottomNav: false }])
             }} />
             <HeroSlider slides={cachedHeroSlides} loading={!heroSlidesLoaded} />
-            <HomeContentSections onNavigateToProducts={(params) => {
+            <HomeContentSections
+              flashDeals={cachedFlashDeals}
+              newArrivals={cachedNewArrivals}
+              featured={cachedFeatured}
+              mostLoved={cachedFlashDeals}
+              trending={cachedTrending}
+              vendors={cachedVendors}
+              loading={!homeSectionsLoaded}
+              onNavigateToProducts={(params) => {
               setSearchQuery('')
               setProductsSubcategoryFilter(undefined)
               setProductsCategoryFilter(params?.category)
