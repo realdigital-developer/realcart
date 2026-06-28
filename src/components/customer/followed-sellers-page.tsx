@@ -22,7 +22,6 @@ import {
   Star,
   Package,
   TrendingUp,
-  RefreshCw,
   AlertCircle,
   BadgeCheck,
   Heart,
@@ -31,7 +30,6 @@ import {
   Users,
   Calendar,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import AdminModal from '@/components/admin/admin-modal'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from './page-header'
@@ -121,11 +119,6 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
         title="Followed Sellers"
         onBack={onBack}
         onNavigate={onNavigate}
-        headerExtra={
-          <button onClick={fetchSellers} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Refresh">
-            <RefreshCw className={cn('h-4 w-4 text-gray-500', loading && 'animate-spin')} />
-          </button>
-        }
       />
 
       {/* Content */}

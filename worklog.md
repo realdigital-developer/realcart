@@ -1856,3 +1856,35 @@ Stage Summary:
 - Page-specific header controls (Refresh buttons, item counts, unread badges, filter tabs) are preserved via the headerExtra/children slots — no existing UI was damaged.
 - The Search/Wishlist/Cart icons are fully functional (navigate to the correct tabs) thanks to the onNavigate prop wired through home-content-wrapper.tsx.
 - Lint: 0 errors. Dev server: stable, all pages HTTP 200, no console errors. Verified via Agent Browser + VLM.
+
+---
+Task ID: remove-refresh-icon
+Agent: main-orchestrator
+Task: Remove the refresh icon from the top navbar on the customer panel's Help & Support, RealCart Balance (wallet), and Followed Sellers pages. Do this robustly without damaging existing UI/code.
+
+Work Log:
+- Reviewed the previous navbar-replication task in worklog.md to understand the current PageHeader setup. All 3 target pages had a `headerExtra` prop on <PageHeader> containing a Refresh button.
+- Examined each of the 3 target pages to identify the exact headerExtra block and determine which imports become unused after removal:
+  * help-support-page.tsx: RefreshCw only used in headerExtra → remove import. cn used 3x elsewhere → keep.
+  * wallet-page.tsx: RefreshCw used in headerExtra AND on line 350 (body) → keep import. cn used 3x elsewhere → keep.
+  * followed-sellers-page.tsx: RefreshCw only used in headerExtra → remove import. cn only used in headerExtra → remove import.
+- Edited help-support-page.tsx: removed headerExtra prop from <PageHeader>, removed RefreshCw from lucide-react imports.
+- Edited wallet-page.tsx: removed headerExtra prop from <PageHeader>. Kept all imports (RefreshCw still used in transaction history body, cn still used elsewhere).
+- Edited followed-sellers-page.tsx: removed headerExtra prop from <PageHeader>, removed RefreshCw from lucide-react imports, removed `import { cn } from '@/lib/utils'` (no longer used).
+- Verified fetchData/fetchSellers functions are still used (called in useEffect on mount + Retry button in error state), so no unused-variable issues.
+- Ran `bun run lint`: 0 errors, 24 warnings (all pre-existing, none new).
+- All 3 target pages compile and return HTTP 200. No errors in dev.log.
+- Agent Browser verification (with auth cookie):
+  * Help & Support: header buttons = [Go back, Search, Wishlist, Cart] — Refresh GONE.
+  * RealCart Balance (wallet): header buttons = [Go back, Search, Wishlist, Cart] — Refresh GONE. Page content (How You Earn Balance, Transaction History) still loads correctly.
+  * Followed Sellers: header buttons = [Go back, Search, Wishlist, Cart] — Refresh GONE.
+  * No console errors on any page.
+  * VLM visual check on help & followed-sellers screenshots: confirmed no refresh/reload icon in the top navbar.
+- Verified 6 unchanged pages (notifications, payment-refund, bank-upi, shared-products, referral, language) are completely unaffected — all still show correct navbar.
+
+Stage Summary:
+- Removed the refresh icon from the top navbar on 3 pages: Help & Support, RealCart Balance (wallet), Followed Sellers.
+- Only 3 files were edited; no other UI or code was touched.
+- Cleaned up unused imports (RefreshCw removed from help-support and followed-sellers; cn removed from followed-sellers). Wallet page kept its imports since RefreshCw is still used in the page body.
+- The data-fetching logic (fetchData/fetchSellers) is untouched — data still loads automatically on page mount and can be re-fetched via the Retry button in error states.
+- Lint: 0 errors. Dev server: stable, all pages HTTP 200, no console errors. Verified via Agent Browser + VLM.

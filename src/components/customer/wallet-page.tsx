@@ -136,11 +136,6 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
         title="RealCart Balance"
         onBack={onBack}
         onNavigate={onNavigate}
-        headerExtra={
-          <button onClick={fetchData} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Refresh">
-            <RefreshCw className={cn('h-4 w-4 text-gray-500', loading && 'animate-spin')} />
-          </button>
-        }
       />
 
       {/* Content */}
