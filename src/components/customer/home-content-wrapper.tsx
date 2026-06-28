@@ -14,6 +14,7 @@ import { ExitToast } from './exit-toast'
 import { ImageSearchDialog } from './image-search-dialog'
 import { useLanguage } from '@/components/providers/language-provider'
 import type { Product, CategoryItem } from './types'
+import type { HeroSlide } from './hero-slider'
 
 // Dynamic imports with ssr: false
 const CategorySection = dynamic(() => import('./category-section').then(m => ({ default: m.CategorySection })), { ssr: false })
@@ -221,6 +222,35 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
       }
     }
     fetchCategories()
+    return () => { cancelled = true }
+  }, [])
+
+  // ── Hero slides cache (client-side) ─────────────────────────────────
+  // Same pattern as categories: fetch ONCE on mount, keep in parent state,
+  // pass down to HeroSlider as props so it shows instantly on every Home
+  // tab visit without re-fetching or showing the loading spinner.
+  const [cachedHeroSlides, setCachedHeroSlides] = useState<HeroSlide[]>([])
+  const [heroSlidesLoaded, setHeroSlidesLoaded] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function fetchHeroSlides() {
+      try {
+        const res = await fetch('/api/hero-slides', {
+          signal: AbortSignal.timeout(10000),
+          cache: 'no-store',
+        })
+        const data = await res.json()
+        if (!cancelled && res.ok && data.slides && Array.isArray(data.slides)) {
+          setCachedHeroSlides(data.slides)
+        }
+      } catch (err) {
+        console.error('Failed to fetch hero slides:', err)
+      } finally {
+        if (!cancelled) setHeroSlidesLoaded(true)
+      }
+    }
+    fetchHeroSlides()
     return () => { cancelled = true }
   }, [])
 
@@ -530,7 +560,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
               setImageSearchInfo(undefined)
               setNavHistory(prev => [...prev, { tab: 'products' as ExtendedTab, fromBottomNav: false }])
             }} />
-            <HeroSlider />
+            <HeroSlider slides={cachedHeroSlides} loading={!heroSlidesLoaded} />
             <HomeContentSections onNavigateToProducts={(params) => {
               setSearchQuery('')
               setProductsSubcategoryFilter(undefined)

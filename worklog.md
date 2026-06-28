@@ -2806,3 +2806,36 @@ Stage Summary:
 - Code uploaded to GitHub: https://github.com/realdigital-developer/realcart (main branch, public repo)
 - To deploy on Vercel: import the GitHub repo → Vercel auto-detects Next.js → set env vars from .env.example → deploy
 - No existing UI or code was damaged — only deployment config files and lockfile were added/removed.
+
+---
+Task ID: realtime-hero-slider-home
+Agent: main-orchestrator
+Task: Fix slow hero slider loading on customer panel home page — hero slider should show in real-time when customer clicks the Home tab, with existing motion effect preserved.
+
+Work Log:
+- Root cause analysis: Same pattern as the categories fix. The HeroSlider component fetches /api/hero-slides in its own useEffect with [] deps (line 88-109). Because the home tab content is conditionally rendered (`{activeTab === 'home' && (...)}`), the HeroSlider UNMOUNTS when the customer navigates to another tab and REMOUNTS when they return — triggering a fresh fetch + loading spinner (Loader2 animate-spin) every single time. The server-side cache (30s TTL) makes the API fast (~7ms on cache hit), but the client-side re-fetch + loading spinner still causes a visible delay on every home tab re-visit.
+- Verified the API: 3 hero slides (70% off sale, buy one get one, mega sale), 617 bytes response. Server cache works well (7ms on hit, ~520ms on miss). The problem was purely client-side: unnecessary re-fetching on component remount.
+- Solution: Lifted the hero slides fetch from HeroSlider up to HomeContentWrapper (the parent that manages all tabs and persists across tab switches) — exactly the same proven pattern used for categories.
+  * Exported the HeroSlide interface from hero-slider.tsx (was internal).
+  * Added `cachedHeroSlides` + `heroSlidesLoaded` state to HomeContentWrapper.
+  * Added a useEffect that fetches /api/hero-slides ONCE on mount (empty deps) — the data then lives in parent state for the entire customer session.
+  * Passed `slides={cachedHeroSlides}` and `loading={!heroSlidesLoaded}` as props to HeroSlider.
+  * Modified HeroSlider to accept optional `slides` and `loading` props. When `slides` is provided (not undefined), it renders the cached data directly WITHOUT fetching — showing the slider instantly. When omitted, it falls back to its own internal fetch (backward compatible for any other usage). Added a cleanup flag (`cancelled`) to prevent state updates after unmount.
+  * ALL existing motion effects preserved: slideVariants (horizontal slide transition), AnimatePresence with popLayout mode, autoplay (4s interval via useAutoplayTick), progress fill animation (useAutoplayProgress with rAF), touch/swipe handling, dot indicators with active/visited states, slide click navigation.
+- No other files were touched. No styling, layout, icons, or motion logic changed — only the data-fetching was optimized.
+- Ran `bun run lint`: 0 errors, 24 warnings (all pre-existing, none new).
+- Agent Browser verification (with test customer login):
+  * First visit to Home: hero slider loaded with image, no spinner.
+  * Home → Cart → Home: hero slider shows INSTANTLY (image present, 0 spinners, 3 dot indicators).
+  * Home → Account → Home: hero slider shows INSTANTLY (image present, 0 spinners, 3 dot indicators).
+  * Home → Orders → Home: hero slider shows INSTANTLY (image present, 0 spinners).
+  * Autoplay motion effect verified: slide advanced from "buy-one-get-one" to "mega-sale" after 4.5s (4s autoplay interval), confirming the slide transition animation works.
+  * Active dot indicator (20px width with progress fill) verified present.
+  * No console errors during any tab switch.
+
+Stage Summary:
+- Hero slider now loads in real-time on the home tab. The data is fetched ONCE when the customer panel mounts and cached in HomeContentWrapper's state. All subsequent Home tab visits show the hero slider instantly from the cache — no loading spinner, no re-fetch, no delay.
+- All existing motion effects are fully preserved: horizontal slide transitions, autoplay, progress fill, dot indicators, touch/swipe, click navigation.
+- The HeroSlider component is now backward-compatible: it uses cached props when provided, and falls back to its own fetch when used standalone.
+- Lint: 0 errors. Dev server: stable, no console errors. Verified via Agent Browser across 3+ tab switches with autoplay motion confirmation.
+- No existing UI or code was damaged — only the data flow was optimized to eliminate redundant re-fetching.

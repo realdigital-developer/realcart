@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 /*  assigned redirect URL.                                            */
 /* ------------------------------------------------------------------ */
 
-interface HeroSlide {
+export interface HeroSlide {
   _id: string
   title: string
   imageUrl: string | null
@@ -74,18 +74,41 @@ function useAutoplayTick(interval: number, paused: boolean) {
 /*  Hero Slider Component                                              */
 /* ------------------------------------------------------------------ */
 
-export function HeroSlider() {
+interface HeroSliderProps {
+  /**
+   * Cached slides from the parent (HomeContentWrapper). When provided,
+   * the slider renders them instantly WITHOUT fetching — this is what
+   * makes the home tab feel "real-time" on re-visits because the data
+   * persists across tab switches at the parent level.
+   *
+   * When omitted (undefined), the slider falls back to its own internal
+   * fetch — keeping it backward-compatible for any other usage.
+   */
+  slides?: HeroSlide[]
+  /**
+   * Loading flag from the parent. Only meaningful when `slides` is
+   * provided. When `slides` is provided AND `loading` is false, the
+   * loading spinner is hidden and the data is shown immediately.
+   */
+  loading?: boolean
+}
+
+export function HeroSlider({ slides: propSlides, loading: propLoading }: HeroSliderProps = {}) {
   const [current, setCurrent] = useState(0)
   const [direction, setDirection] = useState(1)
   const [isPaused, setIsPaused] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
-  const [slides, setSlides] = useState<HeroSlide[]>([])
-  const [loading, setLoading] = useState(true)
+  // Local state — only used when no cached props are provided (fallback mode)
+  const [localSlides, setLocalSlides] = useState<HeroSlide[]>([])
+  const [localLoading, setLocalLoading] = useState(true)
 
   const AUTOPLAY_INTERVAL = 4000
 
-  // ── Fetch slides from the admin-managed API ──
+  // ── Fallback fetch — only runs when the parent does NOT supply cached data ──
   useEffect(() => {
+    // If the parent is managing slides, skip the internal fetch entirely
+    if (propSlides !== undefined) return
+
     let cancelled = false
     async function fetchSlides() {
       try {
@@ -96,17 +119,24 @@ export function HeroSlider() {
         const data = await res.json()
         if (cancelled) return
         const fetched: HeroSlide[] = Array.isArray(data.slides) ? data.slides : []
-        setSlides(fetched)
+        setLocalSlides(fetched)
       } catch {
         // Non-fatal — leave slides empty, the slider won't render
-        if (!cancelled) setSlides([])
+        if (!cancelled) setLocalSlides([])
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLocalLoading(false)
       }
     }
     fetchSlides()
     return () => { cancelled = true }
-  }, [])
+  }, [propSlides])
+
+  // Resolve which data + loading state to use:
+  //   • Parent-managed mode (propSlides !== undefined) → use props directly
+  //   • Fallback mode → use local state
+  const useParentCache = propSlides !== undefined
+  const slides = useParentCache ? propSlides! : localSlides
+  const loading = useParentCache ? (propLoading ?? false) : localLoading
 
   const totalSlides = slides.length
 
