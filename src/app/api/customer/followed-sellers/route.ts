@@ -196,12 +196,19 @@ export async function POST(request: NextRequest) {
       if (sellerDoc) {
         resolvedSellerId = sellerDoc._id.toString()
         resolvedSellerName = resolvedSellerName || sellerDoc.name || ''
+      } else {
+        // Seller not found in the sellers collection — but the customer is
+        // following a seller they discovered via a product. Use the storeName
+        // as the identifier so the follow still works. This handles products
+        // whose `seller` field is a store name that doesn't match a seller
+        // document (e.g., legacy data, deleted sellers, or test data).
+        resolvedSellerId = resolvedStoreName
+        resolvedSellerName = resolvedSellerName || resolvedStoreName
       }
     }
 
-    if (!resolvedSellerId) {
-      return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
-    }
+    // resolvedSellerId is now always set (either from the sellers collection
+    // or from the storeName as a fallback). No 404.
 
     // Check if already following (by sellerId OR storeName to avoid duplicates)
     const existing = await db.collection('customer_followed_sellers').findOne({
