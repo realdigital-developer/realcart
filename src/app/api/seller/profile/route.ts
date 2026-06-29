@@ -229,10 +229,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    // Validate the file
-    const validation = validateImageFile(file, DEFAULT_IMAGE_TYPES, DEFAULT_MAX_IMAGE_SIZE)
-    if (!validation.valid) {
-      return NextResponse.json({ error: validation.error }, { status: 400 })
+    // Validate the file (validateImageFile returns an error string or null if valid)
+    const validationError = validateImageFile(file, DEFAULT_IMAGE_TYPES, DEFAULT_MAX_IMAGE_SIZE)
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 })
     }
 
     const { db } = await connectToDatabase()
