@@ -139,6 +139,7 @@ export async function GET(request: NextRequest) {
       sellerId: sellerDoc?._id?.toString() || sellerId || '',
       storeName: (sellerDoc?.storeName as string) || storeName || '',
       sellerName: (sellerDoc?.name as string) || '',
+      profileImage: (sellerDoc?.profileImage as { url: string; publicId: string } | undefined)?.url || null,
       isVerified: (sellerDoc?.isVerified as boolean) || false,
       verificationStatus: (sellerDoc?.verificationStatus as string) || 'pending',
       businessType: (sellerDoc?.businessType as string) || '',

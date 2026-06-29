@@ -40,6 +40,7 @@ interface FollowedSeller {
   sellerId: string
   storeName: string
   sellerName: string
+  profileImage?: string | null
   isVerified: boolean
   verificationStatus: string
   productCount: number
@@ -173,8 +174,12 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
                     {/* Seller header */}
                     <div className="flex items-start gap-3">
                       {/* Store avatar */}
-                      <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                        {seller.storeName.charAt(0).toUpperCase()}
+                      <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 overflow-hidden">
+                        {seller.profileImage ? (
+                          <img src={seller.profileImage} alt={seller.storeName} className="w-full h-full object-cover" />
+                        ) : (
+                          seller.storeName.charAt(0).toUpperCase()
+                        )}
                       </div>
 
                       {/* Store info */}

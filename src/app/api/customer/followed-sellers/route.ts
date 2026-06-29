@@ -148,6 +148,7 @@ export async function GET() {
         sellerId: f.sellerId,
         storeName: f.storeName || sellerDoc?.storeName || 'Unknown Store',
         sellerName: f.sellerName || sellerDoc?.name || '',
+        profileImage: (sellerDoc?.profileImage as { url: string; publicId: string } | undefined)?.url || null,
         // Seller details
         isVerified: sellerDoc?.isVerified || false,
         verificationStatus: sellerDoc?.verificationStatus || 'pending',

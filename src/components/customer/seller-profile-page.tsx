@@ -45,6 +45,7 @@ interface SellerProfile {
   sellerId: string
   storeName: string
   sellerName: string
+  profileImage?: string | null
   isVerified: boolean
   verificationStatus: string
   businessType: string
@@ -388,8 +389,12 @@ export function SellerProfilePage({ storeName: propStoreName, sellerId: propSell
             {/* Avatar + Follow button — right side, overlapping the gradient by middle of avatar */}
             <div className="absolute -top-10 right-4 flex flex-col items-center gap-1.5 z-10">
               {/* Avatar — overlaps the gradient by half its height (middle of avatar) */}
-              <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-2xl font-black border-[3px] border-white dark:border-gray-900 shadow-lg">
-                {seller.storeName.charAt(0).toUpperCase()}
+              <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-2xl font-black border-[3px] border-white dark:border-gray-900 shadow-lg overflow-hidden">
+                {seller.profileImage ? (
+                  <img src={seller.profileImage} alt={seller.storeName} className="w-full h-full object-cover" />
+                ) : (
+                  seller.storeName.charAt(0).toUpperCase()
+                )}
               </div>
               {/* Follow button — directly below the avatar, compact */}
               {authenticated && (

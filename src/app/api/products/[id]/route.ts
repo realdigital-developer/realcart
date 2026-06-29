@@ -143,6 +143,18 @@ export async function GET(
         approvedAt,
         publishedAt,
         relatedProducts: [], // populated below
+        sellerProfileImage: null as string | null,
+      }
+
+      // ── Fetch seller profile image ──
+      if (product.seller) {
+        const sellerDoc = await db.collection('sellers').findOne(
+          { storeName: product.seller as string },
+          { projection: { profileImage: 1 } }
+        )
+        if (sellerDoc?.profileImage?.url) {
+          (productDetail as Record<string, unknown>).sellerProfileImage = sellerDoc.profileImage.url
+        }
       }
 
       // ── Related products: same category, sorted by totalSold desc, limit 8 ──

@@ -2553,8 +2553,12 @@ export function ProductDetailPage() {
                     aria-label={t('productDetail.viewSellerProfile', { seller: product.seller })}
                   >
                     {/* Store avatar */}
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                      {product.seller.charAt(0).toUpperCase()}
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden">
+                      {product.sellerProfileImage ? (
+                        <img src={product.sellerProfileImage} alt={product.seller} className="w-full h-full object-cover" />
+                      ) : (
+                        product.seller.charAt(0).toUpperCase()
+                      )}
                     </div>
                     <div className="flex flex-col min-w-0">
                       <span className="text-[10px] text-gray-400 dark:text-gray-500">{t('productDetail.soldBy')}</span>

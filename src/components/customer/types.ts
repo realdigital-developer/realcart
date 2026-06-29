@@ -131,6 +131,7 @@ export interface ProductDetail {
   variants?: ProductVariant[]
   relatedProducts?: Product[]      // CHANGED: was inline, now uses Product type
   structuredData?: object          // NEW: JSON-LD
+  sellerProfileImage?: string | null  // Seller's profile image URL
 }
 
 export interface Filters {
