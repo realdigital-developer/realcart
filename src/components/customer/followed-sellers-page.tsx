@@ -24,8 +24,8 @@ import {
   TrendingUp,
   AlertCircle,
   BadgeCheck,
-  Heart,
-  HeartOff,
+  UserCheck,
+  UserX,
   ShoppingBag,
   Users,
   Calendar,
@@ -197,11 +197,11 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
                       {/* Unfollow button */}
                       <button
                         onClick={() => setUnfollowTarget(seller)}
-                        className="h-8 w-8 flex items-center justify-center rounded-full text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors flex-shrink-0"
+                        className="h-8 w-8 flex items-center justify-center rounded-full text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
                         aria-label="Unfollow seller"
                         title="Unfollow"
                       >
-                        <Heart className="h-4 w-4 fill-rose-400" />
+                        <UserCheck className="h-4 w-4 text-emerald-500" />
                       </button>
                     </div>
 
@@ -264,7 +264,7 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
         }
       >
         <div className="flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-900/10 rounded-xl border border-rose-100 dark:border-rose-800/20">
-          <HeartOff className="h-5 w-5 text-rose-500 flex-shrink-0" />
+          <UserX className="h-5 w-5 text-rose-500 flex-shrink-0" />
           <p className="text-xs text-rose-700 dark:text-rose-400">
             {t('followedSellers.unfollowResult')}
           </p>
