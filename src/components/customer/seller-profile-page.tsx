@@ -96,11 +96,12 @@ function formatPrice(n: number | null | undefined): string {
   return `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
-export function SellerProfilePage() {
+export function SellerProfilePage({ storeName: propStoreName, sellerId: propSellerId, onBack: propOnBack }: { storeName?: string; sellerId?: string; onBack?: () => void } = {}) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const storeName = searchParams.get('storeName')
-  const sellerId = searchParams.get('sellerId')
+  // Use props first (SPA tab mode), fall back to URL search params (standalone route mode)
+  const storeName = propStoreName ?? searchParams.get('storeName')
+  const sellerId = propSellerId ?? searchParams.get('sellerId')
 
   const { authenticated } = useCustomerAuth()
   const [seller, setSeller] = useState<SellerProfile | null>(null)
@@ -162,6 +163,12 @@ export function SellerProfilePage() {
     }
     fetchSeller(1, false)
   }, [fetchSeller, storeName, sellerId])
+
+  // Back handler — uses propOnBack (SPA tab mode) when available, falls back to router.back()
+  const handleBack = useCallback(() => {
+    if (propOnBack) propOnBack()
+    else router.back()
+  }, [propOnBack, router])
 
   // Check follow status
   useEffect(() => {
@@ -307,7 +314,7 @@ export function SellerProfilePage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3 px-3 h-12">
-            <button onClick={() => router.back()} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <button onClick={handleBack} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
             </button>
             <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
@@ -335,7 +342,7 @@ export function SellerProfilePage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
         <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3 px-3 h-12">
-            <button onClick={() => router.back()} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <button onClick={handleBack} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
             </button>
             <h1 className="text-base font-bold text-gray-800 dark:text-gray-200">Seller Profile</h1>
@@ -344,7 +351,7 @@ export function SellerProfilePage() {
         <div className="flex-1 flex flex-col items-center justify-center py-20 text-center px-4">
           <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{error || 'Seller not found'}</p>
-          <button onClick={() => router.back()} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">Go Back</button>
+          <button onClick={handleBack} className="mt-4 px-5 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-600">Go Back</button>
         </div>
       </div>
     )
@@ -352,58 +359,60 @@ export function SellerProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-3 px-3 h-12">
-          <button onClick={() => router.back()} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Go back">
-            <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-          </button>
-          <h1 className="text-base font-bold text-gray-800 dark:text-gray-200 truncate">Seller Profile</h1>
-        </div>
-      </div>
-
       <div className="pb-8">
-        {/* ── Seller Hero Card ── */}
+        {/* ── Seller Hero Card — Compact Modern Design ── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden bg-white dark:bg-gray-900 mx-4 mt-4 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm"
         >
-          {/* Gradient header strip */}
-          <div className="h-20 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 relative overflow-hidden">
-            <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-white/10" />
-            <div className="absolute -bottom-12 -left-4 h-24 w-24 rounded-full bg-white/10" />
+          {/* ═══ Top half: Background gradient section (horizontally full, ~half card height) ═══ */}
+          <div className="h-24 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 relative overflow-hidden">
+            {/* Decorative circles */}
+            <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
+            <div className="absolute -bottom-10 -left-4 h-20 w-20 rounded-full bg-white/10" />
+            {/* Subtle dotted texture */}
+            <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+            {/* Smart back button — floating over the gradient */}
+            <button
+              onClick={handleBack}
+              className="absolute top-2.5 left-2.5 z-20 h-8 w-8 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-4 w-4 text-white" />
+            </button>
           </div>
 
-          {/* Seller info */}
-          <div className="px-5 pb-5 -mt-10 relative">
-            <div className="flex items-end justify-between">
-              {/* Avatar */}
-              <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-3xl font-black border-4 border-white dark:border-gray-900 shadow-lg">
+          {/* ═══ Bottom half: Seller info section ═══ */}
+          <div className="px-4 pb-4 pt-1 relative">
+            {/* Avatar + Follow button — right side, overlapping the gradient by middle of avatar */}
+            <div className="absolute -top-10 right-4 flex flex-col items-center gap-1.5 z-10">
+              {/* Avatar — overlaps the gradient by half its height (middle of avatar) */}
+              <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-2xl font-black border-[3px] border-white dark:border-gray-900 shadow-lg">
                 {seller.storeName.charAt(0).toUpperCase()}
               </div>
-              {/* Follow button */}
+              {/* Follow button — directly below the avatar, compact */}
               {authenticated && (
                 <button
                   onClick={handleToggleFollow}
                   disabled={followLoading}
                   className={cn(
-                    'flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all',
+                    'flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all',
                     isFollowing
                       ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 dark:hover:text-rose-400'
                       : 'bg-emerald-500 text-white hover:bg-emerald-600 active:scale-95 shadow-sm'
                   )}
                 >
                   {followLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Loader2 className="h-3 w-3 animate-spin" />
                   ) : isFollowing ? (
                     <>
-                      <UserCheck className="h-3.5 w-3.5" />
+                      <UserCheck className="h-3 w-3" />
                       Following
                     </>
                   ) : (
                     <>
-                      <UserPlus className="h-3.5 w-3.5" />
+                      <UserPlus className="h-3 w-3" />
                       Follow
                     </>
                   )}
@@ -411,51 +420,54 @@ export function SellerProfilePage() {
               )}
             </div>
 
-            {/* Store name + verified badge — always show (badge or spacer for consistency) */}
-            <div className="mt-3 flex items-center gap-1.5">
-              <h2 className="text-lg font-black text-gray-800 dark:text-gray-200">{seller.storeName}</h2>
-              {seller.isVerified ? (
-                <BadgeCheck className="h-5 w-5 text-emerald-500 flex-shrink-0" />
-              ) : (
-                <span className="h-5 w-5 flex-shrink-0" />
-              )}
-            </div>
+            {/* Left side: Seller details (below the background image section) */}
+            <div className="pt-1 pr-24">
+              {/* Store name + verified badge — always show (badge or spacer for consistency) */}
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-base font-black text-gray-800 dark:text-gray-200 truncate">{seller.storeName}</h2>
+                {seller.isVerified ? (
+                  <BadgeCheck className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                ) : (
+                  <span className="h-4 w-4 flex-shrink-0" />
+                )}
+              </div>
 
-            {/* Seller name — always show (fallback to store name for consistency) */}
-            <p className="text-xs text-gray-400 mt-0.5">{seller.sellerName || seller.storeName}</p>
+              {/* Seller name — always show (fallback to store name for consistency) */}
+              <p className="text-[11px] text-gray-400 mt-0.5 truncate">{seller.sellerName || seller.storeName}</p>
 
-            {/* Status badge — always show (Verified or Pending) */}
-            <div className={cn(
-              'inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold',
-              seller.verificationStatus === 'verified'
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
-            )}>
-              {seller.verificationStatus === 'verified' ? (
-                <>
-                  <BadgeCheck className="h-3 w-3" />
-                  Verified Seller
-                </>
-              ) : (
-                <>
-                  <Clock className="h-3 w-3" />
-                  Pending Verification
-                </>
-              )}
-            </div>
+              {/* Status badge — always show (Verified or Pending) */}
+              <div className={cn(
+                'inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold',
+                seller.verificationStatus === 'verified'
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+              )}>
+                {seller.verificationStatus === 'verified' ? (
+                  <>
+                    <BadgeCheck className="h-3 w-3" />
+                    Verified Seller
+                  </>
+                ) : (
+                  <>
+                    <Clock className="h-3 w-3" />
+                    Pending Verification
+                  </>
+                )}
+              </div>
 
-            {/* Location + joined — always show with fallbacks */}
-            <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {seller.pickupAddress?.city
-                  ? `${seller.pickupAddress.city}, ${seller.pickupAddress.state || ''}`
-                  : 'Location N/A'}
-              </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {seller.createdAt ? `Joined ${formatDate(seller.createdAt)}` : 'Recently joined'}
-              </span>
+              {/* Location + joined — always show with fallbacks */}
+              <div className="flex flex-wrap items-center gap-2.5 mt-2 text-[11px] text-gray-400">
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {seller.pickupAddress?.city
+                    ? `${seller.pickupAddress.city}, ${seller.pickupAddress.state || ''}`
+                    : 'Location N/A'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {seller.createdAt ? `Joined ${formatDate(seller.createdAt)}` : 'Recently joined'}
+                </span>
+              </div>
             </div>
           </div>
         </motion.div>
