@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
       bankDetails: seller.bankDetails || null,
       pickupAddress: seller.pickupAddress || null,
       documents: seller.documents || null,
+      profileImage: seller.profileImage || null,
       verificationStatus: seller.verificationStatus || 'pending',
       verificationNotes: seller.verificationNotes || [],
       role: seller.role || 'seller',
