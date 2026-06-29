@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb'
 import { authenticateSeller } from '@/lib/seller-api-auth'
 import { ObjectId } from 'mongodb'
 import { verifyPassword, hashPassword } from '@/lib/seller-auth'
+import { uploadProfileImage, deleteFile, validateImageFile, DEFAULT_IMAGE_TYPES, DEFAULT_MAX_IMAGE_SIZE } from '@/lib/upload'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,6 +60,7 @@ export async function GET(request: NextRequest) {
       bankDetails: seller.bankDetails || null,
       pickupAddress: seller.pickupAddress || null,
       documents: seller.documents || null,
+      profileImage: seller.profileImage || null,
       verificationStatus: seller.verificationStatus || 'pending',
       verificationNotes: seller.verificationNotes || [],
       role: seller.role || 'seller',
@@ -189,6 +191,7 @@ export async function PUT(request: NextRequest) {
       bankDetails: updatedSeller!.bankDetails || null,
       pickupAddress: updatedSeller!.pickupAddress || null,
       documents: updatedSeller!.documents || null,
+      profileImage: updatedSeller!.profileImage || null,
       verificationStatus: updatedSeller!.verificationStatus || 'pending',
       verificationNotes: updatedSeller!.verificationNotes || [],
       role: updatedSeller!.role || 'seller',
@@ -206,5 +209,77 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('[Seller Profile PUT Error]', error)
     return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  POST /api/seller/profile                                           */
+/*  Upload seller profile image. Body: FormData with 'file' field.     */
+/* ------------------------------------------------------------------ */
+
+export async function POST(request: NextRequest) {
+  try {
+    const { error, session } = await authenticateSeller(request)
+    if (error || !session) return error
+
+    const formData = await request.formData()
+    const file = formData.get('file') as File | null
+
+    if (!file) {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    }
+
+    // Validate the file
+    const validation = validateImageFile(file, DEFAULT_IMAGE_TYPES, DEFAULT_MAX_IMAGE_SIZE)
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+
+    const { db } = await connectToDatabase()
+    const sellerId = session.id
+
+    // Get existing seller to check for old image
+    const existingSeller = await db.collection('sellers').findOne(
+      { _id: new ObjectId(sellerId) },
+      { projection: { profileImage: 1 } }
+    )
+
+    // Delete old profile image from Cloudinary if it exists
+    if (existingSeller?.profileImage?.publicId) {
+      await deleteFile(existingSeller.profileImage.publicId)
+    }
+
+    // Upload the new image
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const result = await uploadProfileImage(buffer, file.type, sellerId)
+
+    const profileImageMeta = {
+      url: result.url,
+      publicId: result.publicId,
+      uploadedAt: new Date(),
+    }
+
+    // Update seller document
+    await db.collection('sellers').updateOne(
+      { _id: new ObjectId(sellerId) },
+      {
+        $set: {
+          profileImage: profileImageMeta,
+          updatedAt: new Date(),
+        },
+      }
+    )
+
+    return NextResponse.json({
+      success: true,
+      profileImage: {
+        url: profileImageMeta.url,
+        publicId: profileImageMeta.publicId,
+      },
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to upload profile image'
+    console.error('[Seller Profile Image Upload Error]', message)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

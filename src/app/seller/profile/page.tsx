@@ -46,6 +46,7 @@ import {
   Loader2,
   Upload,
   Trash2,
+  Camera,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -114,6 +115,7 @@ interface SellerProfile {
     business_registration?: DocumentInfo
     address_proof?: DocumentInfo
   }
+  profileImage?: { url: string; publicId: string } | null
   verificationStatus: 'pending' | 'verified' | 'rejected' | 'resubmission_requested' | 'in_review'
   verificationNotes: VerificationNote[]
   role: string
@@ -667,6 +669,65 @@ export default function SellerProfilePage() {
   const [uploadingDocType, setUploadingDocType] = useState<string | null>(null)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
+  // Profile image upload state
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false)
+  const profileImageInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Handle profile image upload
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file type', description: 'Please select an image file', variant: 'destructive' })
+      return
+    }
+    // Validate file size (3.1MB max)
+    if (file.size > 3.1 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Image must be under 3.1MB', variant: 'destructive' })
+      return
+    }
+
+    setUploadingProfileImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/seller/profile', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to upload image')
+      }
+
+      const data = await res.json()
+      // Update profile state with new image
+      if (profile && data.profileImage) {
+        setProfile({
+          ...profile,
+          profileImage: { url: data.profileImage.url, publicId: data.profileImage.publicId },
+        })
+      }
+      toast({ title: 'Profile image updated', description: 'Your profile photo has been updated successfully' })
+    } catch (err) {
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Failed to upload profile image',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingProfileImage(false)
+      // Reset input so the same file can be selected again
+      if (profileImageInputRef.current) {
+        profileImageInputRef.current.value = ''
+      }
+    }
+  }
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!loading && !authenticated) {
@@ -887,8 +948,41 @@ export default function SellerProfilePage() {
           </div>
           <CardContent className="pt-0 px-4 sm:px-6 pb-5">
             <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-10 sm:-mt-12">
-              <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 border-4 border-card shadow-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl sm:text-3xl font-bold text-white">{profile.storeName?.charAt(0)?.toUpperCase() || 'S'}</span>
+              {/* Profile Avatar with Image Upload */}
+              <div className="relative group flex-shrink-0">
+                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border-4 border-card shadow-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500">
+                  {profile.profileImage?.url ? (
+                    <img
+                      src={profile.profileImage.url}
+                      alt={profile.storeName || 'Profile'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl sm:text-3xl font-bold text-white">{profile.storeName?.charAt(0)?.toUpperCase() || 'S'}</span>
+                  )}
+                </div>
+                {/* Camera overlay button — appears on hover, always visible on mobile */}
+                <button
+                  onClick={() => profileImageInputRef.current?.click()}
+                  disabled={uploadingProfileImage}
+                  className="absolute inset-0 rounded-2xl bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer disabled:cursor-not-allowed"
+                  aria-label="Upload profile image"
+                  title="Upload profile image"
+                >
+                  {uploadingProfileImage ? (
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="h-6 w-6 text-white" />
+                  )}
+                </button>
+                {/* Hidden file input */}
+                <input
+                  ref={profileImageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={handleProfileImageUpload}
+                  className="hidden"
+                />
               </div>
               <div className="flex-1 min-w-0 sm:pb-1">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
