@@ -36,6 +36,7 @@ import {
   Truck,
   Heart,
   X,
+  Clock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
@@ -410,40 +411,51 @@ export function SellerProfilePage() {
               )}
             </div>
 
-            {/* Store name + verified */}
+            {/* Store name + verified badge — always show (badge or spacer for consistency) */}
             <div className="mt-3 flex items-center gap-1.5">
               <h2 className="text-lg font-black text-gray-800 dark:text-gray-200">{seller.storeName}</h2>
-              {seller.isVerified && (
-                <BadgeCheck className="h-5 w-5 text-emerald-500" />
+              {seller.isVerified ? (
+                <BadgeCheck className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+              ) : (
+                <span className="h-5 w-5 flex-shrink-0" />
               )}
             </div>
 
-            {seller.sellerName && (
-              <p className="text-xs text-gray-400 mt-0.5">{seller.sellerName}</p>
-            )}
+            {/* Seller name — always show (fallback to store name for consistency) */}
+            <p className="text-xs text-gray-400 mt-0.5">{seller.sellerName || seller.storeName}</p>
 
-            {/* Verified status badge */}
-            {seller.verificationStatus === 'verified' && (
-              <div className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-                <BadgeCheck className="h-3 w-3" />
-                Verified Seller
-              </div>
-            )}
+            {/* Status badge — always show (Verified or Pending) */}
+            <div className={cn(
+              'inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold',
+              seller.verificationStatus === 'verified'
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+            )}>
+              {seller.verificationStatus === 'verified' ? (
+                <>
+                  <BadgeCheck className="h-3 w-3" />
+                  Verified Seller
+                </>
+              ) : (
+                <>
+                  <Clock className="h-3 w-3" />
+                  Pending Verification
+                </>
+              )}
+            </div>
 
-            {/* Location + joined */}
+            {/* Location + joined — always show with fallbacks */}
             <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
-              {seller.pickupAddress?.city && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {seller.pickupAddress.city}, {seller.pickupAddress.state}
-                </span>
-              )}
-              {seller.createdAt && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  Joined {formatDate(seller.createdAt)}
-                </span>
-              )}
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {seller.pickupAddress?.city
+                  ? `${seller.pickupAddress.city}, ${seller.pickupAddress.state || ''}`
+                  : 'Location N/A'}
+              </span>
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {seller.createdAt ? `Joined ${formatDate(seller.createdAt)}` : 'Recently joined'}
+              </span>
             </div>
           </div>
         </motion.div>
