@@ -988,99 +988,108 @@ export default function SellerProfilePage() {
       <EditBankDetailsDialog open={editBankOpen} onOpenChange={setEditBankOpen} profile={profile} onSave={handleSaveBank} saving={savingField === 'bank'} />
       <EditPickupAddressDialog open={editPickupOpen} onOpenChange={setEditPickupOpen} profile={profile} onSave={handleSavePickup} saving={savingField === 'pickup'} />
 
-      {/* ═══════════════════ Profile Header Card — Modern Compact Redesign ═══════════════════ */}
+      {/* ═══════════════════ Profile Header Card — Reference UI Design ═══════════════════ */}
       <motion.div variants={itemVariants}>
-        <Card className="overflow-hidden border-border/60">
-          {/* ── Cover Section ── */}
-          <div className="group relative h-20 sm:h-24 overflow-hidden">
+        <Card className="overflow-hidden border-border/60 shadow-xl">
+          {/* ── Cover Section: h-32, rounded-t, overflow hidden ── */}
+          <div className="group relative h-32 overflow-hidden rounded-t-lg">
             {profile.coverImage?.url ? (
-              <img src={profile.coverImage.url} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={profile.coverImage.url} alt="Cover" className="object-cover object-top w-full h-full" />
             ) : (
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-600" />
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-500 to-emerald-700" />
             )}
-            {/* Subtle dark gradient at bottom for depth */}
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
-            {/* Cover upload button — top-right corner, always visible */}
+            {/* Cover upload button — top-right, always visible */}
             <button
               onClick={() => coverImageInputRef.current?.click()}
               disabled={uploadingCoverImage}
-              className="absolute top-2 right-2 z-10 h-7 w-7 flex items-center justify-center rounded-lg bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors cursor-pointer disabled:cursor-not-allowed"
+              className="absolute top-2.5 right-2.5 z-10 h-8 w-8 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors cursor-pointer disabled:cursor-not-allowed"
               aria-label="Upload cover image"
               title="Upload cover image"
             >
               {uploadingCoverImage ? (
-                <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                <Loader2 className="h-4 w-4 text-white animate-spin" />
               ) : (
-                <Camera className="h-3.5 w-3.5 text-white" />
+                <Camera className="h-4 w-4 text-white" />
               )}
             </button>
             <input ref={coverImageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleCoverImageUpload} className="hidden" />
           </div>
 
-          {/* ── Profile Info Section ── */}
-          <CardContent className="pt-0 px-4 sm:px-6 pb-4 relative">
-            {/* Avatar + Info — horizontal layout on desktop, stacked on mobile */}
-            <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 -mt-8 sm:-mt-10">
-              {/* Avatar */}
-              <div className="relative group flex-shrink-0 mx-auto sm:mx-0">
-                <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border-4 border-card shadow-md overflow-hidden flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500">
-                  {profile.profileImage?.url ? (
-                    <img src={profile.profileImage.url} alt={profile.storeName || 'Profile'} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-xl sm:text-2xl font-bold text-white">{profile.storeName?.charAt(0)?.toUpperCase() || 'S'}</span>
-                  )}
-                </div>
-                {/* Camera button — small, bottom-right of avatar */}
-                <button
-                  onClick={() => profileImageInputRef.current?.click()}
-                  disabled={uploadingProfileImage}
-                  className="absolute -bottom-1 -right-1 h-6 w-6 flex items-center justify-center rounded-full bg-foreground text-background shadow-md hover:scale-110 transition-transform cursor-pointer disabled:cursor-not-allowed border-2 border-card z-10"
-                  aria-label="Upload profile image"
-                  title="Upload profile image"
-                >
-                  {uploadingProfileImage ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Camera className="h-3 w-3" />
-                  )}
-                </button>
-                <input ref={profileImageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleProfileImageUpload} className="hidden" />
-              </div>
-
-              {/* Store name + badges + info */}
-              <div className="flex-1 min-w-0 text-center sm:text-left sm:pt-2">
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
-                  <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">{profile.storeName || 'My Store'}</h1>
-                  {profile.isVerified ? (
-                    <Badge className="gap-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-2 py-0 h-5 text-[10px]">
-                      <BadgeCheck className="h-3 w-3" /> Verified
-                    </Badge>
-                  ) : (
-                    <Badge className="gap-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2 py-0 h-5 text-[10px]">
-                      <ShieldAlert className="h-3 w-3" /> Unverified
-                    </Badge>
-                  )}
-                  {profile.status === 'Active' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400">Active</Badge>}
-                  {profile.status === 'Blocked' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">Blocked</Badge>}
-                </div>
-                {/* Info pills */}
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2">
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 text-[11px] text-muted-foreground">
-                    <User className="h-3 w-3" />
-                    <span className="truncate max-w-[100px]">{profile.name}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 text-[11px] text-muted-foreground">
-                    <Building2 className="h-3 w-3" />
-                    <span className="truncate max-w-[120px]">{BUSINESS_TYPE_LABELS[profile.businessType] || profile.businessType || '\u2014'}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 text-[11px] text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>{formatMemberSince(stats.memberDays)}</span>
-                  </div>
-                </div>
-              </div>
+          {/* ── Profile Avatar: w-32 h-32, circular, -mt-16, border-4 border-white ── */}
+          <div className="flex justify-center">
+            <div className="relative group w-32 h-32 -mt-16 border-4 border-card rounded-full overflow-hidden shadow-lg flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 z-10">
+              {profile.profileImage?.url ? (
+                <img src={profile.profileImage.url} alt={profile.storeName || 'Profile'} className="object-cover object-center w-full h-full" />
+              ) : (
+                <span className="text-4xl font-bold text-white">{profile.storeName?.charAt(0)?.toUpperCase() || 'S'}</span>
+              )}
+              {/* Camera overlay — appears on hover */}
+              <button
+                onClick={() => profileImageInputRef.current?.click()}
+                disabled={uploadingProfileImage}
+                className="absolute inset-0 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer disabled:cursor-not-allowed"
+                aria-label="Upload profile image"
+                title="Upload profile image"
+              >
+                {uploadingProfileImage ? (
+                  <Loader2 className="h-6 w-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="h-6 w-6 text-white" />
+                )}
+              </button>
+              <input ref={profileImageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleProfileImageUpload} className="hidden" />
             </div>
-          </CardContent>
+          </div>
+
+          {/* ── Seller Info: centered text ── */}
+          <div className="text-center mt-2 px-4">
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              <h2 className="text-lg font-semibold text-foreground">{profile.storeName || 'My Store'}</h2>
+              {profile.isVerified ? (
+                <Badge className="gap-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-2 py-0 h-5 text-[10px]">
+                  <BadgeCheck className="h-3 w-3" /> Verified
+                </Badge>
+              ) : (
+                <Badge className="gap-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2 py-0 h-5 text-[10px]">
+                  <ShieldAlert className="h-3 w-3" /> Unverified
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">{profile.name}</p>
+          </div>
+
+          {/* ── Stats Row: flex items-center justify-around ── */}
+          <div className="py-4 mt-2 text-foreground flex items-center justify-around border-t mx-8">
+            <div className="flex flex-col items-center justify-around">
+              <Package className="h-4 w-4 text-emerald-600" />
+              <div className="text-sm font-semibold mt-1">{stats.totalProducts}</div>
+              <div className="text-[10px] text-muted-foreground">Products</div>
+            </div>
+            <div className="flex flex-col items-center justify-between">
+              <ShoppingCart className="h-4 w-4 text-emerald-600" />
+              <div className="text-sm font-semibold mt-1">{stats.totalOrders}</div>
+              <div className="text-[10px] text-muted-foreground">Orders</div>
+            </div>
+            <div className="flex flex-col items-center justify-around">
+              <Star className="h-4 w-4 text-amber-500" />
+              <div className="text-sm font-semibold mt-1">{stats.averageRating || '0'}</div>
+              <div className="text-[10px] text-muted-foreground">Rating</div>
+            </div>
+          </div>
+
+          {/* ── Info Pills: centered ── */}
+          <div className="px-4 pb-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
+            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted/50">
+              <Building2 className="h-3 w-3" />
+              <span>{BUSINESS_TYPE_LABELS[profile.businessType] || profile.businessType || '\u2014'}</span>
+            </div>
+            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted/50">
+              <Calendar className="h-3 w-3" />
+              <span>{formatMemberSince(stats.memberDays)}</span>
+            </div>
+            {profile.status === 'Active' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400">Active</Badge>}
+            {profile.status === 'Blocked' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">Blocked</Badge>}
+          </div>
         </Card>
       </motion.div>
 
