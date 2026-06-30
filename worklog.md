@@ -3046,3 +3046,48 @@ Stage Summary:
 - Fixed the hero card to look consistent for all sellers. All sections (store name, seller name, status badge, location, joined date) now always render with fallback values for missing data.
 - Verified sellers show "Verified Seller" badge (emerald); unverified sellers show "Pending Verification" badge (amber) — both maintain the same visual structure.
 - Lint: 0 errors. Both pages compile successfully. No damage to existing UI or code.
+
+---
+Task ID: fix-sandbox-preview-not-opening
+Agent: main-orchestrator
+Task: Fix why the code and preview of the project cannot be opened in the sandbox.
+
+Work Log:
+- **Root Cause Diagnosis**:
+  * Checked dev server status: `curl http://localhost:3000` → HTTP 000 (connection refused). No process on port 3000.
+  * Checked `.zscripts/` directory: MISSING. `dev.sh`, `dev.pid` all gone.
+  * Checked `dev.log`: MISSING (created by the dev script at runtime).
+  * Checked processes: no next/bun/node processes running.
+  * Confirmed `node_modules` exists with `next` binary — dependencies were installed, but nothing was running.
+  * **Root cause**: The `.zscripts/dev.sh` bootstrap script is gitignored (intentional — it's sandbox-specific plumbing that shouldn't be in the GitHub repo). When the sandbox restarts or the repo is freshly pulled, this script doesn't exist, so the sandbox preview system has no way to start the dev server. This is a recurring issue documented in prior worklog entries: "Sandbox preview not opening: .zscripts/dev.sh missing (gitignored) → Recreated script on each session restart."
+- **Fix** (robust, hardened version of the script):
+  * Created `.zscripts/` directory.
+  * Recreated `.zscripts/dev.sh` with hardened logic:
+    1. Checks if `node_modules` + `next` binary exist; runs `bun install` if missing.
+    2. Kills any stale process on port 3000 before starting (prevents "port already in use" errors).
+    3. Starts dev server via `nohup bun run dev` (survives script exit).
+    4. Writes PID to `.zscripts/dev.pid` for tracking.
+    5. Waits up to 90s for server to become HTTP-reachable (Next.js 16 with large codebase needs generous compile time on first request).
+    6. Detects if the process died unexpectedly and prints last 20 lines of dev.log for debugging.
+    7. Final HTTP code verification (200/307/308 = success).
+    8. Disowns the background process so it isn't killed when the script exits.
+  * Made script executable (`chmod +x`).
+- **Verification**:
+  * Ran `bash .zscripts/dev.sh`:
+    - `[BOOT] node_modules exists, skipping install`
+    - `[BOOT] Dev server PID: 1169`
+    - `[BOOT] Server ready after 2s! (HTTP reachable)`
+    - `[BOOT] SUCCESS — dev server responding with HTTP 200 on port 3000`
+  * Post-start verification:
+    - `curl http://localhost:3000` → HTTP 200 in 0.14s
+    - Process running: `next-server (v16.1.3)` PID 1187
+    - HTML renders: `<html lang="en">`, `<title>RealCart</title>`, 32,617 bytes — UI fully intact
+    - dev.log shows all routes returning 200: `/`, `/customer?tab=account`, `/api/auth/customer/session`, `/api/admin/logo`, `/api/customer/wishlist`, `/api/customer/cart`, `/api/hero-slides`, `/api/products`, `/api/categories`, `/api/customer/notifications`, `/api/customer/top-vendors`
+    - MongoDB connection working: all indexes ensured, "Initialization complete"
+    - No errors in dev.log (only `[Instrumentation] Global error handlers registered` which is an info message, not an error)
+
+Stage Summary:
+- **Root cause**: The `.zscripts/dev.sh` bootstrap script is gitignored (sandbox-specific) and doesn't persist across sandbox restarts. Without it, the sandbox preview system cannot start the dev server, so the code/preview panel shows nothing.
+- **Fix**: Recreated `.zscripts/dev.sh` with a hardened, robust version (stale-process killer, 90s wait loop, process-death detection, HTTP verification). Started the dev server successfully.
+- **Result**: Dev server running on port 3000 (HTTP 200), all routes responding, MongoDB connected, UI rendering correctly (32KB HTML with RealCart title). No errors. No UI or code damaged.
+- **Note**: This is a known recurring issue — the script must be recreated each time the sandbox restarts because it is intentionally NOT tracked in the GitHub repository (to keep sandbox plumbing out of the production codebase). The script is now more robust than before with better error handling and process management.
