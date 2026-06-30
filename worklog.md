@@ -3046,3 +3046,28 @@ Stage Summary:
 - Fixed the hero card to look consistent for all sellers. All sections (store name, seller name, status badge, location, joined date) now always render with fallback values for missing data.
 - Verified sellers show "Verified Seller" badge (emerald); unverified sellers show "Pending Verification" badge (amber) — both maintain the same visual structure.
 - Lint: 0 errors. Both pages compile successfully. No damage to existing UI or code.
+
+---
+Task ID: fix-timeout-errors
+Agent: general-purpose
+Task: Fix the "signal timed out" console error caused by `AbortSignal.timeout()` calls leaking `TimeoutError` to the console when API responses exceed the timeout (slow dev server compiles / slow MongoDB).
+
+Work Log:
+- Root cause: `AbortSignal.timeout(N)` aborts the request after N ms but also fires an unhandled `TimeoutError` that surfaces in the browser console. When routes are compiling or MongoDB is slow, multiple timeouts would spam the console.
+- Fix: Replaced ALL `AbortSignal.timeout(N)` calls with a new `createTimeoutSignal(N)` helper in `src/lib/utils.ts`. The helper:
+  * Creates an `AbortController` + `setTimeout(() => controller.abort(), ms)`.
+  * On abort, clears the timer (cleanup if the fetch finishes first).
+  * Returns the controller's signal — the fetch rejects with a normal `AbortError` that is already handled by the existing `.catch()` / `Promise.allSettled()` blocks, so NO unhandled `TimeoutError` reaches the console.
+- Helper added to `src/lib/utils.ts` (appended after the existing `cn` helper).
+- Updated 6 files (added `createTimeoutSignal` import + replaced every `AbortSignal.timeout(N)` occurrence):
+  1. `src/components/customer/home-content-wrapper.tsx` — added `import { createTimeoutSignal } from '@/lib/utils'`; replaced 7 occurrences of `AbortSignal.timeout(10000)`.
+  2. `src/components/customer/product-detail-page.tsx` — extended existing `cn` import to `{ cn, createTimeoutSignal }`; replaced 1 occurrence of `AbortSignal.timeout(10000)`.
+  3. `src/components/customer/category-section.tsx` — extended existing `cn` import to `{ cn, createTimeoutSignal }`; replaced 1 occurrence of `AbortSignal.timeout(10000)`.
+  4. `src/components/customer/home-sections.tsx` — extended existing `cn` import to `{ cn, createTimeoutSignal }`; replaced 5 occurrences of `AbortSignal.timeout(15000)` and 1 occurrence of `AbortSignal.timeout(10000)`.
+  5. `src/components/providers/wishlist-provider.tsx` — added `import { createTimeoutSignal } from '@/lib/utils'`; replaced 1 occurrence of `AbortSignal.timeout(8000)` and 1 occurrence of `AbortSignal.timeout(5000)`.
+  6. `src/components/providers/cart-provider.tsx` — added `import { createTimeoutSignal } from '@/lib/utils'`; replaced 1 occurrence of `AbortSignal.timeout(8000)` and 1 occurrence of `AbortSignal.timeout(5000)`.
+- Verified: Grep for `AbortSignal\.timeout` in `src/` now only returns the JSDoc comment inside `createTimeoutSignal` itself — no live call sites remain.
+- Ran `bun run lint`: **0 errors, 24 warnings** (all pre-existing unused eslint-disable directives, unrelated to this change).
+
+Stage Summary:
+- All `AbortSignal.timeout(N)` call sites in the customer-facing components and providers have been swapped for the silent `createTimeoutSignal(N)` helper. Timeouts now abort the fetch without throwing an unhandled `TimeoutError` to the console; the existing `.catch()` / `Promise.allSettled()` handlers absorb the `AbortError`. Lint clean (0 errors).

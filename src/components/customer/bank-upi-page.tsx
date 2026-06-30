@@ -353,7 +353,7 @@ export function BankUpiPage({ onBack, onNavigate, initialMethods, initialLoading
                         <div className="flex items-center gap-3 mb-2">
                           <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 flex-shrink-0"><CreditCard className="h-5 w-5" /></div>
                           <div>
-                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200 capitalize">{method.cardNetwork} {method.cardType}</p>
+                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{method.nickname || `${method.cardNetwork} ${method.cardType}`.trim().replace(/\b\w/g, c => c.toUpperCase())}</p>
                             <p className="text-[11px] text-gray-400">****{method.cardLast4}</p>
                           </div>
                         </div>

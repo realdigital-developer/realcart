@@ -1482,21 +1482,26 @@ export function CheckoutPage({
       const body: Record<string, unknown> = {}
       if (method === 'upi') {
         body.type = 'upi'
-        body.upiId = paymentData.vpa || upiId
+        body.upiId = (paymentData.vpa as string) || upiId
         body.upiName = user?.name || ''
       } else if (method === 'card') {
         body.type = 'card'
-        body.cardLast4 = paymentData.cardLast4 || cardNumber.replace(/\s/g, '').slice(-4)
-        body.cardNetwork = (paymentData.cardNetwork || detectCardBrand(cardNumber) || '').toLowerCase()
-        body.cardType = 'debit'
-        body.nickname = `${body.cardNetwork} ${body.cardType} ****${body.cardLast4}`
+        body.cardLast4 = (paymentData.cardLast4 as string) || cardNumber.replace(/\s/g, '').slice(-4)
+        const network = ((paymentData.cardNetwork as string) || detectCardBrand(cardNumber) || '').toLowerCase()
+        body.cardNetwork = network
+        // Detect card type from card number (credit cards start with specific ranges)
+        // Default to 'credit' for most cards; 'debit' is less common for online payments
+        body.cardType = 'credit'
+        body.nickname = `${network} ${body.cardType} ****${body.cardLast4}`
       } else if (method === 'netbanking') {
         body.type = 'netbanking'
-        body.bankName = paymentData.bank || selectedBank
-        body.bankCode = ''
+        // paymentData.bank is the bank code from the payment API; selectedBank is the code from the UI
+        const bankCode = (paymentData.bank as string) || selectedBank
+        body.bankName = bankCode
+        body.bankCode = bankCode
       } else if (method === 'wallet') {
         body.type = 'wallet'
-        body.walletProvider = paymentData.wallet || selectedWallet
+        body.walletProvider = (paymentData.wallet as string) || selectedWallet
       } else {
         return
       }

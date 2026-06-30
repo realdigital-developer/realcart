@@ -13,6 +13,7 @@ import { useBackToExit } from '@/hooks/use-back-to-exit'
 import { ExitToast } from './exit-toast'
 import { ImageSearchDialog } from './image-search-dialog'
 import { useLanguage } from '@/components/providers/language-provider'
+import { createTimeoutSignal } from '@/lib/utils'
 import type { Product, CategoryItem } from './types'
 import type { HeroSlide } from './hero-slider'
 import type { Vendor } from './home-content-sections'
@@ -209,7 +210,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
     async function fetchCategories() {
       try {
         const res = await fetch('/api/categories', {
-          signal: AbortSignal.timeout(10000),
+          signal: createTimeoutSignal(10000),
           cache: 'no-store',
         })
         const data = await res.json()
@@ -238,7 +239,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
     async function fetchHeroSlides() {
       try {
         const res = await fetch('/api/hero-slides', {
-          signal: AbortSignal.timeout(10000),
+          signal: createTimeoutSignal(10000),
           cache: 'no-store',
         })
         const data = await res.json()
@@ -273,11 +274,11 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
     async function fetchHomeSections() {
       try {
         const [deals, newest, rated, popular, vendorsRes] = await Promise.allSettled([
-          fetch('/api/products?sort=discount&limit=4&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
-          fetch('/api/products?sort=newest&limit=8&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
-          fetch('/api/products?sort=rating&limit=4&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
-          fetch('/api/products?sort=popularity&limit=8&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
-          fetch('/api/customer/top-vendors', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { vendors: [] }),
+          fetch('/api/products?sort=discount&limit=4&filters=false', { signal: createTimeoutSignal(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/products?sort=newest&limit=8&filters=false', { signal: createTimeoutSignal(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/products?sort=rating&limit=4&filters=false', { signal: createTimeoutSignal(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/products?sort=popularity&limit=8&filters=false', { signal: createTimeoutSignal(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/customer/top-vendors', { signal: createTimeoutSignal(10000) }).then(r => r.ok ? r.json() : { vendors: [] }),
         ])
         if (cancelled) return
         const get = (r: PromiseSettledResult<{ products: Product[] }>) => r.status === 'fulfilled' ? r.value.products || [] : []

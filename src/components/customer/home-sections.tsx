@@ -4,7 +4,7 @@ import { useState, useEffect, createContext, useContext } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Zap, Clock, Package, ChevronRight, Star, TrendingUp, Timer, Truck, Flame } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, createTimeoutSignal } from '@/lib/utils'
 import { Product, CategoryItem } from './types'
 import { ProductCard } from './product-card'
 
@@ -96,10 +96,10 @@ function HomeProductsProvider({ children, onNavigateToProducts }: { children: Re
       try {
         // Parallel fetches — 4 independent product lists
         const [dealsRes, newestRes, topRatedRes, trendingRes] = await Promise.allSettled([
-          fetch('/api/products?sort=discount&limit=20&filters=false', { signal: AbortSignal.timeout(15000) }),
-          fetch('/api/products?sort=newest&limit=20&filters=false', { signal: AbortSignal.timeout(15000) }),
-          fetch('/api/products?sort=rating&limit=20&filters=false', { signal: AbortSignal.timeout(15000) }),
-          fetch('/api/products?sort=popularity&limit=20&filters=false', { signal: AbortSignal.timeout(15000) }),
+          fetch('/api/products?sort=discount&limit=20&filters=false', { signal: createTimeoutSignal(15000) }),
+          fetch('/api/products?sort=newest&limit=20&filters=false', { signal: createTimeoutSignal(15000) }),
+          fetch('/api/products?sort=rating&limit=20&filters=false', { signal: createTimeoutSignal(15000) }),
+          fetch('/api/products?sort=popularity&limit=20&filters=false', { signal: createTimeoutSignal(15000) }),
         ])
 
         if (cancelled) return
@@ -429,7 +429,7 @@ function ShopByCategorySection({ onNavigateToProducts }: { onNavigateToProducts?
         // Fetch categories first
         // cache: 'no-store' ensures the browser never serves a stale cached
         // response — the admin's reorder is always reflected immediately.
-        const catRes = await fetch('/api/categories', { signal: AbortSignal.timeout(10000), cache: 'no-store' })
+        const catRes = await fetch('/api/categories', { signal: createTimeoutSignal(10000), cache: 'no-store' })
         if (!catRes.ok || cancelled) return
         const catData = await catRes.json()
         const cats: CategoryItem[] = Array.isArray(catData.categories) ? catData.categories : []
@@ -444,7 +444,7 @@ function ShopByCategorySection({ onNavigateToProducts }: { onNavigateToProducts?
         const results = await Promise.allSettled(
           topCats.map(cat =>
             fetch(`/api/products?category=${encodeURIComponent(cat.name)}&sort=popularity&limit=10&filters=false`, {
-              signal: AbortSignal.timeout(15000),
+              signal: createTimeoutSignal(15000),
             }).then(r => r.ok ? r.json() : { products: [] })
           )
         )

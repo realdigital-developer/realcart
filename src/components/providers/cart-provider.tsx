@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
 import { CartItem } from '@/components/customer/types'
+import { createTimeoutSignal } from '@/lib/utils'
 
 interface CartContextType {
   items: CartItem[]
@@ -101,7 +102,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const fetchServerCart = useCallback(async () => {
     try {
       const res = await fetch('/api/customer/cart', {
-        signal: AbortSignal.timeout(8000), // 8s timeout
+        signal: createTimeoutSignal(8000), // 8s timeout
       })
       if (res.ok) {
         const data = await res.json()
@@ -137,7 +138,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 quantity: item.quantity,
                 selectedVariant: item.selectedVariant || {},
               }),
-              signal: AbortSignal.timeout(5000),
+              signal: createTimeoutSignal(5000),
             })
           } catch {
             // Skip this item if it fails, continue with others

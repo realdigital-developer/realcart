@@ -37,7 +37,7 @@ import {
   UserCheck,
   UserPlus,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, createTimeoutSignal } from '@/lib/utils'
 import { ProductDetail, Product, ProductImage, ProductVariant, Review, ReviewStats, SpecificationGroup } from './types'
 import { useCart } from '@/components/providers/cart-provider'
 import { useWishlist } from '@/components/providers/wishlist-provider'
@@ -1733,7 +1733,7 @@ export function ProductDetailPage() {
     setSelectedVariantSku(null)
 
     fetch(`/api/products/${productId}`, {
-      signal: AbortSignal.timeout(10000),
+      signal: createTimeoutSignal(10000),
     })
       .then(res => {
         if (!res.ok) throw new Error(res.status === 404 ? 'Product not found' : 'Failed to load')
