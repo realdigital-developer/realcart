@@ -932,24 +932,18 @@ export default function SellerProfilePage() {
       <EditBankDetailsDialog open={editBankOpen} onOpenChange={setEditBankOpen} profile={profile} onSave={handleSaveBank} saving={savingField === 'bank'} />
       <EditPickupAddressDialog open={editPickupOpen} onOpenChange={setEditPickupOpen} profile={profile} onSave={handleSavePickup} saving={savingField === 'pickup'} />
 
-      {/* ═══════════════════ Profile Header Card ═══════════════════ */}
+      {/* ═══════════════════ Profile Header Card — Compact Modern Design ═══════════════════ */}
       <motion.div variants={itemVariants}>
         <Card className="overflow-hidden">
-          <div className="h-28 sm:h-36 bg-gradient-to-br from-emerald-600 via-teal-500 to-emerald-700 relative">
+          {/* Top half: Gradient background section */}
+          <div className="h-24 sm:h-28 bg-gradient-to-br from-emerald-600 via-teal-500 to-emerald-700 relative">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50" />
-            <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
-              <Link href="/seller/settings">
-                <Button size="sm" className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 gap-1.5 h-8">
-                  <Settings className="h-3.5 w-3.5" />
-                  Settings
-                </Button>
-              </Link>
-            </div>
           </div>
+
           <CardContent className="pt-0 px-4 sm:px-6 pb-5">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-10 sm:-mt-12">
-              {/* Profile Avatar with Image Upload */}
-              <div className="relative group flex-shrink-0">
+            {/* Avatar — centered, overlapping the gradient by middle */}
+            <div className="flex justify-center -mt-10 sm:-mt-12 mb-3">
+              <div className="relative group">
                 <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border-4 border-card shadow-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500">
                   {profile.profileImage?.url ? (
                     <img
@@ -961,7 +955,7 @@ export default function SellerProfilePage() {
                     <span className="text-2xl sm:text-3xl font-bold text-white">{profile.storeName?.charAt(0)?.toUpperCase() || 'S'}</span>
                   )}
                 </div>
-                {/* Camera overlay button — appears on hover, always visible on mobile */}
+                {/* Camera overlay button — appears on hover */}
                 <button
                   onClick={() => profileImageInputRef.current?.click()}
                   disabled={uploadingProfileImage}
@@ -984,26 +978,31 @@ export default function SellerProfilePage() {
                   className="hidden"
                 />
               </div>
-              <div className="flex-1 min-w-0 sm:pb-1">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight truncate">{profile.storeName || 'My Store'}</h1>
-                  {profile.isVerified ? (
-                    <Badge className="gap-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5">
-                      <BadgeCheck className="h-3.5 w-3.5" /> Verified
-                    </Badge>
-                  ) : (
-                    <Badge className="gap-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5">
-                      <ShieldAlert className="h-3.5 w-3.5" /> Unverified
-                    </Badge>
-                  )}
-                  {profile.status === 'Active' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400">Active</Badge>}
-                  {profile.status === 'Blocked' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">Blocked</Badge>}
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground"><User className="h-3.5 w-3.5" /><span>{profile.name}</span></div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground"><Building2 className="h-3.5 w-3.5" /><span>{BUSINESS_TYPE_LABELS[profile.businessType] || profile.businessType || '\u2014'}</span></div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground"><Calendar className="h-3.5 w-3.5" /><span>Member for {formatMemberSince(stats.memberDays)}</span></div>
-                </div>
+            </div>
+
+            {/* Seller details — centered below the avatar */}
+            <div className="flex flex-col items-center text-center gap-2">
+              {/* Store name + badges */}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">{profile.storeName || 'My Store'}</h1>
+                {profile.isVerified ? (
+                  <Badge className="gap-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5">
+                    <BadgeCheck className="h-3.5 w-3.5" /> Verified
+                  </Badge>
+                ) : (
+                  <Badge className="gap-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5">
+                    <ShieldAlert className="h-3.5 w-3.5" /> Unverified
+                  </Badge>
+                )}
+                {profile.status === 'Active' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400">Active</Badge>}
+                {profile.status === 'Blocked' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">Blocked</Badge>}
+              </div>
+
+              {/* Name, business type, member since */}
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" /><span>{profile.name}</span></div>
+                <div className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /><span>{BUSINESS_TYPE_LABELS[profile.businessType] || profile.businessType || '\u2014'}</span></div>
+                <div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /><span>Member for {formatMemberSince(stats.memberDays)}</span></div>
               </div>
             </div>
           </CardContent>
