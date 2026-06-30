@@ -17,7 +17,6 @@ import {
   Wallet,
   Star,
   Clock,
-  ShieldCheck,
   ShieldAlert,
   AlertTriangle,
   RefreshCw,
@@ -289,19 +288,6 @@ function SellerLayoutInner({ children }: { children: React.ReactNode }) {
             </p>
             <p className="text-xs text-red-600 dark:text-red-400">
               Your seller application was not approved. Please check the verification notes in your Settings and re-submit required documents.
-            </p>
-          </div>
-        </div>
-      )}
-      {user?.isVerified && (
-        <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3">
-          <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-              Verified Seller
-            </p>
-            <p className="text-xs text-emerald-600 dark:text-emerald-400">
-              Your account and documents are verified. You have full access to all seller features.
             </p>
           </div>
         </div>
