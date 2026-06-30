@@ -1058,25 +1058,6 @@ export default function SellerProfilePage() {
             <p className="text-sm text-muted-foreground mt-0.5">{profile.name}</p>
           </div>
 
-          {/* ── Stats Row: flex items-center justify-around ── */}
-          <div className="py-4 mt-2 text-foreground flex items-center justify-around border-t mx-8">
-            <div className="flex flex-col items-center justify-around">
-              <Package className="h-4 w-4 text-emerald-600" />
-              <div className="text-sm font-semibold mt-1">{stats.totalProducts}</div>
-              <div className="text-[10px] text-muted-foreground">Products</div>
-            </div>
-            <div className="flex flex-col items-center justify-between">
-              <ShoppingCart className="h-4 w-4 text-emerald-600" />
-              <div className="text-sm font-semibold mt-1">{stats.totalOrders}</div>
-              <div className="text-[10px] text-muted-foreground">Orders</div>
-            </div>
-            <div className="flex flex-col items-center justify-around">
-              <Star className="h-4 w-4 text-amber-500" />
-              <div className="text-sm font-semibold mt-1">{stats.averageRating || '0'}</div>
-              <div className="text-[10px] text-muted-foreground">Rating</div>
-            </div>
-          </div>
-
           {/* ── Info Pills: centered ── */}
           <div className="px-4 pb-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
             <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted/50">
