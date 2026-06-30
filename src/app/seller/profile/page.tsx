@@ -1058,8 +1058,11 @@ export default function SellerProfilePage() {
             <p className="text-sm text-muted-foreground mt-0.5">{profile.name}</p>
           </div>
 
+          {/* ── Separator ── */}
+          <div className="border-t mx-8 mt-3" />
+
           {/* ── Info Pills: centered ── */}
-          <div className="px-4 pb-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
+          <div className="px-4 py-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
             <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted/50">
               <Building2 className="h-3 w-3" />
               <span>{BUSINESS_TYPE_LABELS[profile.businessType] || profile.businessType || '\u2014'}</span>
