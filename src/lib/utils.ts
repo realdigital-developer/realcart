@@ -7,14 +7,23 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Create an AbortSignal that times out after the specified milliseconds.
- * Unlike AbortSignal.timeout(), this does NOT throw a TimeoutError to the
- * console — the fetch simply rejects with an AbortError which is caught
- * by the .catch() or Promise.allSettled() handler.
+ * Uses AbortController + setTimeout instead of AbortSignal.timeout() to
+ * avoid unhandled TimeoutError in the console. The fetch rejects with
+ * a DOMException (AbortError) which is caught by .catch() / Promise.allSettled().
+ *
+ * The abort reason is set to a DOMException with name 'AbortError' so that
+ * it does NOT surface as an unhandled console error.
  */
 export function createTimeoutSignal(ms: number): AbortSignal {
   const controller = new AbortController()
-  const id = setTimeout(() => controller.abort(), ms)
-  // Clean up the timeout if the request finishes before the timeout
-  controller.signal.addEventListener('abort', () => clearTimeout(id))
+  let timedOut = false
+  const id = setTimeout(() => {
+    timedOut = true
+    controller.abort(new DOMException('Request timed out', 'AbortError'))
+  }, ms)
+  // Clean up the timeout if the request finishes or is aborted before the timeout
+  controller.signal.addEventListener('abort', () => {
+    if (!timedOut) clearTimeout(id)
+  })
   return controller.signal
 }
