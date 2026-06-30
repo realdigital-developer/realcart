@@ -46,6 +46,7 @@ interface SellerProfile {
   storeName: string
   sellerName: string
   profileImage?: string | null
+  coverImage?: string | null
   isVerified: boolean
   verificationStatus: string
   businessType: string
@@ -367,13 +368,22 @@ export function SellerProfilePage({ storeName: propStoreName, sellerId: propSell
           animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden bg-white dark:bg-gray-900 mx-4 mt-4 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm"
         >
-          {/* ═══ Top half: Background gradient section (horizontally full, ~half card height) ═══ */}
-          <div className="h-24 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 relative overflow-hidden">
-            {/* Decorative circles */}
-            <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
-            <div className="absolute -bottom-10 -left-4 h-20 w-20 rounded-full bg-white/10" />
-            {/* Subtle dotted texture */}
-            <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+          {/* ═══ Top half: Cover image / Background gradient section ═══ */}
+          <div className="h-24 relative overflow-hidden">
+            {seller.coverImage ? (
+              <img src={seller.coverImage} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500" />
+            )}
+            {/* Decorative circles (only on gradient, not on cover image) */}
+            {!seller.coverImage && (
+              <>
+                <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
+                <div className="absolute -bottom-10 -left-4 h-20 w-20 rounded-full bg-white/10" />
+                {/* Subtle dotted texture */}
+                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+              </>
+            )}
             {/* Smart back button — floating over the gradient */}
             <button
               onClick={handleBack}
