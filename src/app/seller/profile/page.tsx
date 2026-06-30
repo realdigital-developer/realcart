@@ -116,6 +116,7 @@ interface SellerProfile {
     address_proof?: DocumentInfo
   }
   profileImage?: { url: string; publicId: string } | null
+  coverImage?: { url: string; publicId: string } | null
   verificationStatus: 'pending' | 'verified' | 'rejected' | 'resubmission_requested' | 'in_review'
   verificationNotes: VerificationNote[]
   role: string
@@ -673,6 +674,10 @@ export default function SellerProfilePage() {
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false)
   const profileImageInputRef = useRef<HTMLInputElement | null>(null)
 
+  // Cover image upload state
+  const [uploadingCoverImage, setUploadingCoverImage] = useState(false)
+  const coverImageInputRef = useRef<HTMLInputElement | null>(null)
+
   // Handle profile image upload
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -724,6 +729,57 @@ export default function SellerProfilePage() {
       // Reset input so the same file can be selected again
       if (profileImageInputRef.current) {
         profileImageInputRef.current.value = ''
+      }
+    }
+  }
+
+  // Handle cover image upload
+  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file type', description: 'Please select an image file', variant: 'destructive' })
+      return
+    }
+    if (file.size > 3.1 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Image must be under 3.1MB', variant: 'destructive' })
+      return
+    }
+
+    setUploadingCoverImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/seller/profile?type=cover', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to upload cover image')
+      }
+
+      const data = await res.json()
+      if (profile && data.coverImage) {
+        setProfile({
+          ...profile,
+          coverImage: { url: data.coverImage.url, publicId: data.coverImage.publicId },
+        })
+      }
+      toast({ title: 'Cover image updated', description: 'Your cover photo has been updated successfully' })
+    } catch (err) {
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Failed to upload cover image',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingCoverImage(false)
+      if (coverImageInputRef.current) {
+        coverImageInputRef.current.value = ''
       }
     }
   }
@@ -935,9 +991,47 @@ export default function SellerProfilePage() {
       {/* ═══════════════════ Profile Header Card — Compact Modern Design ═══════════════════ */}
       <motion.div variants={itemVariants}>
         <Card className="overflow-hidden">
-          {/* Top half: Gradient background section */}
-          <div className="h-24 sm:h-28 bg-gradient-to-br from-emerald-600 via-teal-500 to-emerald-700 relative">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50" />
+          {/* Top half: Cover image / Gradient background section */}
+          <div className="group relative h-24 sm:h-28 overflow-hidden">
+            {/* Cover image (if uploaded) or gradient fallback */}
+            {profile.coverImage?.url ? (
+              <img
+                src={profile.coverImage.url}
+                alt="Cover"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-500 to-emerald-700" />
+            )}
+            {/* Dotted texture overlay (only on gradient, not on cover image) */}
+            {!profile.coverImage?.url && (
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50" />
+            )}
+            {/* Camera overlay button for cover image — appears on hover */}
+            <button
+              onClick={() => coverImageInputRef.current?.click()}
+              disabled={uploadingCoverImage}
+              className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer disabled:cursor-not-allowed"
+              aria-label="Upload cover image"
+              title="Upload cover image"
+            >
+              {uploadingCoverImage ? (
+                <Loader2 className="h-6 w-6 text-white animate-spin" />
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <Camera className="h-6 w-6 text-white" />
+                  <span className="text-xs text-white font-medium">{profile.coverImage?.url ? 'Change Cover' : 'Upload Cover'}</span>
+                </div>
+              )}
+            </button>
+            {/* Hidden file input for cover image */}
+            <input
+              ref={coverImageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={handleCoverImageUpload}
+              className="hidden"
+            />
           </div>
 
           <CardContent className="pt-0 px-4 sm:px-6 pb-5">

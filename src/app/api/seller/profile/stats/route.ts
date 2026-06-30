@@ -143,6 +143,7 @@ export async function GET(request: NextRequest) {
       pickupAddress: seller.pickupAddress || null,
       documents: seller.documents || null,
       profileImage: seller.profileImage || null,
+      coverImage: seller.coverImage || null,
       verificationStatus: seller.verificationStatus || 'pending',
       verificationNotes: seller.verificationNotes || [],
       role: seller.role || 'seller',
