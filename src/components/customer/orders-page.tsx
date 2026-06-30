@@ -1456,6 +1456,10 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
 
   // Track if we've already attempted to load an order detail from URL orderId
   const urlOrderIdLoaded = useRef(false)
+  // Track if the order detail was opened from a notification (deep link)
+  // — if so, pressing back from the detail view should go directly to the
+  // previous page (notifications), not the orders list.
+  const openedFromDeepLink = useRef(false)
 
   // Fetch orders
   const fetchOrders = useCallback(async () => {
@@ -1520,12 +1524,14 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
     const params = new URLSearchParams(window.location.search)
     const orderId = params.get('orderId')
     if (orderId) {
+      openedFromDeepLink.current = true
       fetchOrderDetail(orderId)
     }
   }, [fetchOrderDetail])
 
   // Handle clicking an order
   const handleOrderClick = useCallback((order: Order) => {
+    openedFromDeepLink.current = false
     setSelectedOrder(order)
     setDetailData(null)
     fetchOrderDetail(order.orderId)
@@ -1608,9 +1614,17 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
         order={selectedOrder}
         detailData={detailData}
         onBack={() => {
-          setSelectedOrder(null)
-          setDetailData(null)
-          updateUrlOrderId(null)
+          if (openedFromDeepLink.current && onBack) {
+            // Opened from a notification deep link — go directly back to the
+            // previous page (notifications), not the orders list.
+            openedFromDeepLink.current = false
+            onBack()
+          } else {
+            // Opened from the orders list — go back to the list
+            setSelectedOrder(null)
+            setDetailData(null)
+            updateUrlOrderId(null)
+          }
         }}
         onAction={handleAction}
         actionLoading={actionLoading}
