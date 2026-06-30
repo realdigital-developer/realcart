@@ -76,6 +76,10 @@ const parentTabMap: Partial<Record<ExtendedTab, ExtendedTab>> = {
   'wallet': 'account',
   'referral': 'account',
   'help': 'account',
+  // 'orders' is normally a bottom-nav tab (no parent), but when opened with
+  // an orderId param (deep link from notifications), we set 'notifications'
+  // as the parent so the back button returns there after a refresh.
+  // This is handled dynamically in the navHistory initializer below.
 }
 
 // Navigation history entry — tracks how a page was reached
@@ -114,6 +118,18 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
         { tab: parentTab, fromBottomNav: true },
         { tab, fromBottomNav: false },
       ]
+    }
+
+    // Special case: 'orders' tab with orderId in the URL = deep link from
+    // notifications. Set 'notifications' as the parent so back button works.
+    if (tab === 'orders' && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('orderId')) {
+        return [
+          { tab: 'notifications' as ExtendedTab, fromBottomNav: true },
+          { tab, fromBottomNav: false },
+        ]
+      }
     }
 
     return [{ tab, fromBottomNav: true }]
