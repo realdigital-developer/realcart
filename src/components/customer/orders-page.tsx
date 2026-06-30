@@ -1460,6 +1460,9 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
   // — if so, pressing back from the detail view should go directly to the
   // previous page (notifications), not the orders list.
   const openedFromDeepLink = useRef(false)
+  // Track if we're loading a deep-linked order detail — while true, we show
+  // a detail loading skeleton instead of the orders list.
+  const [deepLinkLoading, setDeepLinkLoading] = useState(false)
 
   // Fetch orders
   const fetchOrders = useCallback(async () => {
@@ -1525,7 +1528,8 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
     const orderId = params.get('orderId')
     if (orderId) {
       openedFromDeepLink.current = true
-      fetchOrderDetail(orderId)
+      setDeepLinkLoading(true)
+      fetchOrderDetail(orderId).finally(() => setDeepLinkLoading(false))
     }
   }, [fetchOrderDetail])
 
@@ -1581,7 +1585,9 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
     : orders
 
   // Loading state — also guard when loading order detail from URL (prevent flash of orders list)
-  if ((loading && orders.length === 0) || (detailLoading && !selectedOrder)) {
+  // When deepLinkLoading is true (coming from notification), show loading skeleton
+  // until the order detail is fully loaded, skipping the orders list entirely.
+  if ((loading && orders.length === 0) || (detailLoading && !selectedOrder) || deepLinkLoading) {
     return (
       <div className="flex flex-col h-[calc(100dvh-64px)] lg:h-[calc(100dvh)]">
         <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-3 py-2 flex-shrink-0">
