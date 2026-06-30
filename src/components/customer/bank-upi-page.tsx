@@ -47,13 +47,17 @@ interface PaymentMethod {
 interface BankUpiPageProps {
   onBack?: () => void
   onNavigate?: (tab: string, params?: Record<string, string>) => void
+  /** Cached payment methods from the parent (HomeContentWrapper). */
+  initialMethods?: PaymentMethod[]
+  /** Loading flag from the parent. */
+  initialLoading?: boolean
 }
 
-export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
+export function BankUpiPage({ onBack, onNavigate, initialMethods, initialLoading }: BankUpiPageProps) {
   const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState<'bank' | 'upi' | 'card' | 'netbanking' | 'wallet'>('bank')
-  const [methods, setMethods] = useState<PaymentMethod[]>([])
-  const [loading, setLoading] = useState(true)
+  const [methods, setMethods] = useState<PaymentMethod[]>(initialMethods ?? [])
+  const [loading, setLoading] = useState(initialMethods !== undefined ? (initialLoading ?? false) : true)
   const [error, setError] = useState<string | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [addType, setAddType] = useState<'bank' | 'upi' | 'card' | 'netbanking' | 'wallet'>('bank')
@@ -70,9 +74,19 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
   const [upiId, setUpiId] = useState('')
   const [upiName, setUpiName] = useState('')
 
+  // Sync cached data from parent when it changes (e.g., after auth loads on refresh)
   useEffect(() => {
+    if (initialMethods !== undefined) {
+      setMethods(initialMethods)
+      setLoading(initialLoading ?? false)
+    }
+  }, [initialMethods, initialLoading])
+
+  // Fetch internally only when no cached data is provided (standalone mode)
+  useEffect(() => {
+    if (initialMethods !== undefined) return
     fetchMethods()
-  }, [])
+  }, [initialMethods])
 
   const fetchMethods = async () => {
     try {
