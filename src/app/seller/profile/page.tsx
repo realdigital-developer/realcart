@@ -1087,6 +1087,21 @@ export default function SellerProfilePage() {
         </div>
       </motion.div>
 
+      {/* ═══════════════════ Verified Seller Banner (only if verified) ═══════════════════ */}
+      {profile.isVerified && (
+        <motion.div variants={itemVariants}>
+          <div className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+            <div className="h-9 w-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Verified Seller</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">Your account and documents are verified. You have full access to all seller features.</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* ═══════════════════ Tabbed Content ═══════════════════ */}
       <motion.div variants={itemVariants}>
         <Tabs defaultValue="overview" className="space-y-6">
