@@ -2200,11 +2200,11 @@ export function CheckoutPage({
                         m.type === 'netbanking' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' :
                         'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400'
                       const label = m.type === 'upi' ? m.upiId :
-                        m.type === 'card' ? `${m.cardNetwork} ${m.cardType} ••••${m.cardLast4}` :
+                        m.type === 'card' ? (m.nickname || `${m.cardNetwork} ${m.cardType} ••••${m.cardLast4}`) :
                         m.type === 'netbanking' ? getBankFullName(m.bankCode || m.bankName) :
                         getWalletDisplayName(m.walletProvider)
                       const subLabel = m.type === 'upi' ? 'UPI' :
-                        m.type === 'card' ? `${m.cardType} Card` :
+                        m.type === 'card' ? `${m.cardNetwork ? m.cardNetwork.charAt(0).toUpperCase() + m.cardNetwork.slice(1) : ''} ${m.cardType ? m.cardType.charAt(0).toUpperCase() + m.cardType.slice(1) : ''} Card ••••${m.cardLast4}` :
                         m.type === 'netbanking' ? 'Net Banking' : 'Wallet'
                       return (
                         <div key={m.id}>
