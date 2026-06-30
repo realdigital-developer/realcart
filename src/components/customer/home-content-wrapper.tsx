@@ -349,9 +349,16 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
   }, [])
 
   // In-page navigation — pushes onto history (always shows back button)
-  const handleAccountNavigate = useCallback((tab: string, _params?: Record<string, string>) => {
+  const handleAccountNavigate = useCallback((tab: string, params?: Record<string, string>) => {
     if (validTabs.includes(tab as ExtendedTab)) {
       setNavHistory(prev => [...prev, { tab: tab as ExtendedTab, fromBottomNav: false }])
+      // If navigating to orders with an orderId param, set it in the URL
+      // so the OrdersPage can auto-load the order detail
+      if (tab === 'orders' && params?.orderId && typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        url.searchParams.set('orderId', params.orderId)
+        window.history.replaceState({}, '', url.toString())
+      }
     }
   }, [])
 
