@@ -3110,3 +3110,43 @@ Stage Summary:
 - BLOCKER: Push to GitHub cannot be completed without a GitHub Personal Access Token (PAT). No PAT is available in the current environment (previous session's one-time token was not persisted for security).
 - ACTION NEEDED: User must provide a GitHub PAT (with `repo` scope) so the push can be completed, OR run the push command locally.
 - No UI or code was damaged — no files were modified during this verification task.
+
+---
+Task ID: vercel-deploy-ready-and-github-upload
+Agent: main-orchestrator
+Task: Make the RealCart code Vercel deployment-ready, then upload to GitHub (https://github.com/realdigital-developer/realcart.git) using a classic PAT.
+
+Work Log:
+- **Vercel Readiness Audit** (comprehensive double-check — no code changes needed, project was already Vercel-ready):
+  * `vercel.json`: EXISTS and correctly configured — framework=nextjs, buildCommand="next build", installCommand="npm install", functions config for long-running search/image routes (maxDuration: 60s).
+  * `next.config.ts`: Vercel-aware — `output: "standalone"` is ignored by Vercel (commented), `typescript.ignoreBuildErrors: true` (prevents TS build failures), `serverExternalPackages` properly lists heavy server-side packages (cloudinary, mongodb, razorpay, pdfkit, nodemailer, etc.), `images.remotePatterns` configured for Cloudinary, `experimental.optimizePackageImports` for lucide-react/framer-motion/date-fns.
+  * `package.json`: Clean `build` script (`next build`) — no bash-specific syntax (unlike `dev` which has `tee dev.log`). `engines.node >=20.0.0` matches `.nvmrc` (20). No postinstall/preinstall/prepare scripts that could fail.
+  * `package-lock.json`: TRACKED in git (for Vercel npm install). `bun.lock` is gitignored.
+  * `.env.example`: COMPREHENSIVE — documents all 17 required env vars (NEXTAUTH_SECRET, MONGODB_URI, CLOUDINARY_*, RAZORPAY_*, SMTP_*, TWOFACTOR_API_KEY, GOOGLE_*, GROQ_API_KEY, JINA_API_KEY, PINECONE_*, ALGOLIA_*, etc.) with comments and setup instructions.
+  * **Database**: App uses MongoDB Atlas directly via `src/lib/mongodb.ts` (NOT Prisma). Connection pooling configured for serverless (maxPoolSize: 10, minPoolSize: 1, maxIdleTimeMS: 30s, heartbeatFrequencyMS: 10s). Prisma is installed but NOT imported anywhere in src/ — vestigial, harmless.
+  * **API Routes**: 181 route.ts files, ALL use `runtime = 'nodejs'` (NO edge runtime — Vercel-compatible). `maxDuration` settings within Vercel limits (60s for search routes). `force-dynamic` and `revalidate` used appropriately.
+  * **Filesystem**: ZERO `fs` write operations in src/ (no local file storage dependency). Image uploads go to Cloudinary. No `process.cwd()` or `__dirname` usage. Vercel's read-only filesystem is fully compatible.
+  * **Sharp**: Listed in dependencies — Vercel supports it natively for Next.js image optimization.
+- **Lint**: 0 errors, 24 warnings (all pre-existing unused eslint-disable directives — none new).
+- **Sensitive files check**: ZERO sensitive files tracked (.env, dev.log, Caddyfile, .zscripts, bun.lock, node_modules, .next/, upload/, download/, tool-results/, skills/, examples/, mini-services/ — all gitignored).
+- **Dev server**: Running, HTTP 200, no errors in dev.log. No UI or code damaged.
+- **GitHub Push** (2 unpushed commits: faa54ed + 1d02058):
+  * Verified PAT validity via GitHub API (`curl -H "Authorization: token ..." /user`) → returns user `realdigital-developer`, scopes: `repo`. Token is valid.
+  * Initial push via inline URL failed ("Invalid username or token" — GitHub's HTTPS auth parsing issue with inline tokens).
+  * Switched to `GIT_ASKPASS` helper script approach (more reliable):
+    - Created temporary `/tmp/git-askpass-helper.sh` that echoes the token
+    - Ran `GIT_ASKPASS=/tmp/git-askpass-helper.sh git push https://github.com/realdigital-developer/realcart.git main`
+    - Push succeeded: `527eb9a..1d02058 main -> main` (exit code 0)
+    - Deleted the askpass helper script immediately after push
+  * Token NOT persisted in git config (remote.origin.url remains plain HTTPS URL without token).
+  * Verified sync: Local HEAD = Remote main = `1d02058c7b3489ceee388345f212cd0baf4c1a05` → IN SYNC ✓
+
+Stage Summary:
+- **Vercel Readiness**: CONFIRMED — no code changes were needed. The project was already fully Vercel-ready with proper vercel.json, next.config.ts, package.json, .env.example, MongoDB serverless connection pooling, nodejs runtime on all API routes, no filesystem write dependencies, and package-lock.json for npm install.
+- **GitHub Upload**: COMPLETE — all code pushed to https://github.com/realdigital-developer/realcart.git (main branch).
+  - Pushed 2 commits: faa54ed (share functionality fix) + 1d02058 (worklog update)
+  - Local and remote SHAs match exactly: `1d02058c7b3489ceee388345f212cd0baf4c1a05` (IN SYNC)
+  - PAT used via GIT_ASKPASS (one-time, not persisted to git config or filesystem)
+  - Askpass helper deleted after push
+- **No damage**: No UI or code was modified or damaged. Lint: 0 errors. Dev server: running, HTTP 200.
+- **To deploy on Vercel**: Import the repo (realdigital-developer/realcart) at vercel.com, set the environment variables from `.env.example` in the Vercel project settings (especially MONGODB_URI, NEXTAUTH_SECRET, CLOUDINARY_*, RAZORPAY_*), and deploy. Vercel will auto-detect Next.js and use the existing vercel.json config.
