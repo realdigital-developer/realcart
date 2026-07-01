@@ -42,14 +42,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import AdminModal from '@/components/admin/admin-modal'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -993,306 +985,295 @@ function OrdersContent() {
       )}
 
       {/* ──────────────────────────────────────────────────────────────── */}
-      {/*  Order Detail Dialog                                              */}
+      {/*  Order Detail — Reusable AdminModal                               */}
       {/* ──────────────────────────────────────────────────────────────── */}
 
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-[90vh] sm:max-h-[88vh] overflow-hidden flex flex-col p-0 gap-0">
-          <DialogHeader className="px-4 sm:px-5 md:px-6 pt-4 sm:pt-5 md:pt-6 pb-3 sm:pb-4 border-b border-border flex-shrink-0">
-            <div className="flex items-start sm:items-center justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <DialogTitle className="text-base sm:text-lg font-bold font-mono truncate">
-                  {detailLoading ? 'Loading Order...' : selectedOrder ? selectedOrder.orderId : 'Order Details'}
-                </DialogTitle>
-                {!detailLoading && selectedOrder && (
-                  <DialogDescription className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
-                    Placed on {formatDateTime(selectedOrder.createdAt)}
-                  </DialogDescription>
-                )}
+      <AdminModal
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        type="view"
+        size="2xl"
+        className="md:max-w-3xl lg:max-w-4xl"
+        title={detailLoading ? 'Loading Order...' : selectedOrder ? selectedOrder.orderId : 'Order Details'}
+        description={!detailLoading && selectedOrder ? `Placed on ${formatDateTime(selectedOrder.createdAt)}` : undefined}
+        headerExtra={!detailLoading && selectedOrder ? (
+          <div className="flex-shrink-0">
+            <StatusBadge status={getPrimaryStatus(selectedOrder)} />
+          </div>
+        ) : undefined}
+      >
+        {detailLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+          </div>
+        ) : selectedOrder ? (
+          <div className="space-y-5 sm:space-y-6">
+            {/* Order Items */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <Package className="h-4 w-4 text-emerald-500" />
+                Order Items
+              </h4>
+              <div className="space-y-2 sm:space-y-3">
+                {getSellerItems(selectedOrder).map((item, idx) => {
+                  const itemStatus = normalizeStatus(item.status)
+                  const itemConfig = STATUS_CONFIG[itemStatus]
+                  return (
+                    <div key={item._id || idx} className="flex items-start gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-lg bg-muted/30 border border-border">
+                      {/* Product Image */}
+                      <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0 overflow-hidden border border-border">
+                        {item.productImage ? (
+                          <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />
+                        ) : (
+                          <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-foreground truncate">{item.productName}</p>
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
+                          {formatVariant(item.variant) && (
+                            <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">{formatVariant(item.variant)}</span>
+                          )}
+                          <span className="text-[11px] sm:text-xs text-muted-foreground">Qty: {item.quantity}</span>
+                          <span className="text-[11px] sm:text-xs font-medium text-foreground">{fmtPrice(item.total)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 flex-wrap">
+                          <StatusBadge status={itemStatus} />
+                          {item.deliveryBoyName && (
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Truck className="h-2.5 w-2.5" />
+                              {item.deliveryBoyName}
+                            </span>
+                          )}
+                          {item.pickupDeliveryBoyName && (
+                            <span className="text-[10px] text-violet-600 dark:text-violet-400 flex items-center gap-1">
+                              <RotateCcw className="h-2.5 w-2.5" />
+                              {item.pickupDeliveryBoyName}
+                            </span>
+                          )}
+                        </div>
+                        {/* Action buttons per item */}
+                        <div className="mt-2">
+                          {renderActions(selectedOrder, item)}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-              {!detailLoading && selectedOrder && (
-                <div className="flex-shrink-0">
-                  <StatusBadge status={getPrimaryStatus(selectedOrder)} />
+            </div>
+
+            <Separator />
+
+            {/* Customer & Address */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-emerald-500" />
+                  Shipping Address
+                </h4>
+                <div className="p-2.5 sm:p-3 rounded-lg bg-muted/30 border border-border space-y-1">
+                  <p className="text-xs sm:text-sm font-medium text-foreground">{selectedOrder.shippingAddress.name}</p>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground">{selectedOrder.shippingAddress.addressLine1}</p>
+                  {selectedOrder.shippingAddress.addressLine2 && (
+                    <p className="text-[11px] sm:text-xs text-muted-foreground">{selectedOrder.shippingAddress.addressLine2}</p>
+                  )}
+                  <p className="text-[11px] sm:text-xs text-muted-foreground">
+                    {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} - {selectedOrder.shippingAddress.pincode}
+                  </p>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                    <Phone className="h-3 w-3" />
+                    {selectedOrder.shippingAddress.phone}
+                  </p>
+                  {selectedOrder.shippingAddress.type && (
+                    <Badge variant="secondary" className="mt-1 text-[10px]">{selectedOrder.shippingAddress.type}</Badge>
+                  )}
                 </div>
-              )}
-            </div>
-          </DialogHeader>
+              </div>
 
-          {detailLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
-            </div>
-          ) : selectedOrder ? (
-            <ScrollArea className="flex-1 overflow-y-auto">
-                <div className="px-4 sm:px-5 md:px-6 py-4 space-y-5 sm:space-y-6">
-                  {/* Order Items */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                      <Package className="h-4 w-4 text-emerald-500" />
-                      Order Items
-                    </h4>
-                    <div className="space-y-2 sm:space-y-3">
-                      {getSellerItems(selectedOrder).map((item, idx) => {
-                        const itemStatus = normalizeStatus(item.status)
-                        const itemConfig = STATUS_CONFIG[itemStatus]
-                        return (
-                          <div key={item._id || idx} className="flex items-start gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-lg bg-muted/30 border border-border">
-                            {/* Product Image */}
-                            <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0 overflow-hidden border border-border">
-                              {item.productImage ? (
-                                <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />
-                              ) : (
-                                <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs sm:text-sm font-medium text-foreground truncate">{item.productName}</p>
-                              <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
-                                {formatVariant(item.variant) && (
-                                  <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">{formatVariant(item.variant)}</span>
-                                )}
-                                <span className="text-[11px] sm:text-xs text-muted-foreground">Qty: {item.quantity}</span>
-                                <span className="text-[11px] sm:text-xs font-medium text-foreground">{fmtPrice(item.total)}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 flex-wrap">
-                                <StatusBadge status={itemStatus} />
-                                {item.deliveryBoyName && (
-                                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                    <Truck className="h-2.5 w-2.5" />
-                                    {item.deliveryBoyName}
-                                  </span>
-                                )}
-                                {item.pickupDeliveryBoyName && (
-                                  <span className="text-[10px] text-violet-600 dark:text-violet-400 flex items-center gap-1">
-                                    <RotateCcw className="h-2.5 w-2.5" />
-                                    {item.pickupDeliveryBoyName}
-                                  </span>
-                                )}
-                              </div>
-                              {/* Action buttons per item */}
-                              <div className="mt-2">
-                                {renderActions(selectedOrder, item)}
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
+              <div>
+                <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                  <ShoppingCart className="h-4 w-4 text-emerald-500" />
+                  Payment Info
+                </h4>
+                <div className="p-2.5 sm:p-3 rounded-lg bg-muted/30 border border-border space-y-2">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-[11px] sm:text-xs text-muted-foreground">Method</span>
+                    <span className="text-[11px] sm:text-xs font-medium text-foreground uppercase">{selectedOrder.paymentMethod}</span>
                   </div>
-
+                  <div className="flex justify-between gap-2">
+                    <span className="text-[11px] sm:text-xs text-muted-foreground">Status</span>
+                    <Badge className={cn(
+                      selectedOrder.paymentStatus === 'paid'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        : selectedOrder.paymentStatus === 'refunded'
+                        ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                      'text-[10px] border'
+                    )}>
+                      {selectedOrder.paymentStatus}
+                    </Badge>
+                  </div>
                   <Separator />
-
-                  {/* Customer & Address */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-emerald-500" />
-                        Shipping Address
-                      </h4>
-                      <div className="p-2.5 sm:p-3 rounded-lg bg-muted/30 border border-border space-y-1">
-                        <p className="text-xs sm:text-sm font-medium text-foreground">{selectedOrder.shippingAddress.name}</p>
-                        <p className="text-[11px] sm:text-xs text-muted-foreground">{selectedOrder.shippingAddress.addressLine1}</p>
-                        {selectedOrder.shippingAddress.addressLine2 && (
-                          <p className="text-[11px] sm:text-xs text-muted-foreground">{selectedOrder.shippingAddress.addressLine2}</p>
-                        )}
-                        <p className="text-[11px] sm:text-xs text-muted-foreground">
-                          {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} - {selectedOrder.shippingAddress.pincode}
-                        </p>
-                        <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <Phone className="h-3 w-3" />
-                          {selectedOrder.shippingAddress.phone}
-                        </p>
-                        {selectedOrder.shippingAddress.type && (
-                          <Badge variant="secondary" className="mt-1 text-[10px]">{selectedOrder.shippingAddress.type}</Badge>
-                        )}
-                      </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-[11px] sm:text-xs text-muted-foreground">Subtotal</span>
+                    <span className="text-[11px] sm:text-xs text-foreground">{fmtPrice(selectedOrder.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-[11px] sm:text-xs text-muted-foreground">Delivery Fee</span>
+                    <span className="text-[11px] sm:text-xs text-foreground">{fmtPrice(selectedOrder.deliveryFee)}</span>
+                  </div>
+                  {selectedOrder.discount > 0 && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-[11px] sm:text-xs text-muted-foreground">Discount</span>
+                      <span className="text-[11px] sm:text-xs text-emerald-600">-{fmtPrice(selectedOrder.discount)}</span>
                     </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between gap-2">
+                    <span className="text-[11px] sm:text-xs font-medium text-foreground">Total</span>
+                    <span className="text-sm sm:text-base font-bold text-foreground">{fmtPrice(selectedOrder.totalAmount)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                    <div>
-                      <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-                        <ShoppingCart className="h-4 w-4 text-emerald-500" />
-                        Payment Info
-                      </h4>
-                      <div className="p-2.5 sm:p-3 rounded-lg bg-muted/30 border border-border space-y-2">
+            {/* Delivery Boy Info */}
+            {(getSellerItems(selectedOrder).some(item => item.deliveryBoyName) ||
+              getSellerItems(selectedOrder).some(item => item.pickupDeliveryBoyName)) && (
+              <>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-emerald-500" />
+                    Delivery Personnel
+                  </h4>
+                  <div className="space-y-2">
+                    {getSellerItems(selectedOrder).filter(item => item.deliveryBoyName).map((item, idx) => (
+                      <div key={`delivery-${idx}`} className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-muted/30 border border-border gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-foreground truncate">{item.deliveryBoyName}</p>
+                          {item.deliveryBoyPhone && (
+                            <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Phone className="h-2.5 w-2.5" />
+                              {item.deliveryBoyPhone}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant="secondary" className="text-[10px] flex-shrink-0">Delivery</Badge>
+                      </div>
+                    ))}
+                    {getSellerItems(selectedOrder).filter(item => item.pickupDeliveryBoyName).map((item, idx) => (
+                      <div key={`pickup-${idx}`} className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-violet-50/50 dark:bg-violet-950/10 border border-violet-200 dark:border-violet-800/30 gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-foreground truncate">{item.pickupDeliveryBoyName}</p>
+                          {item.pickupDeliveryBoyPhone && (
+                            <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Phone className="h-2.5 w-2.5" />
+                              {item.pickupDeliveryBoyPhone}
+                            </p>
+                          )}
+                          {item.returnId && (
+                            <p className="text-[10px] text-violet-600 dark:text-violet-400 font-medium mt-0.5">
+                              Return ID: {item.returnId}
+                            </p>
+                          )}
+                        </div>
+                        <Badge className="text-[10px] bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border-0 flex-shrink-0">Pickup</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Status Timeline */}
+            {detailStatusLogs.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-emerald-500" />
+                    Status Timeline
+                  </h4>
+                  <div className="space-y-0">
+                    {detailStatusLogs.map((log, idx) => {
+                      const toConfig = STATUS_CONFIG[normalizeStatus(log.toStatus)]
+                      return (
+                        <div key={idx} className="flex gap-2.5 sm:gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className={cn('h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0', toConfig?.bgColor || 'bg-muted/50')}>
+                              <StatusIcon icon={toConfig?.icon || 'clock'} className={cn('h-3 w-3', toConfig?.color || 'text-muted-foreground')} />
+                            </div>
+                            {idx < detailStatusLogs.length - 1 && (
+                              <div className="w-px flex-1 bg-border min-h-[20px]" />
+                            )}
+                          </div>
+                          <div className="pb-4 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[11px] sm:text-xs font-medium text-foreground">{log.toStatus}</span>
+                              {log.fromStatus && (
+                                <span className="text-[10px] text-muted-foreground">from {log.fromStatus}</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {formatDateTime(log.createdAt)} &middot; by {log.userName} ({log.updatedBy})
+                            </p>
+                            {log.reason && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5 italic">&quot;{log.reason}&quot;</p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Return Info */}
+            {(selectedOrder.returnId || getSellerItems(selectedOrder).some(item => item.returnId)) && (
+              <>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <RotateCcw className="h-4 w-4 text-orange-500" />
+                    Return Information
+                  </h4>
+                  <div className="space-y-2">
+                    {getSellerItems(selectedOrder).filter(item => item.returnId).map((item, idx) => (
+                      <div key={idx} className="p-2.5 sm:p-3 rounded-lg bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 space-y-1">
                         <div className="flex justify-between gap-2">
-                          <span className="text-[11px] sm:text-xs text-muted-foreground">Method</span>
-                          <span className="text-[11px] sm:text-xs font-medium text-foreground uppercase">{selectedOrder.paymentMethod}</span>
+                          <span className="text-[11px] sm:text-xs text-muted-foreground flex-shrink-0">Return ID</span>
+                          <span className="text-[11px] sm:text-xs font-medium text-foreground font-mono truncate">{item.returnId}</span>
                         </div>
                         <div className="flex justify-between gap-2">
-                          <span className="text-[11px] sm:text-xs text-muted-foreground">Status</span>
-                          <Badge className={cn(
-                            selectedOrder.paymentStatus === 'paid'
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                              : selectedOrder.paymentStatus === 'refunded'
-                              ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
-                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-                            'text-[10px] border'
-                          )}>
-                            {selectedOrder.paymentStatus}
-                          </Badge>
+                          <span className="text-[11px] sm:text-xs text-muted-foreground flex-shrink-0">Product</span>
+                          <span className="text-[11px] sm:text-xs text-foreground truncate min-w-0">{item.productName}</span>
                         </div>
-                        <Separator />
-                        <div className="flex justify-between gap-2">
-                          <span className="text-[11px] sm:text-xs text-muted-foreground">Subtotal</span>
-                          <span className="text-[11px] sm:text-xs text-foreground">{fmtPrice(selectedOrder.subtotal)}</span>
-                        </div>
-                        <div className="flex justify-between gap-2">
-                          <span className="text-[11px] sm:text-xs text-muted-foreground">Delivery Fee</span>
-                          <span className="text-[11px] sm:text-xs text-foreground">{fmtPrice(selectedOrder.deliveryFee)}</span>
-                        </div>
-                        {selectedOrder.discount > 0 && (
+                        {item.returnReason && (
                           <div className="flex justify-between gap-2">
-                            <span className="text-[11px] sm:text-xs text-muted-foreground">Discount</span>
-                            <span className="text-[11px] sm:text-xs text-emerald-600">-{fmtPrice(selectedOrder.discount)}</span>
+                            <span className="text-[11px] sm:text-xs text-muted-foreground flex-shrink-0">Reason</span>
+                            <span className="text-[11px] sm:text-xs text-foreground text-right">{item.returnReason}</span>
                           </div>
                         )}
-                        <Separator />
-                        <div className="flex justify-between gap-2">
-                          <span className="text-[11px] sm:text-xs font-medium text-foreground">Total</span>
-                          <span className="text-sm sm:text-base font-bold text-foreground">{fmtPrice(selectedOrder.totalAmount)}</span>
-                        </div>
+                        {item.returnRequestedAt && (
+                          <div className="flex justify-between gap-2">
+                            <span className="text-[11px] sm:text-xs text-muted-foreground flex-shrink-0">Requested</span>
+                            <span className="text-[11px] sm:text-xs text-foreground">{formatDateTime(item.returnRequestedAt)}</span>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    ))}
                   </div>
-
-                  {/* Delivery Boy Info */}
-                  {(getSellerItems(selectedOrder).some(item => item.deliveryBoyName) ||
-                    getSellerItems(selectedOrder).some(item => item.pickupDeliveryBoyName)) && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-emerald-500" />
-                          Delivery Personnel
-                        </h4>
-                        <div className="space-y-2">
-                          {getSellerItems(selectedOrder).filter(item => item.deliveryBoyName).map((item, idx) => (
-                            <div key={`delivery-${idx}`} className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-muted/30 border border-border gap-2">
-                              <div className="min-w-0">
-                                <p className="text-xs sm:text-sm font-medium text-foreground truncate">{item.deliveryBoyName}</p>
-                                {item.deliveryBoyPhone && (
-                                  <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                    <Phone className="h-2.5 w-2.5" />
-                                    {item.deliveryBoyPhone}
-                                  </p>
-                                )}
-                              </div>
-                              <Badge variant="secondary" className="text-[10px] flex-shrink-0">Delivery</Badge>
-                            </div>
-                          ))}
-                          {getSellerItems(selectedOrder).filter(item => item.pickupDeliveryBoyName).map((item, idx) => (
-                            <div key={`pickup-${idx}`} className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-violet-50/50 dark:bg-violet-950/10 border border-violet-200 dark:border-violet-800/30 gap-2">
-                              <div className="min-w-0">
-                                <p className="text-xs sm:text-sm font-medium text-foreground truncate">{item.pickupDeliveryBoyName}</p>
-                                {item.pickupDeliveryBoyPhone && (
-                                  <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                    <Phone className="h-2.5 w-2.5" />
-                                    {item.pickupDeliveryBoyPhone}
-                                  </p>
-                                )}
-                                {item.returnId && (
-                                  <p className="text-[10px] text-violet-600 dark:text-violet-400 font-medium mt-0.5">
-                                    Return ID: {item.returnId}
-                                  </p>
-                                )}
-                              </div>
-                              <Badge className="text-[10px] bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border-0 flex-shrink-0">Pickup</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Status Timeline */}
-                  {detailStatusLogs.length > 0 && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-emerald-500" />
-                          Status Timeline
-                        </h4>
-                        <div className="space-y-0">
-                          {detailStatusLogs.map((log, idx) => {
-                            const toConfig = STATUS_CONFIG[normalizeStatus(log.toStatus)]
-                            return (
-                              <div key={idx} className="flex gap-2.5 sm:gap-3">
-                                <div className="flex flex-col items-center">
-                                  <div className={cn('h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0', toConfig?.bgColor || 'bg-muted/50')}>
-                                    <StatusIcon icon={toConfig?.icon || 'clock'} className={cn('h-3 w-3', toConfig?.color || 'text-muted-foreground')} />
-                                  </div>
-                                  {idx < detailStatusLogs.length - 1 && (
-                                    <div className="w-px flex-1 bg-border min-h-[20px]" />
-                                  )}
-                                </div>
-                                <div className="pb-4 min-w-0 flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-[11px] sm:text-xs font-medium text-foreground">{log.toStatus}</span>
-                                    {log.fromStatus && (
-                                      <span className="text-[10px] text-muted-foreground">from {log.fromStatus}</span>
-                                    )}
-                                  </div>
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                                    {formatDateTime(log.createdAt)} &middot; by {log.userName} ({log.updatedBy})
-                                  </p>
-                                  {log.reason && (
-                                    <p className="text-[10px] text-muted-foreground mt-0.5 italic">&quot;{log.reason}&quot;</p>
-                                  )}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Return Info */}
-                  {(selectedOrder.returnId || getSellerItems(selectedOrder).some(item => item.returnId)) && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-                          <RotateCcw className="h-4 w-4 text-orange-500" />
-                          Return Information
-                        </h4>
-                        <div className="space-y-2">
-                          {getSellerItems(selectedOrder).filter(item => item.returnId).map((item, idx) => (
-                            <div key={idx} className="p-2.5 sm:p-3 rounded-lg bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 space-y-1">
-                              <div className="flex justify-between gap-2">
-                                <span className="text-[11px] sm:text-xs text-muted-foreground flex-shrink-0">Return ID</span>
-                                <span className="text-[11px] sm:text-xs font-medium text-foreground font-mono truncate">{item.returnId}</span>
-                              </div>
-                              <div className="flex justify-between gap-2">
-                                <span className="text-[11px] sm:text-xs text-muted-foreground flex-shrink-0">Product</span>
-                                <span className="text-[11px] sm:text-xs text-foreground truncate min-w-0">{item.productName}</span>
-                              </div>
-                              {item.returnReason && (
-                                <div className="flex justify-between gap-2">
-                                  <span className="text-[11px] sm:text-xs text-muted-foreground flex-shrink-0">Reason</span>
-                                  <span className="text-[11px] sm:text-xs text-foreground text-right">{item.returnReason}</span>
-                                </div>
-                              )}
-                              {item.returnRequestedAt && (
-                                <div className="flex justify-between gap-2">
-                                  <span className="text-[11px] sm:text-xs text-muted-foreground flex-shrink-0">Requested</span>
-                                  <span className="text-[11px] sm:text-xs text-foreground">{formatDateTime(item.returnRequestedAt)}</span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
-              </ScrollArea>
-          ) : (
-            <div className="py-16 text-center text-sm text-muted-foreground">Order not found</div>
-          )}
-        </DialogContent>
-      </Dialog>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="py-16 text-center text-sm text-muted-foreground">Order not found</div>
+        )}
+      </AdminModal>
 
       {/* ──────────────────────────────────────────────────────────────── */}
       {/*  Assign Delivery Boy — Reusable AdminModal                        */}

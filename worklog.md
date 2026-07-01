@@ -3652,3 +3652,60 @@ Stage Summary:
 - **Key changes**: Responsive max-width (calc(100vw-1rem) → sm:max-w-2xl → md:max-w-3xl → lg:max-w-4xl), responsive padding (px-4 → sm:px-5 → md:px-6), responsive text sizes (text-[11px] → sm:text-xs, text-xs → sm:text-sm), responsive image sizes (h-12 → sm:h-14), responsive spacing (space-y-5 → sm:space-y-6), responsive alignment (items-start → sm:items-center), proper truncation with min-w-0, flex-shrink-0 on badges.
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only the order detail dialog's responsive classes were updated. All content, structure, and functionality remain intact.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on 3 viewports.
+
+---
+Task ID: order-detail-in-admin-modal
+Agent: main-orchestrator
+Task: Convert the order details dialog to use the common reusable AdminModal component in the seller panel orders page.
+
+Work Log:
+- **Previous State**: The order detail dialog used the raw `Dialog` / `DialogContent` / `DialogHeader` / `ScrollArea` components with custom header layout, custom padding, and custom scroll area. This was inconsistent with the other modals (Assign Delivery Boy, View Assigned Delivery Boy) which already used the reusable `AdminModal` component.
+- **Conversion** (single file: `src/app/seller/orders/page.tsx`):
+
+  **Replaced the entire `<Dialog>` block with `<AdminModal>`**:
+  - `type="view"` — shows the close button (X) in the header by default.
+  - `size="2xl"` — base max-width 800px, overridden with `className="md:max-w-3xl lg:max-w-4xl"` for wider desktop views.
+  - `title` — dynamically set: "Loading Order..." when loading, the order ID when loaded, "Order Details" as fallback.
+  - `description` — "Placed on {formatted date}" when loaded, undefined when loading.
+  - `headerExtra` — the `<StatusBadge>` showing the order's primary status, shown only when loaded.
+  - `children` — all the content sections (conditionally rendered based on loading/loaded/not-found state).
+
+  **Removed custom layout wrappers**:
+  - Removed `<Dialog>`, `<DialogContent>`, `<DialogHeader>`, `<DialogTitle>`, `<DialogDescription>` — AdminModal handles all of these via its `ModalHeader` sub-component.
+  - Removed `<ScrollArea className="flex-1 overflow-y-auto">` — AdminModal's `ModalBody` already provides `px-5 sm:px-6 py-5 overflow-y-auto flex-1 min-h-0` (built-in scrollability).
+  - Removed the custom padding div (`px-4 sm:px-5 md:px-6 py-4`) — ModalBody provides standard padding.
+  - Kept the `space-y-5 sm:space-y-6` on the content wrapper for section spacing.
+
+  **Preserved ALL content sections** (unchanged):
+  - Order Items (product image, name, variant, qty, price, status badge, delivery boy name, action buttons)
+  - Shipping Address (name, address lines, city/state/pincode, phone, type badge)
+  - Payment Info (method, status, subtotal, delivery fee, discount, total)
+  - Delivery Personnel (delivery boy name/phone + pickup delivery boy name/phone)
+  - Status Timeline (vertical timeline with status icons, dates, users, reasons)
+  - Return Information (return ID, product, reason, requested date)
+
+  **Cleanup**:
+  - Removed unused `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter` imports (6 components) — no longer needed since all dialogs now use AdminModal.
+  - Kept `ScrollArea` import — still used in the Assign Delivery Boy AdminModal.
+
+- **Verification** (Agent Browser + VLM):
+  * Logged in as Banasri seller, navigated to /seller/orders.
+  * Clicked an order → AdminModal opened with order details.
+  * VLM analysis confirmed:
+    - Title: Order ID (ORD-20260701-LBH8) in bold.
+    - Description: "Placed on 01 Jul 2026, 04:48 pm" below the title.
+    - Status badge (Shipped) in the top-right corner of the header.
+    - All sections visible: Order Items, Shipping Address, Payment Info.
+    - Clean, modern design with ample white space, rounded corners, subtle shadow.
+    - Scrollable, well-organized, consistent typography.
+    - "Reusable admin modal design" confirmed.
+  * Mobile test (375px): VLM confirmed "comfortable on mobile", fits within screen, readable text, touch-friendly buttons, "mobile-optimized".
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+
+Stage Summary:
+- **Converted**: The order detail dialog now uses the common reusable `AdminModal` component, consistent with the Assign Delivery Boy and View Assigned Delivery Boy modals. All three modals in the seller orders page now use the same reusable component.
+- **Benefits**: Consistent header layout (title + description + status badge + close button), consistent padding and spacing, built-in scrollability via ModalBody, responsive design (mobile + desktop), cleaner code (removed 6 Dialog imports).
+- **All content preserved**: Order Items, Shipping Address, Payment Info, Delivery Personnel, Status Timeline, Return Information — all sections remain intact with their responsive styling.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only the dialog wrapper was replaced, content sections unchanged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on desktop and mobile.
