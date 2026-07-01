@@ -153,7 +153,23 @@ export async function PUT(request: NextRequest) {
         })
         break
 
-      case 'ship':
+      case 'ship': {
+        // ── GUARD: Delivery boy must be assigned before shipping ──────
+        // Enforces the Meesho/Flipkart/Amazon flow: assign → ship.
+        // The seller cannot mark an order as shipped until a delivery boy
+        // has been assigned to the order item. This prevents orders from
+        // being shipped without a delivery partner to pick them up.
+        if (orderItemId) {
+          const itemToShip = (order.items || []).find(
+            (i: Record<string, unknown>) => i._id === orderItemId
+          )
+          if (itemToShip && !itemToShip.deliveryBoyId) {
+            return NextResponse.json(
+              { error: 'Please assign a delivery boy before shipping this order.' },
+              { status: 400 }
+            )
+          }
+        }
         result = await executeStatusTransition({
           orderId,
           orderItemId,
@@ -164,6 +180,7 @@ export async function PUT(request: NextRequest) {
           reason: 'Order shipped by seller',
         })
         break
+      }
 
       case 'cancel':
         result = await executeStatusTransition({

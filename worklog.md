@@ -3401,3 +3401,57 @@ Stage Summary:
 - **All functionality intact**: Ship action, Assign dialog, loading states, disabled states all preserved. No other status cases or UI elements modified.
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. Agent Browser + VLM verified dropdown works correctly.
+
+---
+Task ID: force-assign-before-ship-meesho-pattern
+Agent: main-orchestrator
+Task: Fix why seller can ship an order before assigning a delivery boy. Implement the Meesho/Flipkart/Amazon flow: assign delivery boy first → ship becomes available. Show delivery boys in the reusable AdminModal.
+
+Work Log:
+- **Root Cause Analysis**:
+  * Backend (`src/app/api/seller/orders/route.ts`): The `ship` action (line 156-166) simply called `executeStatusTransition` to move to 'Shipped' with NO check for whether a delivery boy was assigned. The `assign` action was completely separate.
+  * Frontend (`src/app/seller/orders/page.tsx`): The Processing status showed both "Ship" and "Assign" buttons side-by-side in a dropdown — the seller could click "Ship" without ever assigning a delivery boy.
+  * Result: Orders could be marked "Shipped" with no delivery partner assigned — no one to pick up or deliver the order.
+
+- **Fix 1 — Backend Guard** (`src/app/api/seller/orders/route.ts`):
+  * Added a guard in the `case 'ship'` block: before transitioning to 'Shipped', the API checks if the order item has a `deliveryBoyId`. If not, returns HTTP 400 with error: "Please assign a delivery boy before shipping this order."
+  * This is a server-side enforcement (fraud-proof) — even if the frontend is bypassed, the backend rejects the ship action.
+  * Uses the already-fetched `order` document (no extra DB query) to find the item by `orderItemId`.
+
+- **Fix 2 — Frontend Smart Flow** (`src/app/seller/orders/page.tsx`):
+  * Redesigned the `case 'Processing'` in `renderActions` with conditional logic based on `item.deliveryBoyId`:
+    - **NO delivery boy assigned**: Shows ONLY a single emerald "Assign Delivery Boy" button (primary action). No Ship button is available — the seller MUST assign first. This is the Meesho/Flipkart/Amazon pattern.
+    - **Delivery boy IS assigned**: Shows TWO elements:
+      1. Orange "Ship Order" button (enabled) — the seller can now ship.
+      2. A compact chevron-down dropdown button that opens a menu showing the assigned delivery boy's name + phone, plus a "Change Delivery Boy" option to reassign.
+  * Redesigned the `case 'Shipped'` with similar logic:
+    - If delivery boy assigned: shows a dropdown button with the delivery boy's first name (e.g., "Raj") → opens menu with full name, phone, and "Change Delivery Boy" option.
+    - Edge case (legacy data, shipped but no delivery boy): shows "Assign" button as fallback.
+  * All other status cases (Pending, Return Requested, Return Approved, default) remain UNCHANGED.
+
+- **Fix 3 — Reusable AdminModal** (`src/app/seller/orders/page.tsx`):
+  * Converted the delivery boy assignment dialog from the raw `Dialog` component to the reusable `AdminModal` component (`@/components/admin/admin-modal`).
+  * Added `import AdminModal from '@/components/admin/admin-modal'`.
+  * The AdminModal provides: consistent header (title + description), body (children), footer (action buttons), close button, loading/submitting state.
+  * Enhanced the delivery boy list with modern design:
+    - Context banner at top (emerald for delivery, violet for pickup) with icon + label.
+    - "AVAILABLE PARTNERS (N)" count label.
+    - Each delivery boy card: gradient avatar circle with ring, name (semibold), phone + vehicle type badge, hover effect with emerald accent, circular selection icon that turns emerald on hover.
+    - ScrollArea for long lists (max-h-72).
+    - Empty state and loading state with proper icons.
+
+- **Verification** (Agent Browser + VLM, logged in as Banasri seller):
+  * Accepted a Pending order → it became Processing → showed "Assign Delivery Boy" button (ONLY button, no Ship). ✓
+  * Clicked "Assign Delivery Boy" → AdminModal opened with "Assign Delivery Boy" title, "Select a delivery boy for order..." description, "AVAILABLE PARTNERS (3)" heading, 3 delivery boys with avatars/names/phones/vehicles. VLM confirmed: "modern, reusable admin modal with clean, minimalist design". ✓
+  * Selected a delivery boy → toast "Delivery Boy Assigned — has been assigned successfully." → button changed to orange "Ship Order" + chevron dropdown showing assigned info. VLM confirmed: "orange Ship Order button + small dropdown button". ✓
+  * Backend guard verified: the ship action now checks `deliveryBoyId` server-side.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+  * No conflict markers in source code.
+
+Stage Summary:
+- **Root cause fixed**: Seller can no longer ship before assigning a delivery boy. The backend rejects ship attempts without a delivery boy (400 error), and the frontend UI only shows "Assign Delivery Boy" for Processing orders without an assignment — "Ship Order" appears ONLY after a delivery boy is assigned.
+- **Meesho/Flipkart/Amazon flow implemented**: Processing (no delivery boy) → "Assign Delivery Boy" button only → assign via AdminModal → Processing (with delivery boy) → "Ship Order" button + change dropdown → ship → Shipped (shows delivery boy name + change option).
+- **Reusable AdminModal**: The delivery boy assignment dialog now uses the common reusable AdminModal component with a modern, clean design — context banner, partner count, gradient avatars, hover effects, proper loading/empty states.
+- **Files modified**: 2 (`src/app/api/seller/orders/route.ts` — backend guard; `src/app/seller/orders/page.tsx` — frontend flow + AdminModal).
+- **No damage**: All other status cases, the order detail dialog, delivery assignment logic, OTP generation, and all existing functionality remain intact. Lint: 0 errors. Dev server: stable, HTTP 200.

@@ -57,6 +57,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import AdminModal from '@/components/admin/admin-modal'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -467,64 +468,101 @@ function OrdersContent() {
             Accept
           </Button>
         )
-      case 'Processing':
+      case 'Processing': {
+        // ── Meesho/Flipkart/Amazon flow: Assign delivery boy FIRST, then ship ──
+        // If no delivery boy is assigned yet → show "Assign Delivery Boy" as the
+        //   ONLY primary action. Shipping is blocked until assignment is done.
+        // If a delivery boy IS assigned → show "Ship Order" (enabled) + a
+        //   dropdown to change the assigned delivery boy.
+        const hasDeliveryBoy = !!item.deliveryBoyId
+        if (!hasDeliveryBoy) {
+          return (
+            <Button
+              size="sm"
+              className="bg-emerald-500 hover:bg-emerald-600 text-white h-7 text-xs gap-1.5 shadow-sm"
+              onClick={() => openAssignDialog(order.orderId, item)}
+            >
+              <UserCheck className="h-3 w-3" />
+              Assign Delivery Boy
+            </Button>
+          )
+        }
+        // Delivery boy assigned — Ship is now available
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                className="bg-orange-500 hover:bg-orange-600 text-white h-7 text-xs gap-1.5 shadow-sm"
-                disabled={isLoading(`ship-${itemId}`)}
-              >
-                {isLoading(`ship-${itemId}`) ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Zap className="h-3 w-3" />
-                )}
-                Fulfill Order
-                <ChevronDown className="h-3 w-3 opacity-80" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 p-1.5">
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-2 py-1.5">
-                Choose Action
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="my-1" />
-              {/* Ship — mark the item as shipped (ready for dispatch) */}
-              <DropdownMenuItem
-                className="gap-2.5 px-2.5 py-2 cursor-pointer rounded-md focus:bg-orange-50 dark:focus:bg-orange-950/30"
-                disabled={isLoading(`ship-${itemId}`)}
-                onClick={() => handleAction(`ship-${itemId}`, 'ship', order.orderId, itemId)}
-              >
-                <div className="h-7 w-7 rounded-lg bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center flex-shrink-0">
-                  {isLoading(`ship-${itemId}`) ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-orange-600 dark:text-orange-400" />
-                  ) : (
-                    <Truck className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
-                  )}
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              className="bg-orange-500 hover:bg-orange-600 text-white h-7 text-xs gap-1.5 shadow-sm"
+              disabled={isLoading(`ship-${itemId}`)}
+              onClick={() => handleAction(`ship-${itemId}`, 'ship', order.orderId, itemId)}
+            >
+              {isLoading(`ship-${itemId}`) ? <Loader2 className="h-3 w-3 animate-spin" /> : <Truck className="h-3 w-3" />}
+              Ship Order
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 w-7 p-0 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                  title={`Assigned: ${item.deliveryBoyName || 'Delivery Boy'}`}
+                >
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60 p-1.5">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-2 py-1.5">
+                  Assigned Delivery Boy
+                </DropdownMenuLabel>
+                <div className="px-2.5 py-2 flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
+                    <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate">{item.deliveryBoyName || 'Unknown'}</p>
+                    {item.deliveryBoyPhone && (
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Phone className="h-2.5 w-2.5" />
+                        {item.deliveryBoyPhone}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-foreground">Ship Order</p>
-                  <p className="text-[10px] text-muted-foreground">Mark as shipped & ready for dispatch</p>
-                </div>
-              </DropdownMenuItem>
-              {/* Assign Delivery Boy — open the assignment dialog */}
-              <DropdownMenuItem
-                className="gap-2.5 px-2.5 py-2 cursor-pointer rounded-md focus:bg-emerald-50 dark:focus:bg-emerald-950/30"
-                onClick={() => openAssignDialog(order.orderId, item)}
-              >
-                <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
-                  <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-foreground">Assign Delivery Boy</p>
-                  <p className="text-[10px] text-muted-foreground">Choose a delivery partner for this order</p>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuSeparator className="my-1" />
+                <DropdownMenuItem
+                  className="gap-2.5 px-2.5 py-2 cursor-pointer rounded-md focus:bg-emerald-50 dark:focus:bg-emerald-950/30"
+                  onClick={() => openAssignDialog(order.orderId, item)}
+                >
+                  <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
+                    <RotateCcw className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-foreground">Change Delivery Boy</p>
+                    <p className="text-[10px] text-muted-foreground">Reassign to a different partner</p>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )
-      case 'Shipped':
+      }
+      case 'Shipped': {
+        // Show assigned delivery boy info + option to change
+        const hasDeliveryBoy = !!item.deliveryBoyId
+        if (!hasDeliveryBoy) {
+          // Edge case: shipped but no delivery boy (legacy data) — allow assign
+          return (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1.5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+              onClick={() => openAssignDialog(order.orderId, item)}
+            >
+              <UserCheck className="h-3 w-3" />
+              Assign
+            </Button>
+          )
+        }
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -534,30 +572,45 @@ function OrdersContent() {
                 className="h-7 text-xs gap-1.5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 shadow-sm"
               >
                 <UserCheck className="h-3 w-3" />
-                Assign
+                {item.deliveryBoyName ? item.deliveryBoyName.split(' ')[0] : 'Assigned'}
                 <ChevronDown className="h-3 w-3 opacity-80" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 p-1.5">
+            <DropdownMenuContent align="end" className="w-60 p-1.5">
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-2 py-1.5">
-                Delivery Assignment
+                Delivery Boy Assigned
               </DropdownMenuLabel>
+              <div className="px-2.5 py-2 flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
+                  <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground truncate">{item.deliveryBoyName || 'Unknown'}</p>
+                  {item.deliveryBoyPhone && (
+                    <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <Phone className="h-2.5 w-2.5" />
+                      {item.deliveryBoyPhone}
+                    </p>
+                  )}
+                </div>
+              </div>
               <DropdownMenuSeparator className="my-1" />
               <DropdownMenuItem
                 className="gap-2.5 px-2.5 py-2 cursor-pointer rounded-md focus:bg-emerald-50 dark:focus:bg-emerald-950/30"
                 onClick={() => openAssignDialog(order.orderId, item)}
               >
                 <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
-                  <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <RotateCcw className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-foreground">Assign Delivery Boy</p>
-                  <p className="text-[10px] text-muted-foreground">Choose a delivery partner for this order</p>
+                  <p className="text-xs font-semibold text-foreground">Change Delivery Boy</p>
+                  <p className="text-[10px] text-muted-foreground">Reassign to a different partner</p>
                 </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
+      }
       case 'Return Requested':
         return (
           <div className="flex items-center gap-1.5">
@@ -1293,111 +1346,139 @@ function OrdersContent() {
       </Dialog>
 
       {/* ──────────────────────────────────────────────────────────────── */}
-      {/*  Assign Delivery Boy Dialog                                       */}
+      {/*  Assign Delivery Boy — Reusable AdminModal                        */}
       {/* ──────────────────────────────────────────────────────────────── */}
 
-      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-        <DialogContent className="max-w-md p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+      <AdminModal
+        open={assignOpen}
+        onOpenChange={(o) => { if (!assigning) setAssignOpen(o) }}
+        type="form"
+        size="md"
+        title={assignType === 'pickup' ? 'Assign for Return Pickup' : 'Assign Delivery Boy'}
+        description={
+          assignType === 'pickup'
+            ? `Select a delivery boy for return pickup of order ${assignOrderId}${assignOrderItem?.returnId ? ` · Return ID: ${assignOrderItem.returnId}` : ''}`
+            : `Select a delivery boy for order ${assignOrderId}`
+        }
+        submitting={assigning}
+        footer={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAssignOpen(false)}
+            disabled={assigning}
+            className="text-xs rounded-lg"
+          >
+            Cancel
+          </Button>
+        }
+      >
+        <div className="space-y-3">
+          {/* Header banner with context */}
+          <div className={cn(
+            'flex items-center gap-3 p-3 rounded-xl border',
+            assignType === 'pickup'
+              ? 'bg-violet-50/50 dark:bg-violet-950/20 border-violet-100 dark:border-violet-900/30'
+              : 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/30'
+          )}>
+            <div className={cn(
+              'h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0',
+              assignType === 'pickup'
+                ? 'bg-violet-100 dark:bg-violet-950/40'
+                : 'bg-emerald-100 dark:bg-emerald-950/40'
+            )}>
               {assignType === 'pickup' ? (
-                <>
-                  <RotateCcw className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                  Assign for Return Pickup
-                </>
+                <RotateCcw className="h-4 w-4 text-violet-600 dark:text-violet-400" />
               ) : (
-                <>
-                  <Truck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  Assign Delivery Boy
-                </>
+                <Truck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               )}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-              {assignType === 'pickup' ? (
-                <>
-                  Select a delivery boy for return pickup of order {assignOrderId}
-                  {assignOrderItem?.returnId && (
-                    <span className="block mt-1 text-violet-600 dark:text-violet-400 font-medium">
-                      Return ID: {assignOrderItem.returnId}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>Select a delivery boy for order {assignOrderId}</>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="px-6 py-4">
-            {assignLoadingBoys ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading delivery boys...</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-foreground">
+                {assignType === 'pickup' ? 'Return Pickup Assignment' : 'Delivery Assignment'}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {assignType === 'pickup'
+                  ? 'Choose a partner to pick up the return item'
+                  : 'Choose a partner to deliver this order'}
+              </p>
+            </div>
+          </div>
+
+          {/* Delivery boys list */}
+          {assignLoadingBoys ? (
+            <div className="flex flex-col items-center justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+              <span className="mt-2 text-xs text-muted-foreground">Loading delivery boys...</span>
+            </div>
+          ) : assignDeliveryBoys.length === 0 ? (
+            <div className="text-center py-10">
+              <div className="h-14 w-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                <UserCheck className="h-7 w-7 text-muted-foreground/40" />
               </div>
-            ) : assignDeliveryBoys.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                  <Truck className="h-6 w-6 text-muted-foreground/40" />
-                </div>
-                <p className="text-sm text-muted-foreground">No delivery boys available</p>
-                <p className="text-xs text-muted-foreground mt-1">Please ensure delivery boys are registered and active</p>
+              <p className="text-sm font-medium text-foreground">No delivery boys available</p>
+              <p className="text-xs text-muted-foreground mt-1">Please ensure delivery boys are registered and active</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+                  Available Partners ({assignDeliveryBoys.length})
+                </p>
               </div>
-            ) : (
-              <ScrollArea className="max-h-64">
-                <div className="space-y-2">
+              <ScrollArea className="max-h-72">
+                <div className="space-y-2 pr-1">
                   {assignDeliveryBoys.map((boy) => (
                     <button
                       key={boy._id}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors"
+                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors group"
                       disabled={assigning}
                       onClick={() => handleAssignDeliveryBoy(boy._id)}
                     >
-                      <div className="h-9 w-9 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center flex-shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-950/40 dark:to-emerald-900/20 flex items-center justify-center flex-shrink-0 ring-2 ring-white dark:ring-gray-900 shadow-sm">
                         {boy.profileImage ? (
-                          <img src={typeof boy.profileImage === 'string' ? boy.profileImage : (boy.profileImage as { url?: string }).url || ''} alt={boy.name} className="h-full w-full rounded-full object-cover" />
+                          <img
+                            src={typeof boy.profileImage === 'string' ? boy.profileImage : (boy.profileImage as { url?: string }).url || ''}
+                            alt={boy.name}
+                            className="h-full w-full rounded-full object-cover"
+                          />
                         ) : (
-                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                          <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                             {boy.name.charAt(0).toUpperCase()}
                           </span>
                         )}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <p className="text-sm font-medium text-foreground">{boy.name}</p>
+                        <p className="text-sm font-semibold text-foreground">{boy.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                             <Phone className="h-2.5 w-2.5" />
                             {boy.mobile}
                           </span>
                           {boy.vehicleType && (
-                            <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] text-muted-foreground bg-muted/60 dark:bg-muted/30 px-1.5 py-0.5 rounded-md font-medium">
                               {boy.vehicleType}
                             </span>
                           )}
                         </div>
                       </div>
-                      {assigning ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
-                      ) : (
-                        <UserCheck className="h-4 w-4 text-muted-foreground group-hover:text-emerald-500" />
-                      )}
+                      <div className="flex-shrink-0">
+                        {assigning ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+                        ) : (
+                          <div className="h-7 w-7 rounded-full bg-muted/40 dark:bg-muted/20 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-950/40 flex items-center justify-center transition-colors">
+                            <UserCheck className="h-3.5 w-3.5 text-muted-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400" />
+                          </div>
+                        )}
+                      </div>
                     </button>
                   ))}
                 </div>
               </ScrollArea>
-            )}
-          </div>
-          <DialogFooter className="px-6 py-3 border-t border-border">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAssignOpen(false)}
-              disabled={assigning}
-              className="text-xs"
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </>
+          )}
+        </div>
+      </AdminModal>
     </motion.div>
   )
 }
