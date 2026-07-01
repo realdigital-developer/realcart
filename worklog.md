@@ -3563,3 +3563,92 @@ Stage Summary:
 - **Flow**: Click delivery boy name → AdminModal opens with full details → click "Change Delivery Boy" → closes view modal → opens assign dialog with list of available partners → select a new partner.
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). Removed unused DropdownMenu imports. No UI or code damaged — only the Processing/Shipped action buttons and the new AdminModal were changed.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified modal design and flow.
+
+---
+Task ID: responsive-order-detail-modal
+Agent: main-orchestrator
+Task: Fix the order details modal in the seller panel orders page to be properly visible and comfortable on all devices (mobile, tablet, desktop) with smart space management.
+
+Work Log:
+- **Issues Identified** in the order detail dialog (`src/app/seller/orders/page.tsx`):
+  1. `max-w-3xl` — fixed max-width, not responsive for different screen sizes.
+  2. `px-6` padding everywhere — too much padding on mobile (wastes precious screen space), fine on desktop.
+  3. `max-h-[85vh]` — slightly too short, should be taller on desktop.
+  4. Text sizes were fixed (`text-sm`, `text-xs`) — not responsive, could feel too large on mobile or too small on desktop.
+  5. Order item image was `h-14 w-14` — slightly large for mobile.
+  6. Spacing between sections was `space-y-6` — too much vertical gap on mobile.
+  7. Header used `items-center` — on mobile, the order ID + status badge could feel cramped; needed `items-start` on mobile.
+
+- **Fix Applied** (single file: `src/app/seller/orders/page.tsx`):
+
+  **DialogContent (responsive max-width + height)**:
+  - Was: `max-w-3xl max-h-[85vh]`
+  - Now: `max-w-[calc(100vw-1rem)] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-[90vh] sm:max-h-[88vh]`
+  - Added `gap-0` to remove default gap, `p-0` already present.
+
+  **DialogHeader (responsive padding)**:
+  - Was: `px-6 pt-6 pb-4`
+  - Now: `px-4 sm:px-5 md:px-6 pt-4 sm:pt-5 md:pt-6 pb-3 sm:pb-4`
+  - Added `flex-shrink-0` to prevent header from shrinking.
+  - Changed alignment: `items-start sm:items-center` (mobile: top-aligned for wrapping, desktop: centered).
+
+  **DialogTitle (responsive text size)**:
+  - Was: `text-lg`
+  - Now: `text-base sm:text-lg` + `truncate` to prevent overflow on mobile.
+
+  **DialogDescription (responsive text size)**:
+  - Was: `text-xs`
+  - Now: `text-[11px] sm:text-xs`
+
+  **Content area (responsive padding + spacing)**:
+  - Was: `px-6 py-4 space-y-6`
+  - Now: `px-4 sm:px-5 md:px-6 py-4 space-y-5 sm:space-y-6`
+
+  **Order Items (responsive image + text + spacing)**:
+  - Image: `h-14 w-14` → `h-12 w-12 sm:h-14 sm:w-14`
+  - Gap: `gap-3` → `gap-2.5 sm:gap-3`
+  - Padding: `p-3` → `p-2.5 sm:p-3`
+  - List spacing: `space-y-3` → `space-y-2 sm:space-y-3`
+  - Product name: `text-sm` → `text-xs sm:text-sm`
+  - Variant/qty/price: `text-xs` → `text-[11px] sm:text-xs`
+  - Gap between badges: `gap-2` → `gap-1.5 sm:gap-2`
+  - Delivery boy label: removed "(Delivery)"/"(Pickup)" suffix on mobile to save space.
+
+  **Shipping Address + Payment Info (responsive text + padding)**:
+  - Card padding: `p-3` → `p-2.5 sm:p-3`
+  - All text: `text-xs` → `text-[11px] sm:text-xs` (except headings which stay `text-sm`)
+  - Total amount: `text-sm` → `text-sm sm:text-base` (slightly larger on desktop)
+  - Added `gap-2` to `flex justify-between` rows to prevent label/value collision.
+
+  **Delivery Personnel (responsive text + truncate)**:
+  - Card padding: `p-3` → `p-2.5 sm:p-3`
+  - Names: `text-sm` → `text-xs sm:text-sm` + `truncate`
+  - Phone: `text-xs` → `text-[11px] sm:text-xs`
+  - Added `min-w-0` to text containers and `flex-shrink-0` to badges.
+  - Added `gap-2` between name and badge.
+
+  **Status Timeline (responsive gap + text)**:
+  - Timeline gap: `gap-3` → `gap-2.5 sm:gap-3`
+  - Status text: `text-xs` → `text-[11px] sm:text-xs`
+  - Added `min-w-0 flex-1` to the log content container.
+  - Added `flex-wrap` to the status label row.
+
+  **Return Info (responsive text + truncate)**:
+  - Card padding: `p-3` → `p-2.5 sm:p-3`
+  - All text: `text-xs` → `text-[11px] sm:text-xs`
+  - Replaced `max-w-[200px]` with `min-w-0 truncate` for proper responsive truncation.
+  - Added `flex-shrink-0` to labels and `text-right` to reason value.
+  - Added `gap-2` to flex rows.
+
+- **Verification** (Agent Browser + VLM on 3 viewports):
+  * **Mobile (375px)**: VLM confirmed — "well-optimized for mobile", no horizontal overflow, text readable, touch-friendly spacing, all sections visible, no content cut off.
+  * **Tablet (768px)**: VLM confirmed — "comfortable and well-organized", two-column layout for address/payment, readable typography, good space utilization.
+  * **Desktop (1280px)**: VLM confirmed — "excellent layout quality", balanced width, two side-by-side columns, clear hierarchy, clean professional design.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+
+Stage Summary:
+- **Fixed**: The order detail modal is now fully responsive across mobile (375px), tablet (768px), and desktop (1280px+) with smart space management.
+- **Key changes**: Responsive max-width (calc(100vw-1rem) → sm:max-w-2xl → md:max-w-3xl → lg:max-w-4xl), responsive padding (px-4 → sm:px-5 → md:px-6), responsive text sizes (text-[11px] → sm:text-xs, text-xs → sm:text-sm), responsive image sizes (h-12 → sm:h-14), responsive spacing (space-y-5 → sm:space-y-6), responsive alignment (items-start → sm:items-center), proper truncation with min-w-0, flex-shrink-0 on badges.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only the order detail dialog's responsive classes were updated. All content, structure, and functionality remain intact.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on 3 viewports.
