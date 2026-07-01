@@ -29,8 +29,9 @@ import {
   XCircle,
   Image as ImageIcon,
   AlertTriangle,
-  ChevronDown,
-  Zap,
+  Bike,
+  ShieldCheck,
+  Navigation,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,14 +42,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -192,6 +185,12 @@ function OrdersContent() {
   const [assignLoadingBoys, setAssignLoadingBoys] = useState(false)
   // Track whether this is a pickup assignment or delivery assignment
   const [assignType, setAssignType] = useState<'delivery' | 'pickup'>('delivery')
+
+  // View assigned delivery boy modal (shows the currently-assigned delivery
+  // boy details in a reusable AdminModal, with a "Change" option)
+  const [viewAssignedOpen, setViewAssignedOpen] = useState(false)
+  const [viewAssignedItem, setViewAssignedItem] = useState<OrderItem | null>(null)
+  const [viewAssignedOrderId, setViewAssignedOrderId] = useState<string>('')
 
   // Action loading states
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
@@ -425,6 +424,17 @@ function OrdersContent() {
   }, [])
 
   /* ---------------------------------------------------------------- */
+  /*  Open "View Assigned Delivery Boy" Modal                           */
+  /*  Shows the currently-assigned delivery boy's details in a reusable */
+  /*  AdminModal, with a "Change Delivery Boy" option.                  */
+  /* ---------------------------------------------------------------- */
+  const openViewAssignedModal = useCallback((orderId: string, item: OrderItem) => {
+    setViewAssignedOrderId(orderId)
+    setViewAssignedItem(item)
+    setViewAssignedOpen(true)
+  }, [])
+
+  /* ---------------------------------------------------------------- */
   /*  Get seller items from an order                                    */
   /* ---------------------------------------------------------------- */
 
@@ -505,50 +515,16 @@ function OrdersContent() {
               {isLoading(`ship-${itemId}`) ? <Loader2 className="h-3 w-3 animate-spin" /> : <Truck className="h-3 w-3" />}
               Ship Order
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 w-7 p-0 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                  title={`Assigned: ${item.deliveryBoyName || 'Delivery Boy'}`}
-                >
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-60 p-1.5">
-                <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-2 py-1.5">
-                  Assigned Delivery Boy
-                </DropdownMenuLabel>
-                <div className="px-2.5 py-2 flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
-                    <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-foreground truncate">{item.deliveryBoyName || 'Unknown'}</p>
-                    {item.deliveryBoyPhone && (
-                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Phone className="h-2.5 w-2.5" />
-                        {item.deliveryBoyPhone}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <DropdownMenuSeparator className="my-1" />
-                <DropdownMenuItem
-                  className="gap-2.5 px-2.5 py-2 cursor-pointer rounded-md focus:bg-emerald-50 dark:focus:bg-emerald-950/30"
-                  onClick={() => openAssignDialog(order.orderId, item)}
-                >
-                  <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
-                    <RotateCcw className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-foreground">Change Delivery Boy</p>
-                    <p className="text-[10px] text-muted-foreground">Reassign to a different partner</p>
-                  </div>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1.5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 shadow-sm max-w-[120px]"
+              title={`Assigned: ${item.deliveryBoyName || 'Delivery Boy'}`}
+              onClick={() => openViewAssignedModal(order.orderId, item)}
+            >
+              <UserCheck className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{item.deliveryBoyName ? item.deliveryBoyName.split(' ')[0] : 'Assigned'}</span>
+            </Button>
           </div>
         )
       }
@@ -570,51 +546,16 @@ function OrdersContent() {
           )
         }
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs gap-1.5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 shadow-sm"
-              >
-                <UserCheck className="h-3 w-3" />
-                {item.deliveryBoyName ? item.deliveryBoyName.split(' ')[0] : 'Assigned'}
-                <ChevronDown className="h-3 w-3 opacity-80" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-60 p-1.5">
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-2 py-1.5">
-                Delivery Boy Assigned
-              </DropdownMenuLabel>
-              <div className="px-2.5 py-2 flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
-                  <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-foreground truncate">{item.deliveryBoyName || 'Unknown'}</p>
-                  {item.deliveryBoyPhone && (
-                    <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Phone className="h-2.5 w-2.5" />
-                      {item.deliveryBoyPhone}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <DropdownMenuSeparator className="my-1" />
-              <DropdownMenuItem
-                className="gap-2.5 px-2.5 py-2 cursor-pointer rounded-md focus:bg-emerald-50 dark:focus:bg-emerald-950/30"
-                onClick={() => openAssignDialog(order.orderId, item)}
-              >
-                <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
-                  <RotateCcw className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-foreground">Change Delivery Boy</p>
-                  <p className="text-[10px] text-muted-foreground">Reassign to a different partner</p>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1.5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 shadow-sm max-w-[120px]"
+            title={`Assigned: ${item.deliveryBoyName || 'Delivery Boy'}`}
+            onClick={() => openViewAssignedModal(order.orderId, item)}
+          >
+            <UserCheck className="h-3 w-3 flex-shrink-0" />
+            <span className="truncate">{item.deliveryBoyName ? item.deliveryBoyName.split(' ')[0] : 'Assigned'}</span>
+          </Button>
         )
       }
       case 'Return Requested':
@@ -668,7 +609,7 @@ function OrdersContent() {
           </Button>
         )
     }
-  }, [actionLoading, handleAction, openAssignDialog, openDetail])
+  }, [actionLoading, handleAction, openAssignDialog, openViewAssignedModal, openDetail])
 
   /* ---------------------------------------------------------------- */
   /*  Format Date                                                       */
@@ -1509,6 +1450,119 @@ function OrdersContent() {
             </>
           )}
         </div>
+      </AdminModal>
+
+      {/* ──────────────────────────────────────────────────────────────── */}
+      {/*  View Assigned Delivery Boy — Reusable AdminModal                 */}
+      {/*  Shows the currently-assigned delivery boy's full details with a  */}
+      {/*  "Change Delivery Boy" option to reassign.                        */}
+      {/* ──────────────────────────────────────────────────────────────── */}
+
+      <AdminModal
+        open={viewAssignedOpen}
+        onOpenChange={setViewAssignedOpen}
+        type="view"
+        size="md"
+        title="Assigned Delivery Boy"
+        description={`Delivery partner assigned to order ${viewAssignedOrderId}`}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setViewAssignedOpen(false)}
+              className="text-xs rounded-lg"
+            >
+              Close
+            </Button>
+            <Button
+              size="sm"
+              className="text-xs rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white gap-1.5"
+              onClick={() => {
+                if (viewAssignedItem) {
+                  setViewAssignedOpen(false)
+                  openAssignDialog(viewAssignedOrderId, viewAssignedItem)
+                }
+              }}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Change Delivery Boy
+            </Button>
+          </>
+        }
+      >
+        {viewAssignedItem && viewAssignedItem.deliveryBoyId ? (
+          <div className="space-y-4">
+            {/* Delivery boy profile card */}
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-emerald-50/80 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-950/10 border border-emerald-100 dark:border-emerald-900/30">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-200 to-emerald-100 dark:from-emerald-800 dark:to-emerald-900 flex items-center justify-center flex-shrink-0 ring-4 ring-white dark:ring-gray-900 shadow-md">
+                <UserCheck className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-base font-bold text-foreground truncate">{viewAssignedItem.deliveryBoyName || 'Unknown'}</p>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full">
+                    <ShieldCheck className="h-2.5 w-2.5" />
+                    Assigned
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">Delivery Partner</p>
+              </div>
+            </div>
+
+            {/* Contact details */}
+            <div className="space-y-2.5">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-1">Contact Details</p>
+              {viewAssignedItem.deliveryBoyPhone && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 dark:bg-muted/10 border border-border">
+                  <div className="h-9 w-9 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
+                    <Phone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-muted-foreground">Phone Number</p>
+                    <p className="text-sm font-semibold text-foreground">{viewAssignedItem.deliveryBoyPhone}</p>
+                  </div>
+                  <a
+                    href={`tel:${viewAssignedItem.deliveryBoyPhone}`}
+                    className="h-8 w-8 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center text-white transition-colors flex-shrink-0"
+                    title="Call delivery boy"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              )}
+              {/* Order item context */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 dark:bg-muted/10 border border-border">
+                <div className="h-9 w-9 rounded-lg bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center flex-shrink-0">
+                  <Package className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-muted-foreground">Order Item</p>
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {viewAssignedItem.productName || viewAssignedItem.name || 'Item'}
+                    {viewAssignedItem.quantity && ` × ${viewAssignedItem.quantity}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Helper text */}
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30">
+              <Navigation className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <p className="text-[11px] text-blue-700 dark:text-blue-300">
+                The delivery boy has been notified and will pick up this order. You can reassign to a different partner if needed.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-10">
+            <div className="h-14 w-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+              <UserCheck className="h-7 w-7 text-muted-foreground/40" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No delivery boy assigned</p>
+            <p className="text-xs text-muted-foreground mt-1">Please assign a delivery boy to this order.</p>
+          </div>
+        )}
       </AdminModal>
     </motion.div>
   )

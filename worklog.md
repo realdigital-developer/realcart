@@ -3501,3 +3501,65 @@ Stage Summary:
 - **Enhanced UX**: The selected delivery boy gets a distinct emerald highlight (border, background, ring, text color) so the seller can clearly see which one they selected while the assignment is processing.
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only the delivery boy button rendering logic was updated.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
+
+---
+Task ID: assigned-delivery-boy-in-admin-modal
+Agent: main-orchestrator
+Task: Replace the dropdown menu showing "assigned delivery boy" with a reusable AdminModal view. Clicking the delivery boy button should open an AdminModal (not a dropdown) showing the assigned delivery boy's details.
+
+Work Log:
+- **Previous State**: The Processing (with delivery boy) and Shipped cases in `renderActions` used `DropdownMenu` components to show the assigned delivery boy info in a small dropdown popover. The user didn't like this — wanted a proper AdminModal instead.
+- **Fix** (single file: `src/app/seller/orders/page.tsx`):
+
+  **1. Added new state for the "View Assigned" modal**:
+  - `viewAssignedOpen` (boolean) — modal open/close
+  - `viewAssignedItem` (OrderItem | null) — the order item with the assigned delivery boy
+  - `viewAssignedOrderId` (string) — the order ID for context
+
+  **2. Added `openViewAssignedModal` handler**:
+  - Sets the item + orderId + opens the modal.
+
+  **3. Replaced the Processing dropdown with a simple button**:
+  - Was: `<DropdownMenu>` with `DropdownMenuTrigger` (chevron-down) + `DropdownMenuContent` showing delivery boy info + "Change Delivery Boy" item.
+  - Now: A single `<Button>` showing the delivery boy's first name (e.g., "Puspendu") with UserCheck icon. Clicking it calls `openViewAssignedModal(order.orderId, item)`.
+
+  **4. Replaced the Shipped dropdown with a simple button**:
+  - Was: `<DropdownMenu>` with trigger showing name + chevron + content with info + change option.
+  - Now: Same simple `<Button>` as Processing — shows first name, opens the AdminModal.
+
+  **5. Added the "View Assigned Delivery Boy" AdminModal**:
+  - Uses the reusable `AdminModal` component (`type="view"`, `size="md"`).
+  - Title: "Assigned Delivery Boy", description: "Delivery partner assigned to order {orderId}".
+  - Content:
+    - **Profile card**: Large avatar (h-16 w-16) with UserCheck icon, delivery boy name (bold), "ASSIGNED" emerald badge with ShieldCheck icon, "Delivery Partner" role label. Gradient emerald background.
+    - **Contact Details section**: Phone number card with Phone icon, the number, and a green call button (`tel:` link). Order item card with Package icon showing product name + quantity.
+    - **Info banner**: Blue background with Navigation icon: "The delivery boy has been notified and will pick up this order. You can reassign to a different partner if needed."
+  - Footer: "Close" (outline) + "Change Delivery Boy" (emerald, with RotateCcw icon) — the Change button closes this modal and opens the assign dialog.
+  - Empty state: Shows "No delivery boy assigned" if `viewAssignedItem.deliveryBoyId` is missing.
+
+  **6. Cleanup**:
+  - Removed unused `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator`, `DropdownMenuLabel` imports.
+  - Removed unused `ChevronDown`, `Zap` icon imports.
+  - Added new icon imports: `Bike`, `ShieldCheck`, `Navigation`.
+  - Updated `renderActions` dependency array to include `openViewAssignedModal`.
+
+- **Verification** (Agent Browser + VLM):
+  * Logged in as Banasri seller, navigated to /seller/orders.
+  * Saw delivery boy name buttons ("Puspendu", "Raj") instead of dropdown chevrons.
+  * Clicked "Puspendu" → AdminModal opened.
+  * VLM analysis confirmed:
+    - Title: "Assigned Delivery Boy", subtitle with order ID.
+    - Profile card: "Puspendu Mallick" with "ASSIGNED" green badge, "Delivery Partner" role.
+    - Contact Details: Phone "9123314132" with green call button, Order Item with package icon.
+    - Info banner in blue with Navigation icon.
+    - Buttons: "Close" + "Change Delivery Boy" (green).
+    - "Modern reusable admin modal with clean design, rounded corners, consistent color scheme."
+  * Clicked "Change Delivery Boy" → correctly closed the view modal and opened the "Assign Delivery Boy" modal showing the list of available delivery boys.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+
+Stage Summary:
+- **Changed**: Replaced the dropdown menu (small popover) for viewing assigned delivery boy info with a proper reusable AdminModal. Now clicking the delivery boy name button opens a full modal showing the delivery boy's profile, contact details (with call button), order item context, and a "Change Delivery Boy" action.
+- **Flow**: Click delivery boy name → AdminModal opens with full details → click "Change Delivery Boy" → closes view modal → opens assign dialog with list of available partners → select a new partner.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). Removed unused DropdownMenu imports. No UI or code damaged — only the Processing/Shipped action buttons and the new AdminModal were changed.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified modal design and flow.
