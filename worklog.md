@@ -3349,3 +3349,55 @@ Stage Summary:
 - **No damage**: No UI or code was damaged. The merge preserved both histories. All recent fixes (delivery guard, real-time address update, saved payment methods) are intact and verified.
 - **Local and remote SHAs match exactly**: `e946fbdee187a52e3c5685c84ae71d1c97935e7c` (IN SYNC).
 - PAT used via GIT_ASKPASS (one-time, not persisted). Askpass helper deleted after push.
+
+---
+Task ID: redesign-ship-assign-delivery-ui
+Agent: main-orchestrator
+Task: Redesign the "Ship" and "Assign Delivery Boy" buttons in the seller panel orders page with a smart, modern UI. Keep all other functionality intact.
+
+Work Log:
+- **Current UI Analysis** (src/app/seller/orders/page.tsx):
+  * `renderActions` function (line 442) renders action buttons per order item based on status.
+  * **Processing status** (line 460-482): Two side-by-side buttons — "Ship" (orange, Truck icon) + "Assign" (outline emerald, UserCheck icon). Felt cluttered and old-fashioned.
+  * **Shipped status** (line 483-494): Single "Assign Delivery Boy" button (outline emerald). Long text, not compact.
+  * Both used simple `<Button>` components with no contextual menu.
+- **Design Decision**: Replace the two side-by-side buttons with a single modern primary action button that opens a DropdownMenu (Radix UI). This is the pattern used by Amazon Seller, Flipkart Seller Hub, and Meesho — a single "Actions" button that reveals contextual options in a clean popover.
+  * **Processing status**: "Fulfill Order" button (orange, Zap icon, ChevronDown) → dropdown with 2 options:
+    1. "Ship Order" (orange icon box, Truck icon, title + description "Mark as shipped & ready for dispatch")
+    2. "Assign Delivery Boy" (emerald icon box, UserCheck icon, title + description "Choose a delivery partner for this order")
+  * **Shipped status**: "Assign" button (outline emerald, UserCheck icon, ChevronDown) → dropdown with 1 option:
+    1. "Assign Delivery Boy" (emerald icon box, UserCheck icon, title + description)
+  * Each dropdown option has: colored icon box (h-7 w-7 rounded-lg), bold title, muted description — clean, scannable, modern.
+  * DropdownMenuLabel at top: "Choose Action" / "Delivery Assignment" (uppercase, muted, for context).
+  * DropdownMenuSeparator between label and items.
+- **Implementation** (single file: src/app/seller/orders/page.tsx):
+  * Added imports: `DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel` from `@/components/ui/dropdown-menu`.
+  * Added icons: `ChevronDown`, `Zap` from lucide-react.
+  * Replaced the `case 'Processing'` block (was 2 side-by-side buttons) with a DropdownMenu containing a "Fulfill Order" trigger and 2 dropdown items (Ship + Assign).
+  * Replaced the `case 'Shipped'` block (was 1 long "Assign Delivery Boy" button) with a DropdownMenu containing a compact "Assign" trigger and 1 dropdown item.
+  * All existing functionality preserved:
+    - Ship action: still calls `handleAction(`ship-${itemId}`, 'ship', order.orderId, itemId)` with loading state.
+    - Assign action: still calls `openAssignDialog(order.orderId, item)`.
+    - Loading spinner: shown on the trigger button when shipping is in progress.
+    - Disabled state: trigger disabled when ship action is loading.
+  * All other status cases (Pending, Return Requested, Return Approved, default) remain UNCHANGED.
+  * The Assign Delivery Boy dialog (lines 1230-1334) remains UNCHANGED — the dropdown just opens it.
+- **Verification**:
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, page compiles without errors.
+  * Agent Browser testing (logged in as Banasri seller):
+    - Navigated to /seller/orders, page loaded successfully.
+    - Verified "Assign" dropdown buttons appear for Shipped orders.
+    - Opened the dropdown — confirmed it shows "DELIVERY ASSIGNMENT" label + "Assign Delivery Boy" option with icon and description.
+    - VLM analysis of screenshot confirmed: dropdown menu is open, shows "DELIVERY ASSIGNMENT" title, "Assign Delivery Boy" option with green icon, clean modern design with white background.
+    - Verified Accept button works (PUT /api/seller/orders returned 200).
+    - No browser console errors.
+
+Stage Summary:
+- **Redesigned**: Replaced the old two-button layout (Ship + Assign side-by-side) with a modern single-button dropdown menu pattern for both Processing and Shipped statuses.
+- **Processing status**: "Fulfill Order" button (orange, Zap icon) → dropdown with "Ship Order" + "Assign Delivery Boy" options, each with colored icon box, title, and description.
+- **Shipped status**: "Assign" button (outline emerald, UserCheck icon) → dropdown with "Assign Delivery Boy" option.
+- **Modern design**: Each dropdown item has a colored icon box (h-7 w-7 rounded-lg), bold title, muted description text — clean, scannable, professional. DropdownMenuLabel provides context ("Choose Action" / "Delivery Assignment").
+- **All functionality intact**: Ship action, Assign dialog, loading states, disabled states all preserved. No other status cases or UI elements modified.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. Agent Browser + VLM verified dropdown works correctly.

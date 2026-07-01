@@ -29,6 +29,8 @@ import {
   XCircle,
   Image as ImageIcon,
   AlertTriangle,
+  ChevronDown,
+  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,6 +41,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -459,38 +469,94 @@ function OrdersContent() {
         )
       case 'Processing':
         return (
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="sm"
-              className="bg-orange-500 hover:bg-orange-600 text-white h-7 text-xs gap-1"
-              disabled={isLoading(`ship-${itemId}`)}
-              onClick={() => handleAction(`ship-${itemId}`, 'ship', order.orderId, itemId)}
-            >
-              {isLoading(`ship-${itemId}`) ? <Loader2 className="h-3 w-3 animate-spin" /> : <Truck className="h-3 w-3" />}
-              Ship
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs gap-1 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-              onClick={() => openAssignDialog(order.orderId, item)}
-            >
-              <UserCheck className="h-3 w-3" />
-              Assign
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                className="bg-orange-500 hover:bg-orange-600 text-white h-7 text-xs gap-1.5 shadow-sm"
+                disabled={isLoading(`ship-${itemId}`)}
+              >
+                {isLoading(`ship-${itemId}`) ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Zap className="h-3 w-3" />
+                )}
+                Fulfill Order
+                <ChevronDown className="h-3 w-3 opacity-80" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 p-1.5">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-2 py-1.5">
+                Choose Action
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="my-1" />
+              {/* Ship — mark the item as shipped (ready for dispatch) */}
+              <DropdownMenuItem
+                className="gap-2.5 px-2.5 py-2 cursor-pointer rounded-md focus:bg-orange-50 dark:focus:bg-orange-950/30"
+                disabled={isLoading(`ship-${itemId}`)}
+                onClick={() => handleAction(`ship-${itemId}`, 'ship', order.orderId, itemId)}
+              >
+                <div className="h-7 w-7 rounded-lg bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center flex-shrink-0">
+                  {isLoading(`ship-${itemId}`) ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-orange-600 dark:text-orange-400" />
+                  ) : (
+                    <Truck className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground">Ship Order</p>
+                  <p className="text-[10px] text-muted-foreground">Mark as shipped & ready for dispatch</p>
+                </div>
+              </DropdownMenuItem>
+              {/* Assign Delivery Boy — open the assignment dialog */}
+              <DropdownMenuItem
+                className="gap-2.5 px-2.5 py-2 cursor-pointer rounded-md focus:bg-emerald-50 dark:focus:bg-emerald-950/30"
+                onClick={() => openAssignDialog(order.orderId, item)}
+              >
+                <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
+                  <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground">Assign Delivery Boy</p>
+                  <p className="text-[10px] text-muted-foreground">Choose a delivery partner for this order</p>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )
       case 'Shipped':
         return (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs gap-1 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-            onClick={() => openAssignDialog(order.orderId, item)}
-          >
-            <UserCheck className="h-3 w-3" />
-            Assign Delivery Boy
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1.5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 shadow-sm"
+              >
+                <UserCheck className="h-3 w-3" />
+                Assign
+                <ChevronDown className="h-3 w-3 opacity-80" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 p-1.5">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-2 py-1.5">
+                Delivery Assignment
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="my-1" />
+              <DropdownMenuItem
+                className="gap-2.5 px-2.5 py-2 cursor-pointer rounded-md focus:bg-emerald-50 dark:focus:bg-emerald-950/30"
+                onClick={() => openAssignDialog(order.orderId, item)}
+              >
+                <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
+                  <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground">Assign Delivery Boy</p>
+                  <p className="text-[10px] text-muted-foreground">Choose a delivery partner for this order</p>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )
       case 'Return Requested':
         return (
