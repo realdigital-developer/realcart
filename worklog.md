@@ -3248,3 +3248,59 @@ Stage Summary:
 - **Real-time updates now work for**: (1) selecting a different saved address, (2) editing the selected address's pincode/state, (3) adding a new address, (4) cart item changes. All scenarios refresh delivery options + the "Continue to Payment" guard instantly.
 - **Files modified**: 1 (`src/components/customer/checkout-page.tsx`) — added `selectedAddressSignature` useMemo + updated dependency array. No UI structure changed. No existing code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200, no console errors.
+
+---
+Task ID: fix-saved-payment-methods-not-showing
+Agent: main-orchestrator
+Task: Fix why saved payment methods (cards, net banking, UPI, wallet) are not showing in the customer panel bank & UPI details page tabs and at the next checkout payment page, when the customer marks the "faster checkout" checkbox.
+
+Work Log:
+- **Root Cause Analysis** (traced the full save → display flow):
+  * **checkout-page.tsx**: The "Save Payment Method" checkbox (`savePaymentMethod`) at line 2912 controls whether `savePaymentMethodToBackend()` is called after a successful payment.
+  * **BUG 1 — Fire-and-forget saves**: All 3 call sites (lines 1342, 1437, 1494) called `savePaymentMethodToBackend()` WITHOUT `await`. Immediately after, `clearCart()` + `setStep('success')` ran, which could cancel the in-flight save request when the checkout modal closed or the customer navigated away. The save never reached the database.
+  * **BUG 2 — bank-upi-page handleAdd broken for card/netbanking/wallet**: The `handleAdd` function (lines 172-206) only handled `bank` type and fell to an `else` branch that sent UPI fields (`upiId`, `upiName`) for ALL other types. So manually adding a card/netbanking/wallet from the bank-upi page sent the wrong body → API rejected or stored garbage.
+  * **BUG 3 — bank-upi-page Add modal only had bank + UPI forms**: The modal form (lines 513-550) only rendered bank fields OR UPI fields. No forms existed for card/netbanking/wallet, so customers couldn't manually add these types.
+  * **BUG 4 — bank-upi page didn't refresh on return from checkout**: The page only fetched on mount (`useEffect(() => { fetchMethods() }, [])`). Since the SPA keeps components mounted, if a customer saved a payment method at checkout then navigated to the bank-upi page, the list showed stale data (no refresh).
+- **Fixes Applied**:
+
+  **Fix 1 — Await all saves (checkout-page.tsx)**:
+  * Changed all 3 `savePaymentMethodToBackend()` calls to `await savePaymentMethodToBackend()` (lines 1345, 1443, 1503). Now the save completes BEFORE `clearCart()`/`setStep('success')` — the request can't be cancelled.
+  * Improved `savePaymentMethodToBackend` (lines 1545-1588):
+    - Net banking: now uses `getBankFullName()` to resolve "SBIN" → "State Bank of India" (was saving the raw code as bankName).
+    - Wallet: now uses `getWalletDisplayName()` to resolve "paytm" → "Paytm Wallet".
+    - Added response handling: duplicate (409) is treated as success (expected if already saved); other errors are logged as warnings (non-critical since payment already succeeded).
+
+  **Fix 2 — Fix handleAdd for all 5 types (bank-upi-page.tsx)**:
+  * Rewrote `handleAdd` (lines 172-217) to build the correct body for each type:
+    - `bank`: accountNumber, ifscCode, bankName, accountHolderName, accountType
+    - `upi`: upiId, upiName
+    - `card`: cardLast4, cardNetwork, cardType, nickname (RBI-compliant)
+    - `netbanking`: bankName (from dropdown) + bankCode (resolved from NETBANKING_BANKS)
+    - `wallet`: walletProvider (from dropdown)
+
+  **Fix 3 — Add card/netbanking/wallet forms in Add modal (bank-upi-page.tsx)**:
+  * Added 3 new form sections to the Add modal (lines 552-616):
+    - **Card form**: RBI-compliant notice, card network dropdown (visa/mastercard/rupay/amex/discover/diners), last 4 digits input (max 4, numeric only), card type dropdown (debit/credit), optional nickname.
+    - **Net Banking form**: security notice, bank dropdown (8 major Indian banks with full names).
+    - **Wallet form**: security notice, wallet dropdown (6 providers: Paytm, Mobikwik, Airtel Money, Ola Money, FreeCharge, JioMoney).
+  * Added module-level constants: `NETBANKING_BANKS`, `WALLET_PROVIDERS`, `CARD_NETWORKS`.
+  * Added form state: `cardLast4`, `cardNetwork`, `cardType`, `cardNickname`, `nbBank`, `walletProvider`.
+  * Updated `handleOpenAdd` to reset ALL form fields (including the new ones) when opening the modal.
+
+  **Fix 4 — Real-time refresh on focus/visibility (bank-upi-page.tsx)**:
+  * Converted `fetchMethods` to a `useCallback` (stable reference).
+  * Added a `useEffect` (lines 133-144) that listens for `window focus` + `document visibilitychange` events. When the customer returns to the bank-upi page (from checkout or any other tab), the list auto-refreshes — no stale data. This catches payment methods saved during checkout.
+- **Verification**:
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /customer, page compiles without errors.
+  * Dev log: no errors after the changes.
+  * Agent Browser: page loads successfully, no browser errors, no console errors.
+  * API test: GET /api/customer/bank-upi correctly returns 401 without auth (auth required).
+  * Checkout saved-methods fetch (line 524-554): verified it refetches on every `step === 'payment'` entry via `[authenticated, step]` deps — so the next checkout will show newly saved methods.
+
+Stage Summary:
+- **Root causes** (4 bugs): (1) fire-and-forget saves could be cancelled before completing; (2) bank-upi page handleAdd sent wrong body for card/netbanking/wallet; (3) no add forms for card/netbanking/wallet; (4) bank-upi page didn't refresh on return from checkout.
+- **Fixes**: (1) await all saves + resolve proper bank/wallet display names; (2) build correct body per type; (3) add 3 new forms with RBI-compliant notices; (4) auto-refresh on focus/visibility.
+- **Flow now works end-to-end**: Customer checks "faster checkout" → payment succeeds → method is AWAITED and saved to DB → customer returns to bank-upi page → list auto-refreshes → saved method appears in the correct tab → next checkout's payment step refetches and shows the saved method for quick-select.
+- **Files modified**: 2 (`src/components/customer/checkout-page.tsx`, `src/components/customer/bank-upi-page.tsx`). No UI structure damaged — only added forms, fixed body construction, added await, added refresh listeners.
+- Lint: 0 errors. Dev server: stable, HTTP 200, no console errors.

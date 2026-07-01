@@ -12,7 +12,7 @@
  *   - Loading skeleton + empty states
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Banknote, Smartphone, Star, Trash2, CheckCircle2, Landmark, X, CreditCard, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,31 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from './page-header'
 import { useLanguage } from '@/components/providers/language-provider'
+
+/** Bank list for the Net Banking dropdown (mirrors checkout page). */
+const NETBANKING_BANKS = [
+  { name: 'State Bank of India', code: 'SBIN' },
+  { name: 'HDFC Bank', code: 'HDFC' },
+  { name: 'ICICI Bank', code: 'ICIC' },
+  { name: 'Axis Bank', code: 'UTIB' },
+  { name: 'Kotak Mahindra Bank', code: 'KKBK' },
+  { name: 'Punjab National Bank', code: 'PUNB' },
+  { name: 'Bank of Baroda', code: 'BARB_R' },
+  { name: 'Canara Bank', code: 'CNRB' },
+]
+
+/** Wallet list for the Wallet dropdown (mirrors checkout page). */
+const WALLET_PROVIDERS = [
+  { name: 'Paytm Wallet', code: 'paytm' },
+  { name: 'Mobikwik', code: 'mobikwik' },
+  { name: 'Airtel Money', code: 'airtelmoney' },
+  { name: 'Ola Money', code: 'olamoney' },
+  { name: 'FreeCharge', code: 'freecharge' },
+  { name: 'JioMoney', code: 'jiomoney' },
+]
+
+/** Card networks for the Card form. */
+const CARD_NETWORKS = ['visa', 'mastercard', 'rupay', 'amex', 'discover', 'diners']
 
 interface PaymentMethod {
   id: string
@@ -61,20 +86,27 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
   const [formError, setFormError] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
-  // Form state
+  // Form state — Bank
   const [accountNumber, setAccountNumber] = useState('')
   const [ifscCode, setIfscCode] = useState('')
   const [bankName, setBankName] = useState('')
   const [accountHolderName, setAccountHolderName] = useState('')
   const [accountType, setAccountType] = useState('savings')
+  // Form state — UPI
   const [upiId, setUpiId] = useState('')
   const [upiName, setUpiName] = useState('')
+  // Form state — Card (RBI-compliant: only last 4 + network)
+  const [cardLast4, setCardLast4] = useState('')
+  const [cardNetwork, setCardNetwork] = useState('visa')
+  const [cardType, setCardType] = useState<'debit' | 'credit'>('debit')
+  const [cardNickname, setCardNickname] = useState('')
+  // Form state — Net Banking
+  const [nbBank, setNbBank] = useState('')
+  // Form state — Wallet
+  const [walletProvider, setWalletProvider] = useState('')
 
-  useEffect(() => {
-    fetchMethods()
-  }, [])
-
-  const fetchMethods = async () => {
+  // Stable fetch callback (used by mount + focus/visibility listeners)
+  const fetchMethods = useCallback(async () => {
     try {
       setLoading(true)
       const res = await fetch('/api/customer/bank-upi')
@@ -87,7 +119,29 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchMethods()
+  }, [fetchMethods])
+
+  // ── Real-time refresh: refetch when the tab regains focus or visibility ──
+  // This catches payment methods saved during checkout (which happens in a
+  // different view/modal). When the customer returns to this page, the list
+  // refreshes automatically — no stale data.
+  useEffect(() => {
+    const handleFocus = () => fetchMethods()
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchMethods()
+    }
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [fetchMethods])
 
   const bankAccounts = methods.filter((m) => m.type === 'bank')
   const upiIds = methods.filter((m) => m.type === 'upi')
@@ -98,6 +152,7 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
   const handleOpenAdd = (type: 'bank' | 'upi' | 'card' | 'netbanking' | 'wallet') => {
     setAddType(type)
     setFormError(null)
+    // Reset ALL form fields
     setAccountNumber('')
     setIfscCode('')
     setBankName('')
@@ -105,6 +160,12 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
     setAccountType('savings')
     setUpiId('')
     setUpiName('')
+    setCardLast4('')
+    setCardNetwork('visa')
+    setCardType('debit')
+    setCardNickname('')
+    setNbBank('')
+    setWalletProvider('')
     setAddModalOpen(true)
   }
 
@@ -119,9 +180,20 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
         body.bankName = bankName
         body.accountHolderName = accountHolderName
         body.accountType = accountType
-      } else {
+      } else if (addType === 'upi') {
         body.upiId = upiId
         body.upiName = upiName
+      } else if (addType === 'card') {
+        // RBI-compliant: only last 4 digits + network (no full PAN/expiry/CVV)
+        body.cardLast4 = cardLast4
+        body.cardNetwork = cardNetwork
+        body.cardType = cardType
+        body.nickname = cardNickname.trim() || `${cardNetwork} ${cardType} ****${cardLast4}`
+      } else if (addType === 'netbanking') {
+        body.bankName = nbBank
+        body.bankCode = NETBANKING_BANKS.find((b) => b.name === nbBank)?.code || ''
+      } else if (addType === 'wallet') {
+        body.walletProvider = walletProvider
       }
 
       const res = await fetch('/api/customer/bank-upi', {
@@ -438,7 +510,7 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
               <p className="text-[11px] text-red-600 dark:text-red-400">{formError}</p>
             </div>
           )}
-          {addType === 'bank' ? (
+          {addType === 'bank' && (
             <>
               <div>
                 <Label className="text-xs">Account Holder Name *</Label>
@@ -464,7 +536,8 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
                 </select>
               </div>
             </>
-          ) : (
+          )}
+          {addType === 'upi' && (
             <>
               <div>
                 <Label className="text-xs">UPI ID *</Label>
@@ -473,6 +546,71 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
               <div>
                 <Label className="text-xs">Name (optional)</Label>
                 <Input value={upiName} onChange={(e) => setUpiName(e.target.value)} placeholder="e.g., John Doe" className="mt-1 h-10" />
+              </div>
+            </>
+          )}
+          {addType === 'card' && (
+            <>
+              <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30">
+                <p className="text-[10px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  <CreditCard className="h-3 w-3" />
+                  RBI-compliant: Only last 4 digits + network are stored. No full card number, expiry, or CVV.
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Card Network *</Label>
+                <select value={cardNetwork} onChange={(e) => setCardNetwork(e.target.value)} className="mt-1 w-full h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm capitalize">
+                  {CARD_NETWORKS.map((n) => <option key={n} value={n} className="capitalize">{n}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Last 4 Digits *</Label>
+                <Input value={cardLast4} onChange={(e) => setCardLast4(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="e.g., 1234" className="mt-1 h-10" inputMode="numeric" maxLength={4} />
+              </div>
+              <div>
+                <Label className="text-xs">Card Type</Label>
+                <select value={cardType} onChange={(e) => setCardType(e.target.value as 'debit' | 'credit')} className="mt-1 w-full h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm">
+                  <option value="debit">Debit Card</option>
+                  <option value="credit">Credit Card</option>
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Nickname (optional)</Label>
+                <Input value={cardNickname} onChange={(e) => setCardNickname(e.target.value)} placeholder="e.g., My HDFC Card" className="mt-1 h-10" />
+              </div>
+            </>
+          )}
+          {addType === 'netbanking' && (
+            <>
+              <div className="p-2.5 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/30">
+                <p className="text-[10px] text-orange-700 dark:text-orange-400 flex items-center gap-1">
+                  <Landmark className="h-3 w-3" />
+                  Only the bank name is stored. No credentials are ever saved.
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Select Bank *</Label>
+                <select value={nbBank} onChange={(e) => setNbBank(e.target.value)} className="mt-1 w-full h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm">
+                  <option value="">Choose your bank…</option>
+                  {NETBANKING_BANKS.map((b) => <option key={b.code} value={b.name}>{b.name}</option>)}
+                </select>
+              </div>
+            </>
+          )}
+          {addType === 'wallet' && (
+            <>
+              <div className="p-2.5 rounded-lg bg-pink-50 dark:bg-pink-900/20 border border-pink-100 dark:border-pink-800/30">
+                <p className="text-[10px] text-pink-700 dark:text-pink-400 flex items-center gap-1">
+                  <Wallet className="h-3 w-3" />
+                  Only the wallet provider name is stored. No credentials are ever saved.
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Select Wallet *</Label>
+                <select value={walletProvider} onChange={(e) => setWalletProvider(e.target.value)} className="mt-1 w-full h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm">
+                  <option value="">Choose your wallet…</option>
+                  {WALLET_PROVIDERS.map((w) => <option key={w.code} value={w.name}>{w.name}</option>)}
+                </select>
               </div>
             </>
           )}

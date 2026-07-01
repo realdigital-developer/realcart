@@ -1338,8 +1338,11 @@ export function CheckoutPage({
 
               // Save payment method if customer opted in (RBI-compliant)
               // Skip if using a saved method (already stored)
+              // AWAIT the save so it completes before navigating to success —
+              // prevents the request from being cancelled when the checkout
+              // modal closes or the customer navigates away.
               if (savePaymentMethod && !selectedSavedMethodId) {
-                savePaymentMethodToBackend('upi', { vpa: upiId })
+                await savePaymentMethodToBackend('upi', { vpa: upiId })
               }
 
               clearCart()
@@ -1433,8 +1436,11 @@ export function CheckoutPage({
 
         // Save payment method if customer opted in (RBI-compliant)
         // Skip if using a saved method (already stored)
+        // AWAIT the save so it completes before navigating to success —
+        // prevents the request from being cancelled when the checkout
+        // modal closes or the customer navigates away.
         if (savePaymentMethod && !selectedSavedMethodId) {
-          savePaymentMethodToBackend(method, data)
+          await savePaymentMethodToBackend(method, data)
         }
 
         clearCart()
@@ -1490,8 +1496,11 @@ export function CheckoutPage({
 
         // Save payment method if customer opted in (RBI-compliant)
         // Skip if using a saved method (already stored)
+        // AWAIT the save so it completes before navigating to success —
+        // prevents the request from being cancelled when the checkout
+        // modal closes or the customer navigates away.
         if (savePaymentMethod && !selectedSavedMethodId) {
-          savePaymentMethodToBackend(method, data)
+          await savePaymentMethodToBackend(method, data)
         }
 
         clearCart()
@@ -1548,19 +1557,31 @@ export function CheckoutPage({
         body.nickname = `${body.cardNetwork} ${body.cardType} ****${body.cardLast4}`
       } else if (method === 'netbanking') {
         body.type = 'netbanking'
-        body.bankName = paymentData.bank || selectedBank
-        body.bankCode = ''
+        // Resolve the full bank name from the code (e.g. "SBIN" → "State Bank of India")
+        const bankCodeOrName = (paymentData.bank as string) || selectedBank || ''
+        body.bankName = getBankFullName(bankCodeOrName)
+        body.bankCode = bankCodeOrName
       } else if (method === 'wallet') {
         body.type = 'wallet'
-        body.walletProvider = paymentData.wallet || selectedWallet
+        // Resolve the wallet display name from the code (e.g. "paytm" → "Paytm Wallet")
+        const walletCode = (paymentData.wallet as string) || selectedWallet || ''
+        body.walletProvider = getWalletDisplayName(walletCode)
       } else {
         return
       }
-      await fetch('/api/customer/bank-upi', {
+      const res = await fetch('/api/customer/bank-upi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      if (!res.ok) {
+        // Duplicate (409) is expected if the method was already saved —
+        // treat as success. Other errors are non-critical (payment already succeeded).
+        const errData = await res.json().catch(() => ({}))
+        if (errData?.error && !String(errData.error).toLowerCase().includes('already')) {
+          console.warn('[Save Payment Method] Non-critical save error:', errData.error)
+        }
+      }
     } catch {
       // Non-critical — payment already succeeded
     }
