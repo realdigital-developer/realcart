@@ -3191,3 +3191,60 @@ Stage Summary:
 - **Files modified**: 1 component (`checkout-page.tsx`) + 10 locale files (added `checkout.checkingDelivery` key).
 - **No damage**: No existing UI or code was damaged. The delivery options UI, price summary, address selection, and all other checkout functionality remain untouched. Only the button's enabled/disabled state and the reason message were added.
 - Lint: 0 errors. Dev server: stable, HTTP 200, no console errors.
+
+---
+Task ID: fix-real-time-delivery-options-on-address-update
+Agent: main-orchestrator
+Task: Fix why the "delivery option" is not updating in real-time when a customer changes or updates their address on the order summary (checkout) page. Everything should update in real-time.
+
+Work Log:
+- **Root Cause Analysis**:
+  * Traced the delivery-options fetch logic in `src/components/customer/checkout-page.tsx`:
+    - The `useEffect` that fetches delivery options (POST /api/customer/delivery/check) had dependency array `[selectedAddressId, items]` (line 641).
+    - This ONLY re-fires when the **address ID** changes (customer picks a different saved address) OR when cart items change.
+  * **THE BUG**: When a customer **EDITS an existing address** (e.g. changes the pincode from 560001 to 700001 within the same address `_id`), `selectedAddressId` stays the SAME. The dependency array didn't change, so the `useEffect` did NOT re-fire, and the delivery options remained STALE (showing the old pincode's options/availability).
+  * Flow that was broken:
+    1. Customer clicks "Edit" on the selected address
+    2. Changes pincode/state in the edit form
+    3. `handleSaveAddress` PUTs the update → GETs refreshed `addresses` array → `setAddresses(data.addresses)` updates state with NEW content
+    4. BUT `selectedAddressId` is unchanged (same _id), so the delivery-fetch `useEffect` did NOT re-run
+    5. Delivery options UI showed stale data from the OLD pincode
+- **Fix** (robust, content-based reactivity):
+  * Added a new `selectedAddressSignature` useMemo (lines 581-593):
+    ```tsx
+    const selectedAddressSignature = useMemo(() => {
+      const addr = addresses.find((a) => a._id === selectedAddressId)
+      if (!addr) return ''
+      return `${addr.pincode || ''}|${addr.state || ''}`
+    }, [addresses, selectedAddressId])
+    ```
+    This computes a stable string from the SELECTED address's **content** (pincode + state), not just its ID. When the address content changes (edit), the signature changes, even though the `_id` stays the same.
+  * Added `selectedAddressSignature` to the delivery-fetch `useEffect` dependency array (line 661):
+    ```tsx
+    }, [selectedAddressId, selectedAddressSignature, items])
+    ```
+    Now the effect re-fires on THREE triggers:
+    1. `selectedAddressId` — customer picks a different saved address
+    2. `selectedAddressSignature` — customer EDITS the selected address (pincode/state changed, same _id)
+    3. `items` — cart contents changed (price/qty/product)
+  * Added comprehensive documentation comments explaining the real-time refresh design.
+- **How it works end-to-end now**:
+  1. Customer edits selected address → `handleSaveAddress` PUT + GET refresh
+  2. `setAddresses(data.addresses)` updates the `addresses` array with new content
+  3. `selectedAddressSignature` useMemo recomputes (deps: `[addresses, selectedAddressId]`) → new signature string (e.g. "700001|West Bengal" instead of "560001|Karnataka")
+  4. Delivery-fetch `useEffect` sees changed `selectedAddressSignature` in deps → re-fires
+  5. POST /api/customer/delivery/check with NEW pincode/state → fresh delivery options
+  6. `setDeliveryOptions(opts)` updates UI → customer sees real-time updated delivery options + the `canContinueToPayment` guard (from previous task) also re-evaluates instantly
+- **Verification**:
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /customer, page compiles without errors.
+  * Dev log: no errors after the change. Delivery check API calls returning 200.
+  * Agent Browser: page loads successfully, no browser errors, no console errors (only normal React DevTools info + HMR logs).
+  * Code review confirmed: only ONE delivery-fetch useEffect exists, now with correct deps.
+
+Stage Summary:
+- **Root cause**: The delivery-options fetch `useEffect` depended only on `[selectedAddressId, items]`. When a customer EDITED an existing address (same `_id`, different pincode/state), the ID didn't change, so the effect didn't re-fire → stale delivery options.
+- **Fix**: Added a `selectedAddressSignature` useMemo that derives a stable string from the selected address's pincode + state content. Added this signature to the `useEffect` deps. Now ANY change to the selected address's content (edit) OR a different address selection instantly triggers a fresh delivery check.
+- **Real-time updates now work for**: (1) selecting a different saved address, (2) editing the selected address's pincode/state, (3) adding a new address, (4) cart item changes. All scenarios refresh delivery options + the "Continue to Payment" guard instantly.
+- **Files modified**: 1 (`src/components/customer/checkout-page.tsx`) — added `selectedAddressSignature` useMemo + updated dependency array. No UI structure changed. No existing code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200, no console errors.

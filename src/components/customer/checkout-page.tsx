@@ -578,11 +578,31 @@ export function CheckoutPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authenticated, step])
 
+  // === Selected address content signature (for real-time delivery refresh) ===
+  // Computes a stable string from the SELECTED address's pincode + state.
+  // This is the key to real-time delivery-option updates: when a customer
+  // EDITS an existing address (same _id but different pincode/state), the
+  // `selectedAddressId` doesn't change, so a plain [selectedAddressId] dep
+  // would NOT trigger a re-fetch. By depending on the actual address
+  // CONTENT (pincode + state), any edit to the selected address instantly
+  // re-runs the delivery check — no stale options.
+  const selectedAddressSignature = useMemo(() => {
+    const addr = addresses.find((a) => a._id === selectedAddressId)
+    if (!addr) return ''
+    return `${addr.pincode || ''}|${addr.state || ''}`
+  }, [addresses, selectedAddressId])
+
   // === Fetch delivery options (standard + express) for the selected address ===
   // Hits the delivery engine every time the selected address OR cart contents
   // change. Returns a UI-ready list of options with ETA + charge for each.
   // Auto-selects 'standard' on first load; preserves a manual customer pick
   // across refetches (e.g. when they switch addresses after picking express).
+  //
+  // DEPENDENCIES (real-time refresh):
+  //   - selectedAddressId            → customer picks a different saved address
+  //   - selectedAddressSignature     → customer EDITS the selected address
+  //                                    (pincode/state changed, same _id)
+  //   - items                        → cart contents changed (price/qty/product)
   useEffect(() => {
     const addr = addresses.find((a) => a._id === selectedAddressId)
     // Need a valid pincode + at least one item to compute an estimate
@@ -638,7 +658,7 @@ export function CheckoutPage({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAddressId, items])
+  }, [selectedAddressId, selectedAddressSignature, items])
 
   // The currently-selected option snapshot (looked up from deliveryOptions).
   // Falls back to a sensible default if the API hasn't responded yet.
