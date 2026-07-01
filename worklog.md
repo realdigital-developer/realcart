@@ -3091,3 +3091,47 @@ Stage Summary:
 - **Fix**: Recreated `.zscripts/dev.sh` with a hardened, robust version (stale-process killer, 90s wait loop, process-death detection, HTTP verification). Started the dev server successfully.
 - **Result**: Dev server running on port 3000 (HTTP 200), all routes responding, MongoDB connected, UI rendering correctly (32KB HTML with RealCart title). No errors. No UI or code damaged.
 - **Note**: This is a known recurring issue — the script must be recreated each time the sandbox restarts because it is intentionally NOT tracked in the GitHub repository (to keep sandbox plumbing out of the production codebase). The script is now more robust than before with better error handling and process management.
+
+---
+Task ID: fix-sandbox-preview-not-opening-2
+Agent: main-orchestrator
+Task: Fix why the code and preview of the project cannot be opened in the sandbox (recurring issue).
+
+Work Log:
+- **Diagnosis**:
+  * `curl http://localhost:3000` → HTTP 000 (connection refused). No process on port 3000.
+  * `.zscripts/` directory: MISSING (gitignored — confirmed in .gitignore: `/.zscripts/`).
+  * `dev.log`: MISSING (created at runtime by the dev script).
+  * No next/bun/node processes running.
+  * `node_modules` + `next` binary: PRESENT (dependencies were installed).
+  * **Root cause**: Same recurring issue as before — the `.zscripts/dev.sh` bootstrap script is gitignored (intentionally, to keep sandbox plumbing out of the GitHub repo). When the sandbox restarts, the script doesn't exist, so the preview system cannot start the dev server.
+- **Fix**:
+  * Recreated `.zscripts/` directory.
+  * Recreated `.zscripts/dev.sh` (robust hardened version):
+    1. Checks `node_modules`/`next` binary; runs `bun install` if missing.
+    2. Kills any stale process on port 3000 (prevents "port already in use").
+    3. Starts dev server via `nohup bun run dev` (survives script exit).
+    4. Writes PID to `.zscripts/dev.pid`.
+    5. Waits up to 90s for HTTP reachability (generous compile time for Next.js 16 large codebase).
+    6. Detects unexpected process death and prints last 20 lines of dev.log.
+    7. Final HTTP code verification (200/307/308 = success).
+    8. `disown` so background process isn't killed when script exits.
+  * Made script executable (`chmod +x`).
+- **Verification**:
+  * Ran `bash .zscripts/dev.sh`:
+    - `[BOOT] node_modules exists, skipping install`
+    - `[BOOT] Dev server PID: 1176`
+    - `[BOOT] Server ready after 2s!`
+    - `[BOOT] SUCCESS — dev server responding with HTTP 200 on port 3000`
+  * Post-start verification:
+    - `curl http://localhost:3000` → HTTP 200 in 1.03s
+    - Process running: `next-server (v16.1.3)` PID 1194
+    - HTML renders: `<html lang="en">`, `<title>RealCart</title>`, 32,619 bytes — UI fully intact
+    - dev.log shows all routes returning 200: `/`, `/customer?tab=account`, `/api/auth/customer/session`, `/api/admin/logo`, `/api/admin/schemas`, `/api/customer/wishlist`, `/api/customer/cart`, `/api/hero-slides`, `/api/products` (4 sort variants), `/api/categories`, `/api/customer/notifications`, `/api/customer/top-vendors`
+    - Error check: NONE (grep for error/fail/exception/cannot find/module not found returned empty)
+
+Stage Summary:
+- **Root cause**: The `.zscripts/dev.sh` bootstrap script is gitignored (sandbox-specific) and doesn't persist across sandbox restarts. Without it, the sandbox preview system cannot start the dev server, so the preview panel shows nothing.
+- **Fix**: Recreated `.zscripts/dev.sh` with a hardened, robust version (stale-process killer, 90s wait loop, process-death detection, HTTP verification). Started the dev server successfully.
+- **Result**: Dev server running on port 3000 (HTTP 200), all routes responding, UI rendering correctly (32KB HTML with RealCart title). No errors. No UI or code damaged.
+- **Note**: This is a known recurring issue — the script must be recreated each time the sandbox restarts because it is intentionally NOT tracked in the GitHub repository. The script is robust with error handling and process management.
