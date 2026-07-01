@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
       pickupAddress: seller.pickupAddress || null,
       documents: seller.documents || null,
       profileImage: seller.profileImage || null,
+      coverImage: seller.coverImage || null,
       verificationStatus: seller.verificationStatus || 'pending',
       verificationNotes: seller.verificationNotes || [],
       role: seller.role || 'seller',
@@ -192,6 +193,7 @@ export async function PUT(request: NextRequest) {
       pickupAddress: updatedSeller!.pickupAddress || null,
       documents: updatedSeller!.documents || null,
       profileImage: updatedSeller!.profileImage || null,
+      coverImage: updatedSeller!.coverImage || null,
       verificationStatus: updatedSeller!.verificationStatus || 'pending',
       verificationNotes: updatedSeller!.verificationNotes || [],
       role: updatedSeller!.role || 'seller',
@@ -213,14 +215,16 @@ export async function PUT(request: NextRequest) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  POST /api/seller/profile                                           */
-/*  Upload seller profile image. Body: FormData with 'file' field.     */
+/*  POST /api/seller/profile?type=profile|cover                        */
+/*  Upload seller profile/cover image. Body: FormData with 'file'.      */
 /* ------------------------------------------------------------------ */
 
 export async function POST(request: NextRequest) {
   try {
     const { error, session } = await authenticateSeller(request)
     if (error || !session) return error
+
+    const uploadType = (new URL(request.url).searchParams.get('type') || 'profile') as 'profile' | 'cover'
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -238,22 +242,24 @@ export async function POST(request: NextRequest) {
     const { db } = await connectToDatabase()
     const sellerId = session.id
 
+    const fieldName = uploadType === 'cover' ? 'coverImage' : 'profileImage'
+
     // Get existing seller to check for old image
     const existingSeller = await db.collection('sellers').findOne(
       { _id: new ObjectId(sellerId) },
-      { projection: { profileImage: 1 } }
+      { projection: { profileImage: 1, coverImage: 1 } }
     )
 
-    // Delete old profile image from Cloudinary if it exists
-    if (existingSeller?.profileImage?.publicId) {
-      await deleteFile(existingSeller.profileImage.publicId)
+    // Delete old image from Cloudinary if it exists
+    if (existingSeller?.[fieldName]?.publicId) {
+      await deleteFile(existingSeller[fieldName].publicId)
     }
 
     // Upload the new image
     const buffer = Buffer.from(await file.arrayBuffer())
     const result = await uploadProfileImage(buffer, file.type, sellerId)
 
-    const profileImageMeta = {
+    const imageMeta = {
       url: result.url,
       publicId: result.publicId,
       uploadedAt: new Date(),
@@ -264,7 +270,7 @@ export async function POST(request: NextRequest) {
       { _id: new ObjectId(sellerId) },
       {
         $set: {
-          profileImage: profileImageMeta,
+          [fieldName]: imageMeta,
           updatedAt: new Date(),
         },
       }
@@ -272,14 +278,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      profileImage: {
-        url: profileImageMeta.url,
-        publicId: profileImageMeta.publicId,
+      [fieldName]: {
+        url: imageMeta.url,
+        publicId: imageMeta.publicId,
       },
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to upload profile image'
-    console.error('[Seller Profile Image Upload Error]', message)
+    const message = error instanceof Error ? error.message : 'Failed to upload image'
+    console.error('[Seller Image Upload Error]', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

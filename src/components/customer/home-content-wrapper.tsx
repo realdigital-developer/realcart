@@ -13,6 +13,7 @@ import { useBackToExit } from '@/hooks/use-back-to-exit'
 import { ExitToast } from './exit-toast'
 import { ImageSearchDialog } from './image-search-dialog'
 import { useLanguage } from '@/components/providers/language-provider'
+import { createTimeoutSignal } from '@/lib/utils'
 import type { Product, CategoryItem } from './types'
 import type { HeroSlide } from './hero-slider'
 import type { Vendor } from './home-content-sections'
@@ -75,6 +76,10 @@ const parentTabMap: Partial<Record<ExtendedTab, ExtendedTab>> = {
   'wallet': 'account',
   'referral': 'account',
   'help': 'account',
+  // 'orders' is normally a bottom-nav tab (no parent), but when opened with
+  // an orderId param (deep link from notifications), we set 'notifications'
+  // as the parent so the back button returns there after a refresh.
+  // This is handled dynamically in the navHistory initializer below.
 }
 
 // Navigation history entry — tracks how a page was reached
@@ -113,6 +118,18 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
         { tab: parentTab, fromBottomNav: true },
         { tab, fromBottomNav: false },
       ]
+    }
+
+    // Special case: 'orders' tab with orderId in the URL = deep link from
+    // notifications. Set 'notifications' as the parent so back button works.
+    if (tab === 'orders' && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('orderId')) {
+        return [
+          { tab: 'notifications' as ExtendedTab, fromBottomNav: true },
+          { tab, fromBottomNav: false },
+        ]
+      }
     }
 
     return [{ tab, fromBottomNav: true }]
@@ -209,7 +226,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
     async function fetchCategories() {
       try {
         const res = await fetch('/api/categories', {
-          signal: AbortSignal.timeout(10000),
+          signal: createTimeoutSignal(10000),
           cache: 'no-store',
         })
         const data = await res.json()
@@ -238,7 +255,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
     async function fetchHeroSlides() {
       try {
         const res = await fetch('/api/hero-slides', {
-          signal: AbortSignal.timeout(10000),
+          signal: createTimeoutSignal(10000),
           cache: 'no-store',
         })
         const data = await res.json()
@@ -273,11 +290,11 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
     async function fetchHomeSections() {
       try {
         const [deals, newest, rated, popular, vendorsRes] = await Promise.allSettled([
-          fetch('/api/products?sort=discount&limit=4&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
-          fetch('/api/products?sort=newest&limit=8&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
-          fetch('/api/products?sort=rating&limit=4&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
-          fetch('/api/products?sort=popularity&limit=8&filters=false', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { products: [] }),
-          fetch('/api/customer/top-vendors', { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : { vendors: [] }),
+          fetch('/api/products?sort=discount&limit=4&filters=false', { signal: createTimeoutSignal(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/products?sort=newest&limit=8&filters=false', { signal: createTimeoutSignal(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/products?sort=rating&limit=4&filters=false', { signal: createTimeoutSignal(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/products?sort=popularity&limit=8&filters=false', { signal: createTimeoutSignal(10000) }).then(r => r.ok ? r.json() : { products: [] }),
+          fetch('/api/customer/top-vendors', { signal: createTimeoutSignal(10000) }).then(r => r.ok ? r.json() : { vendors: [] }),
         ])
         if (cancelled) return
         const get = (r: PromiseSettledResult<{ products: Product[] }>) => r.status === 'fulfilled' ? r.value.products || [] : []
@@ -348,9 +365,16 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
   }, [])
 
   // In-page navigation — pushes onto history (always shows back button)
-  const handleAccountNavigate = useCallback((tab: string, _params?: Record<string, string>) => {
+  const handleAccountNavigate = useCallback((tab: string, params?: Record<string, string>) => {
     if (validTabs.includes(tab as ExtendedTab)) {
       setNavHistory(prev => [...prev, { tab: tab as ExtendedTab, fromBottomNav: false }])
+      // If navigating to orders with an orderId param, set it in the URL
+      // so the OrdersPage can auto-load the order detail
+      if (tab === 'orders' && params?.orderId && typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        url.searchParams.set('orderId', params.orderId)
+        window.history.replaceState({}, '', url.toString())
+      }
     }
   }, [])
 

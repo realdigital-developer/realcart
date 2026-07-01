@@ -116,6 +116,7 @@ interface SellerProfile {
     address_proof?: DocumentInfo
   }
   profileImage?: { url: string; publicId: string } | null
+  coverImage?: { url: string; publicId: string } | null
   verificationStatus: 'pending' | 'verified' | 'rejected' | 'resubmission_requested' | 'in_review'
   verificationNotes: VerificationNote[]
   role: string
@@ -673,6 +674,10 @@ export default function SellerProfilePage() {
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false)
   const profileImageInputRef = useRef<HTMLInputElement | null>(null)
 
+  // Cover image upload state
+  const [uploadingCoverImage, setUploadingCoverImage] = useState(false)
+  const coverImageInputRef = useRef<HTMLInputElement | null>(null)
+
   // Handle profile image upload
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -724,6 +729,57 @@ export default function SellerProfilePage() {
       // Reset input so the same file can be selected again
       if (profileImageInputRef.current) {
         profileImageInputRef.current.value = ''
+      }
+    }
+  }
+
+  // Handle cover image upload
+  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file type', description: 'Please select an image file', variant: 'destructive' })
+      return
+    }
+    if (file.size > 3.1 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Image must be under 3.1MB', variant: 'destructive' })
+      return
+    }
+
+    setUploadingCoverImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/seller/profile?type=cover', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to upload cover image')
+      }
+
+      const data = await res.json()
+      if (profile && data.coverImage) {
+        setProfile({
+          ...profile,
+          coverImage: { url: data.coverImage.url, publicId: data.coverImage.publicId },
+        })
+      }
+      toast({ title: 'Cover image updated', description: 'Your cover photo has been updated successfully' })
+    } catch (err) {
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Failed to upload cover image',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingCoverImage(false)
+      if (coverImageInputRef.current) {
+        coverImageInputRef.current.value = ''
       }
     }
   }
@@ -932,81 +988,92 @@ export default function SellerProfilePage() {
       <EditBankDetailsDialog open={editBankOpen} onOpenChange={setEditBankOpen} profile={profile} onSave={handleSaveBank} saving={savingField === 'bank'} />
       <EditPickupAddressDialog open={editPickupOpen} onOpenChange={setEditPickupOpen} profile={profile} onSave={handleSavePickup} saving={savingField === 'pickup'} />
 
-      {/* ═══════════════════ Profile Header Card ═══════════════════ */}
+      {/* ═══════════════════ Profile Header Card — Reference UI Design ═══════════════════ */}
       <motion.div variants={itemVariants}>
-        <Card className="overflow-hidden">
-          <div className="h-28 sm:h-36 bg-gradient-to-br from-emerald-600 via-teal-500 to-emerald-700 relative">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50" />
-            <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
-              <Link href="/seller/settings">
-                <Button size="sm" className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 gap-1.5 h-8">
-                  <Settings className="h-3.5 w-3.5" />
-                  Settings
-                </Button>
-              </Link>
+        <Card className="overflow-hidden border-border/60 shadow-xl">
+          {/* ── Cover Section: h-32, rounded-t, overflow hidden ── */}
+          <div className="group relative h-32 overflow-hidden rounded-t-lg">
+            {profile.coverImage?.url ? (
+              <img src={profile.coverImage.url} alt="Cover" className="object-cover object-top w-full h-full" />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-500 to-emerald-700" />
+            )}
+            {/* Cover upload button — top-right, always visible */}
+            <button
+              onClick={() => coverImageInputRef.current?.click()}
+              disabled={uploadingCoverImage}
+              className="absolute top-2.5 right-2.5 z-10 h-8 w-8 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors cursor-pointer disabled:cursor-not-allowed"
+              aria-label="Upload cover image"
+              title="Upload cover image"
+            >
+              {uploadingCoverImage ? (
+                <Loader2 className="h-4 w-4 text-white animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4 text-white" />
+              )}
+            </button>
+            <input ref={coverImageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleCoverImageUpload} className="hidden" />
+          </div>
+
+          {/* ── Profile Avatar: w-32 h-32, circular, -mt-16, border-4 border-white ── */}
+          <div className="flex justify-center">
+            <div className="relative group w-32 h-32 -mt-16 border-4 border-card rounded-full overflow-hidden shadow-lg flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 z-10">
+              {profile.profileImage?.url ? (
+                <img src={profile.profileImage.url} alt={profile.storeName || 'Profile'} className="object-cover object-center w-full h-full" />
+              ) : (
+                <span className="text-4xl font-bold text-white">{profile.storeName?.charAt(0)?.toUpperCase() || 'S'}</span>
+              )}
+              {/* Camera overlay — appears on hover */}
+              <button
+                onClick={() => profileImageInputRef.current?.click()}
+                disabled={uploadingProfileImage}
+                className="absolute inset-0 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer disabled:cursor-not-allowed"
+                aria-label="Upload profile image"
+                title="Upload profile image"
+              >
+                {uploadingProfileImage ? (
+                  <Loader2 className="h-6 w-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="h-6 w-6 text-white" />
+                )}
+              </button>
+              <input ref={profileImageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleProfileImageUpload} className="hidden" />
             </div>
           </div>
-          <CardContent className="pt-0 px-4 sm:px-6 pb-5">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-10 sm:-mt-12">
-              {/* Profile Avatar with Image Upload */}
-              <div className="relative group flex-shrink-0">
-                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border-4 border-card shadow-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500">
-                  {profile.profileImage?.url ? (
-                    <img
-                      src={profile.profileImage.url}
-                      alt={profile.storeName || 'Profile'}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xl sm:text-3xl font-bold text-white">{profile.storeName?.charAt(0)?.toUpperCase() || 'S'}</span>
-                  )}
-                </div>
-                {/* Camera overlay button — appears on hover, always visible on mobile */}
-                <button
-                  onClick={() => profileImageInputRef.current?.click()}
-                  disabled={uploadingProfileImage}
-                  className="absolute inset-0 rounded-2xl bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer disabled:cursor-not-allowed"
-                  aria-label="Upload profile image"
-                  title="Upload profile image"
-                >
-                  {uploadingProfileImage ? (
-                    <Loader2 className="h-6 w-6 text-white animate-spin" />
-                  ) : (
-                    <Camera className="h-6 w-6 text-white" />
-                  )}
-                </button>
-                {/* Hidden file input */}
-                <input
-                  ref={profileImageInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  onChange={handleProfileImageUpload}
-                  className="hidden"
-                />
-              </div>
-              <div className="flex-1 min-w-0 sm:pb-1">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight truncate">{profile.storeName || 'My Store'}</h1>
-                  {profile.isVerified ? (
-                    <Badge className="gap-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5">
-                      <BadgeCheck className="h-3.5 w-3.5" /> Verified
-                    </Badge>
-                  ) : (
-                    <Badge className="gap-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5">
-                      <ShieldAlert className="h-3.5 w-3.5" /> Unverified
-                    </Badge>
-                  )}
-                  {profile.status === 'Active' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400">Active</Badge>}
-                  {profile.status === 'Blocked' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">Blocked</Badge>}
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground"><User className="h-3.5 w-3.5" /><span>{profile.name}</span></div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground"><Building2 className="h-3.5 w-3.5" /><span>{BUSINESS_TYPE_LABELS[profile.businessType] || profile.businessType || '\u2014'}</span></div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground"><Calendar className="h-3.5 w-3.5" /><span>Member for {formatMemberSince(stats.memberDays)}</span></div>
-                </div>
-              </div>
+
+          {/* ── Seller Info: centered text ── */}
+          <div className="text-center mt-2 px-4">
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              <h2 className="text-lg font-semibold text-foreground">{profile.storeName || 'My Store'}</h2>
+              {profile.isVerified ? (
+                <Badge className="gap-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-2 py-0 h-5 text-[10px]">
+                  <BadgeCheck className="h-3 w-3" /> Verified
+                </Badge>
+              ) : (
+                <Badge className="gap-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2 py-0 h-5 text-[10px]">
+                  <ShieldAlert className="h-3 w-3" /> Unverified
+                </Badge>
+              )}
             </div>
-          </CardContent>
+            <p className="text-sm text-muted-foreground mt-0.5">{profile.name}</p>
+          </div>
+
+          {/* ── Separator ── */}
+          <div className="border-t mx-8 mt-3" />
+
+          {/* ── Info Pills: centered ── */}
+          <div className="px-4 py-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
+            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted/50">
+              <Building2 className="h-3 w-3" />
+              <span>{BUSINESS_TYPE_LABELS[profile.businessType] || profile.businessType || '\u2014'}</span>
+            </div>
+            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted/50">
+              <Calendar className="h-3 w-3" />
+              <span>{formatMemberSince(stats.memberDays)}</span>
+            </div>
+            {profile.status === 'Active' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400">Active</Badge>}
+            {profile.status === 'Blocked' && <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">Blocked</Badge>}
+          </div>
         </Card>
       </motion.div>
 
@@ -1019,6 +1086,21 @@ export default function SellerProfilePage() {
           <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center flex-shrink-0"><Star className="h-5 w-5 text-orange-500 dark:text-orange-400" /></div><div className="min-w-0"><p className="text-xs text-muted-foreground font-medium">Rating</p><div className="flex items-center gap-1"><p className="text-lg font-bold text-foreground leading-tight">{stats.averageRating}</p><Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" /></div><p className="text-[10px] text-muted-foreground">{stats.totalReviews} reviews</p></div></div></CardContent></Card>
         </div>
       </motion.div>
+
+      {/* ═══════════════════ Verified Seller Banner (only if verified) ═══════════════════ */}
+      {profile.isVerified && (
+        <motion.div variants={itemVariants}>
+          <div className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+            <div className="h-9 w-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Verified Seller</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">Your account and documents are verified. You have full access to all seller features.</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* ═══════════════════ Tabbed Content ═══════════════════ */}
       <motion.div variants={itemVariants}>

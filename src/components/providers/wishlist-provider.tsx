@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
 import { WishlistItem } from '@/components/customer/types'
+import { createTimeoutSignal } from '@/lib/utils'
 
 interface WishlistContextType {
   items: WishlistItem[]
@@ -100,7 +101,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const fetchServerWishlist = useCallback(async () => {
     try {
       const res = await fetch('/api/customer/wishlist', {
-        signal: AbortSignal.timeout(8000), // 8s timeout
+        signal: createTimeoutSignal(8000), // 8s timeout
       })
       if (res.ok) {
         const data = await res.json()
@@ -131,7 +132,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ productId: item.productId }),
-              signal: AbortSignal.timeout(5000),
+              signal: createTimeoutSignal(5000),
             })
           } catch {
             // Skip this item if it fails

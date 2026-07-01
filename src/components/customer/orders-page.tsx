@@ -1456,6 +1456,13 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
 
   // Track if we've already attempted to load an order detail from URL orderId
   const urlOrderIdLoaded = useRef(false)
+  // Track if the order detail was opened from a notification (deep link)
+  // — if so, pressing back from the detail view should go directly to the
+  // previous page (notifications), not the orders list.
+  const openedFromDeepLink = useRef(false)
+  // Track if we're loading a deep-linked order detail — while true, we show
+  // a detail loading skeleton instead of the orders list.
+  const [deepLinkLoading, setDeepLinkLoading] = useState(false)
 
   // Fetch orders
   const fetchOrders = useCallback(async () => {
@@ -1481,6 +1488,15 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
   }, [authenticated, page, statusFilter])
 
   useEffect(() => {
+    // Skip fetching the orders list if we're deep-linking to a specific order detail
+    // (from a notification). The order detail will be loaded by the URL orderId effect below.
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('orderId')) {
+        setLoading(false)
+        return
+      }
+    }
     fetchOrders()
   }, [fetchOrders])
 
@@ -1520,12 +1536,15 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
     const params = new URLSearchParams(window.location.search)
     const orderId = params.get('orderId')
     if (orderId) {
-      fetchOrderDetail(orderId)
+      openedFromDeepLink.current = true
+      setDeepLinkLoading(true)
+      fetchOrderDetail(orderId).finally(() => setDeepLinkLoading(false))
     }
   }, [fetchOrderDetail])
 
   // Handle clicking an order
   const handleOrderClick = useCallback((order: Order) => {
+    openedFromDeepLink.current = false
     setSelectedOrder(order)
     setDetailData(null)
     fetchOrderDetail(order.orderId)
@@ -1575,15 +1594,25 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
     : orders
 
   // Loading state — also guard when loading order detail from URL (prevent flash of orders list)
-  if ((loading && orders.length === 0) || (detailLoading && !selectedOrder)) {
+  // When deepLinkLoading is true (coming from notification), show an order-detail-style
+  // loading skeleton (NOT the orders list skeleton) so the customer sees "Order Details"
+  // loading, not "My Orders" loading.
+  if ((loading && orders.length === 0) || (detailLoading && !selectedOrder) || deepLinkLoading) {
+    const isDeepLink = deepLinkLoading || (detailLoading && !selectedOrder)
     return (
       <div className="flex flex-col h-[calc(100dvh-64px)] lg:h-[calc(100dvh)]">
         <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-3 py-2 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {onBack && <div className="h-8 w-8" />}
+              {onBack && (
+                <button onClick={onBack} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                </button>
+              )}
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200">{t('orders.title')}</h1>
+                <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200">
+                  {isDeepLink ? t('orders.orderDetails') : t('orders.title')}
+                </h1>
               </div>
             </div>
             <div className="flex items-center gap-0.5">
@@ -1593,9 +1622,19 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
           </div>
         </div>
         <div className="flex-1 p-4 space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-48 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
-          ))}
+          {isDeepLink ? (
+            // Order detail loading skeleton — looks like a detail page, not a list
+            <>
+              <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+              <div className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+              <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+            </>
+          ) : (
+            // Orders list loading skeleton
+            [1, 2, 3].map(i => (
+              <div key={i} className="h-48 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+            ))
+          )}
         </div>
       </div>
     )
@@ -1608,9 +1647,17 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
         order={selectedOrder}
         detailData={detailData}
         onBack={() => {
-          setSelectedOrder(null)
-          setDetailData(null)
-          updateUrlOrderId(null)
+          if (openedFromDeepLink.current && onBack) {
+            // Opened from a notification deep link — go directly back to the
+            // previous page (notifications), not the orders list.
+            openedFromDeepLink.current = false
+            onBack()
+          } else {
+            // Opened from the orders list — go back to the list
+            setSelectedOrder(null)
+            setDetailData(null)
+            updateUrlOrderId(null)
+          }
         }}
         onAction={handleAction}
         actionLoading={actionLoading}

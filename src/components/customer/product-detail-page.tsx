@@ -37,7 +37,7 @@ import {
   UserCheck,
   UserPlus,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, createTimeoutSignal } from '@/lib/utils'
 import { ProductDetail, Product, ProductImage, ProductVariant, Review, ReviewStats, SpecificationGroup } from './types'
 import { useCart } from '@/components/providers/cart-provider'
 import { useWishlist } from '@/components/providers/wishlist-provider'
@@ -1733,7 +1733,7 @@ export function ProductDetailPage() {
     setSelectedVariantSku(null)
 
     fetch(`/api/products/${productId}`, {
-      signal: AbortSignal.timeout(10000),
+      signal: createTimeoutSignal(10000),
     })
       .then(res => {
         if (!res.ok) throw new Error(res.status === 404 ? 'Product not found' : 'Failed to load')
@@ -2123,8 +2123,11 @@ export function ProductDetailPage() {
 
   // ── Share Product ──
   // Uses the Web Share API (native share sheet on mobile) with a fallback
-  // to clipboard copy. Also stores the share record in the backend so the
-  // customer can view all their shared products in the Shared Products page.
+  // to a custom share dialog (WhatsApp, Copy Link, etc.) for desktop browsers.
+  // Also stores the share record in the backend so the customer can view all
+  // their shared products in the Shared Products page.
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
+
   const handleShareProduct = async () => {
     if (!product) return
     const shareUrl = typeof window !== 'undefined'
@@ -2132,28 +2135,36 @@ export function ProductDetailPage() {
       : `/customer/product/${product._id}`
     const shareText = t('productDetail.shareText', { name: product.name, price: product.effectivePrice.toLocaleString('en-IN') })
 
-    // Try native Web Share API (mobile)
-    if (typeof navigator !== 'undefined' && navigator.share) {
+    // Try native Web Share API (mobile / secure context)
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
         await navigator.share({
           title: product.name,
           text: shareText,
           url: shareUrl,
         })
+        // Share succeeded — store the record
+        storeShareRecord()
+        return
       } catch {
-        // User cancelled — no action needed
-      }
-    } else {
-      // Fallback: copy to clipboard
-      try {
-        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
-        // Could show a toast here
-      } catch {
-        // Clipboard not available — ignore
+        // User cancelled or share failed — fall through to custom dialog
       }
     }
 
-    // Store the share record in the backend (fire-and-forget)
+    // Fallback: open custom share dialog
+    setShareUrl(shareUrl)
+    setShareTextValue(shareText)
+    setShareDialogOpen(true)
+  }
+
+  // State for custom share dialog
+  const [shareUrl, setShareUrl] = useState('')
+  const [shareTextValue, setShareTextValue] = useState('')
+  const [linkCopied, setLinkCopied] = useState(false)
+
+  // Store the share record in the backend (fire-and-forget)
+  const storeShareRecord = async () => {
+    if (!product) return
     try {
       await fetch('/api/customer/shared-products', {
         method: 'POST',
@@ -2169,8 +2180,53 @@ export function ProductDetailPage() {
         }),
       })
     } catch {
-      // Non-critical — share still worked via Web Share API / clipboard
+      // Non-critical — share still worked
     }
+  }
+
+  // Copy link to clipboard
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${shareTextValue} ${shareUrl}`)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+      storeShareRecord()
+    } catch {
+      // Fallback: create a temporary textarea
+      const textarea = document.createElement('textarea')
+      textarea.value = `${shareTextValue} ${shareUrl}`
+      document.body.appendChild(textarea)
+      textarea.select()
+      try { document.execCommand('copy') } catch { /* ignore */ }
+      document.body.removeChild(textarea)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+      storeShareRecord()
+    }
+  }
+
+  // Share via WhatsApp
+  const handleShareWhatsApp = () => {
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareTextValue} ${shareUrl}`)}`
+    window.open(whatsappUrl, '_blank')
+    storeShareRecord()
+    setShareDialogOpen(false)
+  }
+
+  // Share via SMS
+  const handleShareSMS = () => {
+    const smsUrl = `sms:?body=${encodeURIComponent(`${shareTextValue} ${shareUrl}`)}`
+    window.location.href = smsUrl
+    storeShareRecord()
+    setShareDialogOpen(false)
+  }
+
+  // Share via email
+  const handleShareEmail = () => {
+    const emailUrl = `mailto:?subject=${encodeURIComponent(product?.name || 'Check out this product')}&body=${encodeURIComponent(`${shareTextValue} ${shareUrl}`)}`
+    window.location.href = emailUrl
+    storeShareRecord()
+    setShareDialogOpen(false)
   }
 
   /* ── Loading skeleton ── */
@@ -3304,6 +3360,101 @@ export function ProductDetailPage() {
                     )
                   })()}
                 </motion.div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Custom Share Dialog (fallback when Web Share API is not available) ── */}
+      <AnimatePresence>
+        {shareDialogOpen && (
+          <>
+            <motion.div
+              key="share-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShareDialogOpen(false)}
+            />
+            <motion.div
+              key="share-modal"
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl pb-6"
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full" />
+              </div>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+                <h3 className="text-base font-bold text-gray-800 dark:text-gray-200">Share Product</h3>
+                <button onClick={() => setShareDialogOpen(false)} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+              {/* Share options */}
+              <div className="px-5 py-4 space-y-2">
+                {/* WhatsApp */}
+                <button
+                  onClick={handleShareWhatsApp}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                >
+                  <div className="h-10 w-10 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.6 0 12 0zm0 22C6.5 22 2 17.5 2 12S6.5 2 12 2s10 4.5 10 10-4.5 10-10 10zm5.4-7.3c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5 4.5.7.3 1.2.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.2-.6-.4z"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">WhatsApp</p>
+                    <p className="text-xs text-gray-400">Share via WhatsApp</p>
+                  </div>
+                </button>
+                {/* SMS */}
+                <button
+                  onClick={handleShareSMS}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                >
+                  <div className="h-10 w-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">SMS</p>
+                    <p className="text-xs text-gray-400">Share via text message</p>
+                  </div>
+                </button>
+                {/* Email */}
+                <button
+                  onClick={handleShareEmail}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                >
+                  <div className="h-10 w-10 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Email</p>
+                    <p className="text-xs text-gray-400">Share via email</p>
+                  </div>
+                </button>
+                {/* Copy Link */}
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                >
+                  <div className="h-10 w-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+                    {linkCopied ? (
+                      <Check className="h-5 w-5 text-emerald-600" />
+                    ) : (
+                      <svg className="h-5 w-5 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{linkCopied ? 'Copied!' : 'Copy Link'}</p>
+                    <p className="text-xs text-gray-400">{linkCopied ? 'Link copied to clipboard' : 'Copy product link to clipboard'}</p>
+                  </div>
+                </button>
               </div>
             </motion.div>
           </>

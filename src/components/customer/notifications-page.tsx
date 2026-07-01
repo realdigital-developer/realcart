@@ -116,16 +116,29 @@ function getNotificationIcon(type: NotificationType): { icon: React.ReactNode; b
 function NotificationCard({
   notification,
   onMarkRead,
+  onNavigateToOrder,
 }: {
   notification: Notification
   onMarkRead: (id: string) => void
+  onNavigateToOrder?: (orderId: string) => void
 }) {
   const { t, locale } = useLanguage()
   const { icon, bgColor, iconColor } = getNotificationIcon(notification.type)
 
+  // Order-related notification types that should navigate to order details
+  const isOrderNotification = [
+    'order_placed', 'order_confirmed', 'order_shipped',
+    'order_out_for_delivery', 'order_delivered', 'order_cancelled',
+    'return_requested', 'return_completed',
+  ].includes(notification.type)
+
   const handleClick = () => {
     if (!notification.read) {
       onMarkRead(notification._id)
+    }
+    // Navigate to order details if this is an order notification with a relatedId
+    if (isOrderNotification && notification.relatedId && onNavigateToOrder) {
+      onNavigateToOrder(notification.relatedId)
     }
   }
 
@@ -137,7 +150,7 @@ function NotificationCard({
       className={cn(
         'w-full flex items-start gap-3 p-4 border-b border-gray-100 dark:border-gray-800 transition-colors',
         !notification.read ? 'bg-blue-50/40 dark:bg-blue-950/10' : 'bg-white dark:bg-gray-900',
-        notification.relatedId ? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer' : 'cursor-default'
+        (isOrderNotification && notification.relatedId) ? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer' : 'cursor-default'
       )}
     >
       {/* Icon */}
@@ -172,8 +185,8 @@ function NotificationCard({
           </span>
         </div>
 
-        {/* Navigate indicator */}
-        {notification.relatedId && (
+        {/* Navigate indicator — only for order notifications with relatedId */}
+        {isOrderNotification && notification.relatedId && (
           <div className="flex items-center gap-1 mt-1.5 text-emerald-600 dark:text-emerald-400">
             <span className="text-[11px] font-medium">{t('common.viewDetails')}</span>
             <ArrowRight className="h-3 w-3" />
@@ -398,6 +411,11 @@ export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void;
                   key={n._id || `notif-${idx}`}
                   notification={n}
                   onMarkRead={handleMarkRead}
+                  onNavigateToOrder={(orderId) => {
+                    if (onNavigate) {
+                      onNavigate('orders', { orderId })
+                    }
+                  }}
                 />
               ))}
             </div>

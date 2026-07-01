@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Package } from 'lucide-react'
 import { CategoryItem } from './types'
-import { cn } from '@/lib/utils'
+import { cn, createTimeoutSignal } from '@/lib/utils'
 
 interface CategorySectionProps {
   onCategoryClick?: (categoryName: string) => void
@@ -40,7 +40,7 @@ export function CategorySection({ onCategoryClick, categories: propCategories, l
     async function fetchCategories() {
       try {
         const res = await fetch('/api/categories', {
-          signal: AbortSignal.timeout(10000),
+          signal: createTimeoutSignal(10000),
           cache: 'no-store',
         })
         const data = await res.json()
