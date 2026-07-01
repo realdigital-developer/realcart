@@ -507,6 +507,7 @@
   "checkout.deliveryBy": "{eta} నాటికి డెలివరీ",
   "checkout.deliveryFeeNote": "డెలివరీ ఫీజు ఆర్డర్ ఇచ్చేటప్పుడు సర్వర్-సైడ్‌గా ధృవీకరించబడుతుంది.",
   "checkout.continueToPayment": "చెల్లింపుకు కొనసాగించు",
+  "checkout.checkingDelivery": "డెలివరీ అందుబాధ్యత తనిఖీ చేయబడుతోంది...",
   "checkout.priceMrp": "ధర (MRP, {count} అంశం)",
   "checkout.priceMrp_plural": "ధర (MRP, {count} అంశాలు)",
   "checkout.couponLabel": "కూపన్ ({code})",

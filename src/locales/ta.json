@@ -1,7 +1,6 @@
 {
   "brand": "RealCart",
   "brand.tagline": "அறிவார்ந்த வாங்குதல், சிறப்பான வாழ்க்கை",
-
   "common.back": "திரும்பு",
   "common.search": "தேடு",
   "common.wishlist": "விருப்பப்பட்டியல்",
@@ -49,32 +48,25 @@
   "common.other": "மற்றவை",
   "common.justNow": "இப்போது",
   "common.yesterday": "நேற்று",
-
   "nav.home": "முகப்பு",
   "nav.categories": "பிரிவுகள்",
   "nav.cart": "வண்டி",
   "nav.orders": "ஆர்டர்கள்",
   "nav.account": "கணக்கு",
-
   "header.searchPlaceholder": "முக்கிய வார்த்தை அல்லது தயாரிப்பு பெயரால் தேடு",
   "header.searchByImage": "படம் மூலம் தேடு",
-
   "exitToast.pressBackAgain": "வெளியேற மீண்டும் பேக் அழுத்தவும்",
-
   "payment.success": "பணம் செலுத்துதல் வெற்றி!",
   "payment.successOrder": "ஆர்டர்: {orderNumber}",
   "payment.failed": "பணம் செலுத்துதல் தோல்வி",
-
   "categories.title": "அனைத்து பிரிவுகள்",
   "categories.searchPlaceholder": "பிரிவுகளைத் தேடு...",
   "categories.noCategories": "பிரிவுகள் எதுவும் இல்லை",
-
   "language.title": "மொழியை மாற்று",
   "language.description": "ஆப் இடைமுகத்திற்கு உங்கள் விருப்பமான மொழியைத் தேர்ந்தெடுக்கவும்",
   "language.moreComingSoon": "மேலும் மொழிகள் விரைவில்",
   "language.changedToast": "மொழி {language} ஆக மாற்றப்பட்டது",
   "language.english": "ஆங்கிலம்",
-
   "account.title": "எனது கணக்கு",
   "account.customer": "வாடிக்கையாளர்",
   "account.tapToViewProfile": "சுயவிவரத்தைப் பார்க்க தட்டவும்",
@@ -105,7 +97,6 @@
   "account.followedSellers": "பின்தொடர்ந்த விற்பனையாளர்கள்",
   "account.followedSellersDesc": "நீங்கள் பின்தொடரும் விற்பனையாளர்கள்",
   "account.logout": "வெளியேறு",
-
   "wallet.title": "RealCart இருப்பு",
   "wallet.availableToSpend": "உங்கள் அடுத்த ஆர்டரில் செலவழிக்க கிடைக்கும்",
   "wallet.howYouEarn": "இருப்பை எவ்வாறு ஈட்டுவது",
@@ -130,7 +121,6 @@
   "wallet.emptyDesc2": "பரிவர்த்தனைகள் இங்கே தோன்றும்",
   "wallet.infoNote": "RealCart இருப்பு ரெஃபரல் வெகுமதிகள், ஊக்கவித்தியாச கேஷ்பேக் மற்றும் திரும்பப் பெறுதல்கள் மூலம் ஈட்டப்படுகிறது — இதை கைமுறையாக ஏற்ற முடியாது. செக்அவுட்டில் பைகளுக்கு இதைப் பயன்படுத்து. இருப்பை மாற்ற முடியாது மற்றும் வங்கி கணக்குகளுக்கு திரும்ப எடுக்க முடியாது.",
   "wallet.loadFailed": "வாலட் தரவை ஏற்றுவதில் தோல்வி",
-
   "notifications.title": "அறிவிப்புகள்",
   "notifications.markAllRead": "அனைத்தையும் படித்ததாக குறி",
   "notifications.marking": "குறிக்கிறது...",
@@ -150,7 +140,6 @@
   "notifications.hourAgo": "{count} மணி நேரம் முன்",
   "notifications.hoursAgo": "{count} மணி நேரம் முன்",
   "notifications.daysAgo": "{count} நாட்கள் முன்",
-
   "help.title": "உதவி & ஆதரவு",
   "help.browseTopics": "உதவி தலைப்புகளை உலாவு",
   "help.searchPlaceholder": "உதவியைத் தேடு...",
@@ -163,7 +152,6 @@
   "help.emailUs": "எங்களுக்கு மின்னஞ்சல் அனுப்பு",
   "help.emailHours": "24/7 பதில்",
   "help.loadFailed": "உதவி & ஆதரவு தரவை ஏற்றுவதில் தோல்வி",
-
   "followedSellers.title": "பின்தொடர்ந்த விற்பனையாளர்கள்",
   "followedSellers.loadFailed": "பின்தொடர்ந்த விற்பனையாளர்களை ஏற்றுவதில் தோல்வி",
   "followedSellers.empty": "இன்னும் பின்தொடர்ந்த விற்பனையாளர்கள் இல்லை",
@@ -176,7 +164,6 @@
   "followedSellers.unfollowSeller": "விற்பனையாளரைப் பின்தொடர்வதை நிறுத்து",
   "followedSellers.unfollowConfirm": "{name} ஐப் பின்தொடர்வதை நிறுத்தவா? நீங்கள் பின்னர் எப்போது வேண்டுமானாலும் மீண்டும் அவர்களைப் பின்தொடரலாம்.",
   "followedSellers.unfollowResult": "இந்த விற்பனையாளரிடமிருந்து புதுப்பிப்புகளை இனி உங்கள் பின்தொடர் பட்டியலில் காண மாட்டீர்கள்.",
-
   "paymentRefund.title": "பணம் & திரும்பப் பெறுதல்",
   "paymentRefund.totalSpent": "மொத்த செலவு",
   "paymentRefund.totalRefunded": "மொத்த திரும்பப் பெற்ற தொகை",
@@ -191,7 +178,6 @@
   "paymentRefund.pending": "நிலுவையில்",
   "paymentRefund.failed": "தோல்வி",
   "paymentRefund.refunded": "திரும்பப் பெற்றது",
-
   "bankUpi.title": "வங்கி & UPI விவரங்கள்",
   "bankUpi.tabBank": "வங்கி",
   "bankUpi.tabUpi": "UPI",
@@ -217,7 +203,6 @@
   "bankUpi.noWalletsDesc": "செக்அவுட்டின் போது 'பணம் செலுத்தும் முறையை சேமி' என்பதைத் தேர்ந்தெடுத்தால் வாலட்கள் தானாகவே சேமிக்கப்படும்",
   "bankUpi.savings": "சேமிப்பு",
   "bankUpi.current": "நடப்பு",
-
   "sharedProducts.title": "பகிரப்பட்ட தயாரிப்புகள்",
   "sharedProducts.itemCount": "{count} பொருள்",
   "sharedProducts.itemCount_plural": "{count} பொருட்கள்",
@@ -225,7 +210,6 @@
   "sharedProducts.empty": "இன்னும் பகிரப்பட்ட தயாரிப்புகள் இல்லை",
   "sharedProducts.emptyDesc": "ஒரு தயாரிப்பை அதன் விவரப் பக்கத்திலிருந்து பகிரும்போது, அதை நீங்கள் எளிதாகக் கண்டுபிடித்து மீண்டும் பகிர்வதற்காக இங்கே காட்டப்படும்.",
   "sharedProducts.hAgo": "{count} மணி முன்",
-
   "referral.title": "ரெஃபர் & ஈர்ந்திடு",
   "referral.loadFailed": "ரெஃபரல் தரவை ஏற்றுவதில் தோல்வி",
   "referral.heroTitle": "ரெஃபர் & ஈர்ந்திடு",
@@ -265,7 +249,6 @@
   "referral.referralCodeLabel": "ரெஃபரல் குறியீடு *",
   "referral.referralCodePlaceholder": "எ.கா., USER99-7K3X",
   "referral.referralCodeNote": "குறிப்பு: ரெஃபரல் குறியீட்டை நீங்கள் ஒரே ஒரு முறை மட்டுமே பயன்படுத்த முடியும். சமர்ப்பிக்கும் முன் சரியான குறியீட்டை உள்ளிடுவதை உறுதி செய்யவும்.",
-
   "cart.title": "எனது வண்டி",
   "cart.emptyItems": "(0 பொருட்கள்)",
   "cart.itemCount": "({count} பொருள்)",
@@ -293,7 +276,6 @@
   "cart.couponsOffers": "கூப்பன்கள் & ஆஃபர்கள்",
   "cart.applicable": "{count} பொருந்தும்",
   "cart.minOrder": "குறைந்தபட்ச ஆர்டர் {amount}",
-
   "wishlist.title": "விருப்பப்பட்டியல்",
   "wishlist.itemCount": "({count} பொருள்)",
   "wishlist.itemCount_plural": "({count} பொருட்கள்)",
@@ -307,7 +289,6 @@
   "wishlist.selectOptions": "தயாரிப்பு விருப்பங்களைத் தேர்ந்தெடுக்கவும்",
   "wishlist.movedToCart": "வண்டிக்கு மாற்றப்பட்டது",
   "wishlist.addToCartFailed": "வண்டியில் சேர்க்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
-
   "orders.title": "எனது ஆர்டர்கள்",
   "orders.orderCount": "({count} ஆர்டர்)",
   "orders.orderCount_plural": "({count} ஆர்டர்கள்)",
@@ -334,7 +315,6 @@
   "orders.return": "திரும்பப் பெறு",
   "orders.viewInvoice": "விலைப்பட்டியலைக் காண்க",
   "orders.viewCreditNote": "கிரெடிட் நோட்டைக் காண்க",
-
   "imageSearch.title": "படத் தேடல்",
   "imageSearch.subtitle": "உங்கள் கேமராவுடன் தயாரிப்புகளைக் கண்டுபிடி",
   "imageSearch.description": "புகைப்படத்தைப் பதிவேற்றி அல்லது எடுத்து தயாரிப்புகளைத் தேடு",
@@ -354,9 +334,7 @@
   "imageSearch.errorFileType": "ஆதரிக்காத கோப்பு வகை. தயவுசெய்து JPEG, PNG அல்லது WebP படத்தைப் பயன்படுத்து.",
   "imageSearch.errorFileSize": "படம் மிகப் பெரியது ({size}MB). தயவுசெய்து 5MB க்கும் குறைவான படத்தைத் தேர்ந்தெடுக்கவும்.",
   "imageSearch.errorNetwork": "நெட்வொர்க் பிழை. தயவுசெய்து உங்கள் இணைப்பை சரிபார்க்கவும்.",
-
   "notifications.emptyTitleAll": "இன்னும் அறிவிப்புகள் இல்லை",
-
   "search.recentSearches": "சமீபத்திய தேடல்கள்",
   "search.clearAll": "அனைத்தையும் அழி",
   "search.popularSearches": "பிரபலமான தேடல்கள்",
@@ -371,7 +349,6 @@
   "search.noSpeech": "எந்தப் பேச்சும் கண்டறியப்படவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.",
   "search.micDenied": "மைக்ரோஃபோன் அணுகல் மறுக்கப்பட்டது. தயவுசெய்து மைக்ரோஃபோன் அனுமதி அளிக்கவும்.",
   "search.voiceError": "குரல் தேடல் பிழை: {error}",
-
   "productDetail.productNotFound": "தயாரிப்பு கிடைக்கவில்லை",
   "productDetail.productUnavailable": "இந்தத் தயாரிப்பு நீக்கப்பட்டிருக்கலாம் அல்லது கிடைக்கவில்லை.",
   "productDetail.failedToLoad": "ஏற்றுவதில் தோல்வி",
@@ -447,7 +424,6 @@
   "productDetail.customerVideo": "வாடிக்கையாளர் வீடியோ {index}",
   "productDetail.imageCounter": "{current} / {total}",
   "productDetail.videoNotSupported": "உங்கள் உலாவி வீடியோ குறிச்சொல்லை ஆதரிக்கவில்லை.",
-
   "reviews.terrible": "மோசம்",
   "reviews.poor": "குறைவு",
   "reviews.average": "சராசரி",
@@ -481,7 +457,6 @@
   "reviews.maxVideos": "அதிகபட்சம் 5 வீடியோக்கள் அனுமதிக்கப்படுகின்றன",
   "reviews.selectRating": "தயவுசெய்து ஒரு மதிப்பீட்டைத் தேர்ந்தெடுக்கவும்",
   "reviews.commentTooShort": "கருத்து குறைந்தபட்சம் 10 எழுத்துகள் இருக்க வேண்டும்",
-
   "addresses.editAddress": "முகவரியைத் திருத்து",
   "addresses.addNewAddress": "புதிய முகவரி சேர்",
   "addresses.home": "வீடு",
@@ -512,7 +487,6 @@
   "addresses.noSavedAddressesDesc": "தொடங்க உங்கள் முதல் டெலிவரி முகவரியைச் சேர்க்கவும்",
   "addresses.addAddress": "முகவரி சேர்",
   "addresses.deleteConfirm": "இந்த முகவரியை நீக்க விரும்புகிறீர்களா?",
-
   "checkout.selectDeliveryAddress": "டெலிவரி முகவரியைத் தேர்ந்தெடு",
   "checkout.orderSummary": "ஆர்டர் சுருக்கம்",
   "checkout.payment": "பணம் செலுத்துதல்",
@@ -533,6 +507,7 @@
   "checkout.deliveryBy": "{eta} முன் டெலிவரி",
   "checkout.deliveryFeeNote": "ஆர்டர் செய்யும்போது டெலிவரி கட்டணம் சர்வர்-சைடில் சரிபார்க்கப்படுகிறது.",
   "checkout.continueToPayment": "பணம் செலுத்துதலுக்குச் செல்",
+  "checkout.checkingDelivery": "டெலிவரி கிடைப்பு சரிபார்க்கப்படுகிறது...",
   "checkout.priceMrp": "விலை (MRP, {count} பொருள்)",
   "checkout.priceMrp_plural": "விலை (MRP, {count} பொருட்கள்)",
   "checkout.couponLabel": "கூப்பன் ({code})",

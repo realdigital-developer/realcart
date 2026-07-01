@@ -1,7 +1,6 @@
 {
   "brand": "RealCart",
   "brand.tagline": "ਸਮਾਰਟ ਖਰੀਦੋ, ਵਧੀਆ ਜੀਵੋ",
-
   "common.back": "ਵਾਪਸ ਜਾਓ",
   "common.search": "ਖੋਜੋ",
   "common.wishlist": "ਵਿਸ਼ਲਿਸਟ",
@@ -49,32 +48,25 @@
   "common.other": "ਹੋਰ",
   "common.justNow": "ਹੁਣੇ",
   "common.yesterday": "ਬੀਤਿਆ ਕੱਲ੍ਹ",
-
   "nav.home": "ਹੋਮ",
   "nav.categories": "ਸ਼੍ਰੇਣੀਆਂ",
   "nav.cart": "ਕਾਰਟ",
   "nav.orders": "ਆਰਡਰ",
   "nav.account": "ਖਾਤਾ",
-
   "header.searchPlaceholder": "ਕੀਵਰਡ ਜਾਂ ਉਤਪਾਦ ਨਾਮ ਨਾਲ ਖੋਜੋ",
   "header.searchByImage": "ਤਸਵੀਰ ਨਾਲ ਖੋਜੋ",
-
   "exitToast.pressBackAgain": "ਬਾਹਰ ਜਾਣ ਲਈ ਮੁੜ ਬੈਕ ਦਬਾਓ",
-
   "payment.success": "ਭੁਗਤਾਨ ਸਫ਼ਲ!",
   "payment.successOrder": "ਆਰਡਰ: {orderNumber}",
   "payment.failed": "ਭੁਗਤਾਨ ਅਸਫ਼ਲ",
-
   "categories.title": "ਸਾਰੀਆਂ ਸ਼੍ਰੇਣੀਆਂ",
   "categories.searchPlaceholder": "ਸ਼੍ਰੇਣੀਆਂ ਖੋਜੋ...",
   "categories.noCategories": "ਕੋਈ ਸ਼੍ਰੇਣੀ ਉਪਲਬਧ ਨਹੀਂ",
-
   "language.title": "ਭਾਸ਼ਾ ਬਦਲੋ",
   "language.description": "ਐਪ ਇੰਟਰਫੇਸ ਲਈ ਆਪਣੀ ਪਸੰਦੀਦਾ ਭਾਸ਼ਾ ਚੁਣੋ",
   "language.moreComingSoon": "ਹੋਰ ਭਾਸ਼ਾਵਾਂ ਜਲਦੀ ਆ ਰਹੀਆਂ ਹਨ",
   "language.changedToast": "ਭਾਸ਼ਾ {language} ਵਿੱਚ ਬਦਲ ਗਈ",
   "language.english": "ਅੰਗਰੇਜ਼ੀ",
-
   "account.title": "ਮੇਰਾ ਖਾਤਾ",
   "account.customer": "ਗਾਹਕ",
   "account.tapToViewProfile": "ਪ੍ਰੋਫਾਈਲ ਵੇਖਣ ਲਈ ਟੈਪ ਕਰੋ",
@@ -105,7 +97,6 @@
   "account.followedSellers": "ਫ਼ਾਲੋ ਕੀਤੇ ਵਿਕਰੇਤਾ",
   "account.followedSellersDesc": "ਤੁਹਾਡੇ ਵੱਲੋਂ ਫ਼ਾਲੋ ਕੀਤੇ ਵਿਕਰੇਤਾ",
   "account.logout": "ਲਾਗ ਆਊਟ",
-
   "wallet.title": "RealCart ਬੈਲੰਸ",
   "wallet.availableToSpend": "ਤੁਹਾਡੇ ਅਗਲੇ ਆਰਡਰ 'ਤੇ ਖਰਚ ਕਰਨ ਲਈ ਉਪਲਬਧ",
   "wallet.howYouEarn": "ਤੁਸੀਂ ਬੈਲੰਸ ਕਿਵੇਂ ਕਮਾਉਂਦੇ ਹੋ",
@@ -130,7 +121,6 @@
   "wallet.emptyDesc2": "ਲੈਣ-ਦੇਣ ਇੱਥੇ ਦਿਖਾਈ ਦੇਣਗੇ",
   "wallet.infoNote": "RealCart ਬੈਲੰਸ ਰੈਫਰਲ ਇਨਾਮ, ਪ੍ਰੋਮੋਸ਼ਨਲ ਕੈਸ਼ਬੈਕ ਅਤੇ ਰਿਫੰਡ ਰਾਹੀਂ ਕਮਾਇਆ ਜਾਂਦਾ ਹੈ — ਇਸਨੂੰ ਖੁਦ ਲੋਡ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਦਾ। ਖਰੀਦਦਾਰੀ ਲਈ ਚੈੱਕਆਊਟ 'ਤੇ ਇਸਦੀ ਵਰਤੋਂ ਕਰੋ। ਬੈਲੰਸ ਟ੍ਰਾਂਸਫਰ ਨਹੀਂ ਹੋ ਸਕਦਾ ਅਤੇ ਬੈਂਕ ਖਾਤਿਆਂ ਵਿੱਚ ਵਾਪਸ ਨਹੀਂ ਲਿਆ ਜਾ ਸਕਦਾ।",
   "wallet.loadFailed": "ਵਾਲਿਟ ਡਾਟਾ ਲੋਡ ਕਰਨ ਵਿੱਚ ਅਸਫ਼ਲ",
-
   "notifications.title": "ਨੋਟੀਫਿਕੇਸ਼ਨ",
   "notifications.markAllRead": "ਸਾਰੇ ਪੜ੍ਹੇ ਹੋਏ ਮਾਰਕ ਕਰੋ",
   "notifications.marking": "ਮਾਰਕ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ...",
@@ -150,7 +140,6 @@
   "notifications.hourAgo": "{count} ਘੰਟਾ ਪਹਿਲਾਂ",
   "notifications.hoursAgo": "{count} ਘੰਟੇ ਪਹਿਲਾਂ",
   "notifications.daysAgo": "{count} ਦਿਨ ਪਹਿਲਾਂ",
-
   "help.title": "ਮਦਦ & ਸਹਾਇਤਾ",
   "help.browseTopics": "ਮਦਦ ਵਿਸ਼ੇ ਬ੍ਰਾਊਜ਼ ਕਰੋ",
   "help.searchPlaceholder": "ਮਦਦ ਲਈ ਖੋਜੋ...",
@@ -163,7 +152,6 @@
   "help.emailUs": "ਸਾਨੂੰ ਈਮੇਲ ਕਰੋ",
   "help.emailHours": "24/7 ਜਵਾਬ",
   "help.loadFailed": "ਮਦਦ & ਸਹਾਇਤਾ ਡਾਟਾ ਲੋਡ ਕਰਨ ਵਿੱਚ ਅਸਫ਼ਲ",
-
   "followedSellers.title": "ਫ਼ਾਲੋ ਕੀਤੇ ਵਿਕਰੇਤਾ",
   "followedSellers.loadFailed": "ਫ਼ਾਲੋ ਕੀਤੇ ਵਿਕਰੇਤਾ ਲੋਡ ਕਰਨ ਵਿੱਚ ਅਸਫ਼ਲ",
   "followedSellers.empty": "ਅਜੇ ਤੱਕ ਕੋਈ ਫ਼ਾਲੋ ਕੀਤੇ ਵਿਕਰੇਤਾ ਨਹੀਂ",
@@ -176,7 +164,6 @@
   "followedSellers.unfollowSeller": "ਵਿਕਰੇਤਾ ਅਨਫ਼ਾਲੋ ਕਰੋ",
   "followedSellers.unfollowConfirm": "{name} ਨੂੰ ਫ਼ਾਲੋ ਕਰਨਾ ਬੰਦ ਕਰਨਾ ਹੈ? ਤੁਸੀਂ ਬਾਅਦ ਵਿੱਚ ਉਹਨਾਂ ਨੂੰ ਮੁੜ ਫ਼ਾਲੋ ਕਰ ਸਕਦੇ ਹੋ।",
   "followedSellers.unfollowResult": "ਹੁਣ ਤੁਹਾਡੀ ਫ਼ਾਲੋ ਸੂਚੀ ਵਿੱਚ ਇਸ ਵਿਕਰੇਤਾ ਦੇ ਅੱਪਡੇਟ ਨਹੀਂ ਦਿਖਾਈ ਦੇਣਗੇ।",
-
   "paymentRefund.title": "ਭੁਗਤਾਨ & ਰਿਫੰਡ",
   "paymentRefund.totalSpent": "ਕੁੱਲ ਖਰਚ",
   "paymentRefund.totalRefunded": "ਕੁੱਲ ਰਿਫੰਡ",
@@ -191,7 +178,6 @@
   "paymentRefund.pending": "ਬਾਕੀ",
   "paymentRefund.failed": "ਅਸਫ਼ਲ",
   "paymentRefund.refunded": "ਰਿਫੰਡ ਹੋਇਆ",
-
   "bankUpi.title": "ਬੈਂਕ & UPI ਵੇਰਵੇ",
   "bankUpi.tabBank": "ਬੈਂਕ",
   "bankUpi.tabUpi": "UPI",
@@ -217,7 +203,6 @@
   "bankUpi.noWalletsDesc": "ਚੈੱਕਆਊਟ ਦੌਰਾਨ 'ਭੁਗਤਾਨ ਢੰਗ ਸੰਭਾਲੋ' ਚੁਣਨ 'ਤੇ ਵਾਲਿਟ ਆਪਣੇ ਆਪ ਸੰਭਾਲੇ ਜਾਂਦੇ ਹਨ",
   "bankUpi.savings": "ਬੱਚਤ",
   "bankUpi.current": "ਚਾਲੂ",
-
   "sharedProducts.title": "ਸਾਂਝੇ ਕੀਤੇ ਉਤਪਾਦ",
   "sharedProducts.itemCount": "{count} ਆਈਟਮ",
   "sharedProducts.itemCount_plural": "{count} ਆਈਟਮਾਂ",
@@ -225,7 +210,6 @@
   "sharedProducts.empty": "ਅਜੇ ਤੱਕ ਕੋਈ ਸਾਂਝੇ ਕੀਤੇ ਉਤਪਾਦ ਨਹੀਂ",
   "sharedProducts.emptyDesc": "ਜਦੋਂ ਤੁਸੀਂ ਕਿਸੇ ਉਤਪਾਦ ਦੇ ਵੇਰਵਾ ਪੰਨੇ ਤੋਂ ਸਾਂਝਾ ਕਰਦੇ ਹੋ, ਤਾਂ ਇਹ ਇੱਥੇ ਦਿਖਾਈ ਦੇਵੇਗਾ ਤਾਂ ਜੋ ਤੁਸੀਂ ਇਸਨੂੰ ਅਸਾਨੀ ਨਾਲ ਲੱਭ ਅਤੇ ਮੁੜ ਸਾਂਝਾ ਕਰ ਸਕੋ।",
   "sharedProducts.hAgo": "{count} ਘੰਟੇ ਪਹਿਲਾਂ",
-
   "referral.title": "ਰੈਫ਼ਰ ਕਰੋ & ਕਮਾਓ",
   "referral.loadFailed": "ਰੈਫ਼ਰਲ ਡਾਟਾ ਲੋਡ ਕਰਨ ਵਿੱਚ ਅਸਫ਼ਲ",
   "referral.heroTitle": "ਰੈਫ਼ਰ ਕਰੋ & ਕਮਾਓ",
@@ -265,7 +249,6 @@
   "referral.referralCodeLabel": "ਰੈਫ਼ਰਲ ਕੋਡ *",
   "referral.referralCodePlaceholder": "ਜਿਵੇਂ USER99-7K3X",
   "referral.referralCodeNote": "ਨੋਟ: ਤੁਸੀਂ ਰੈਫ਼ਰਲ ਕੋਡ ਸਿਰਫ਼ ਇੱਕ ਵਾਰ ਹੀ ਲਗਾ ਸਕਦੇ ਹੋ। ਜਮ੍ਹਾਂ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਸਹੀ ਕੋਡ ਦਰਜ ਕਰਨਾ ਯਕੀਨੀ ਬਣਾਓ।",
-
   "cart.title": "ਮੇਰਾ ਕਾਰਟ",
   "cart.emptyItems": "(0 ਆਈਟਮਾਂ)",
   "cart.itemCount": "({count} ਆਈਟਮ)",
@@ -293,7 +276,6 @@
   "cart.couponsOffers": "ਕੂਪਨ & ਆਫ਼ਰ",
   "cart.applicable": "{count} ਲਾਗੂ",
   "cart.minOrder": "ਘੱਟੋ-ਘੱਟ ਆਰਡਰ {amount}",
-
   "wishlist.title": "ਵਿਸ਼ਲਿਸਟ",
   "wishlist.itemCount": "({count} ਆਈਟਮ)",
   "wishlist.itemCount_plural": "({count} ਆਈਟਮਾਂ)",
@@ -307,7 +289,6 @@
   "wishlist.selectOptions": "ਕਿਰਪਾ ਕਰਕੇ ਉਤਪਾਦ ਵਿਕਲਪ ਚੁਣੋ",
   "wishlist.movedToCart": "ਕਾਰਟ ਵਿੱਚ ਤਬਦੀਲ ਹੋਇਆ",
   "wishlist.addToCartFailed": "ਕਾਰਟ ਵਿੱਚ ਸ਼ਾਮਲ ਨਹੀਂ ਹੋ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
-
   "orders.title": "ਮੇਰੇ ਆਰਡਰ",
   "orders.orderCount": "({count} ਆਰਡਰ)",
   "orders.orderCount_plural": "({count} ਆਰਡਰ)",
@@ -334,7 +315,6 @@
   "orders.return": "ਰਿਟਰਨ",
   "orders.viewInvoice": "ਇਨਵੌਇਸ ਵੇਖੋ",
   "orders.viewCreditNote": "ਕ੍ਰੈਡਿਟ ਨੋਟ ਵੇਖੋ",
-
   "imageSearch.title": "ਵਿਜ਼ੂਅਲ ਖੋਜ",
   "imageSearch.subtitle": "ਆਪਣੇ ਕੈਮਰੇ ਨਾਲ ਉਤਪਾਦ ਲੱਭੋ",
   "imageSearch.description": "ਫੋਟੋ ਅੱਪਲੋਡ ਕਰਕੇ ਜਾਂ ਖਿੱਚ ਕੇ ਉਤਪਾਦ ਖੋਜੋ",
@@ -354,9 +334,7 @@
   "imageSearch.errorFileType": "ਅਸਮਰਥਿਤ ਫਾਈਲ ਕਿਸਮ। ਕਿਰਪਾ ਕਰਕੇ JPEG, PNG ਜਾਂ WebP ਤਸਵੀਰ ਵਰਤੋ।",
   "imageSearch.errorFileSize": "ਤਸਵੀਰ ਬਹੁਤ ਵੱਡੀ ਹੈ ({size}MB)। ਕਿਰਪਾ ਕਰਕੇ 5MB ਤੋਂ ਘੱਟ ਦੀ ਤਸਵੀਰ ਚੁਣੋ।",
   "imageSearch.errorNetwork": "ਨੈੱਟਵਰਕ ਗਲਤੀ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਕਨੈਕਸ਼ਨ ਜਾਂਚੋ।",
-
   "notifications.emptyTitleAll": "ਅਜੇ ਤੱਕ ਕੋਈ ਨੋਟੀਫਿਕੇਸ਼ਨ ਨਹੀਂ",
-
   "search.recentSearches": "ਹਾਲੀਆ ਖੋਜਾਂ",
   "search.clearAll": "ਸਭ ਸਾਫ਼ ਕਰੋ",
   "search.popularSearches": "ਪ੍ਰਸਿੱਧ ਖੋਜਾਂ",
@@ -371,7 +349,6 @@
   "search.noSpeech": "ਕੋਈ ਬੋਲ ਨਹੀਂ ਸੁਣਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   "search.micDenied": "ਮਾਈਕ੍ਰੋਫ਼ੋਨ ਪਹੁੰਚ ਅਸਵੀਕਾਰ। ਕਿਰਪਾ ਕਰਕੇ ਮਾਈਕ੍ਰੋਫ਼ੋਨ ਇਜਾਜ਼ਤ ਦਿਓ।",
   "search.voiceError": "ਵੌਇਸ ਖੋਜ ਗਲਤੀ: {error}",
-
   "productDetail.productNotFound": "ਉਤਪਾਦ ਨਹੀਂ ਲੱਭਿਆ",
   "productDetail.productUnavailable": "ਇਹ ਉਤਪਾਦ ਹਟਾ ਦਿੱਤਾ ਗਿਆ ਹੈ ਜਾਂ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।",
   "productDetail.failedToLoad": "ਲੋਡ ਕਰਨ ਵਿੱਚ ਅਸਫ਼ਲ",
@@ -480,7 +457,6 @@
   "reviews.maxVideos": "ਅਧਿਕਤਮ 5 ਵੀਡੀਓ ਦੀ ਇਜਾਜ਼ਤ ਹੈ",
   "reviews.selectRating": "ਕਿਰਪਾ ਕਰਕੇ ਇੱਕ ਰੇਟਿੰਗ ਚੁਣੋ",
   "reviews.commentTooShort": "ਟਿੱਪਣੀ ਘੱਟੋ-ਘੱਟ 10 ਅੱਖਰਾਂ ਦੀ ਹੋਣੀ ਚਾਹੀਦੀ ਹੈ",
-
   "addresses.editAddress": "ਪਤਾ ਸੋਧੋ",
   "addresses.addNewAddress": "ਨਵਾਂ ਪਤਾ ਸ਼ਾਮਲ ਕਰੋ",
   "addresses.home": "ਘਰ",
@@ -511,7 +487,6 @@
   "addresses.noSavedAddressesDesc": "ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਆਪਣਾ ਪਹਿਲਾ ਡਿਲੀਵਰੀ ਪਤਾ ਸ਼ਾਮਲ ਕਰੋ",
   "addresses.addAddress": "ਪਤਾ ਸ਼ਾਮਲ ਕਰੋ",
   "addresses.deleteConfirm": "ਕੀ ਤੁਸੀਂ ਇਹ ਪਤਾ ਮਿਟਾਉਣਾ ਚਾਹੁੰਦੇ ਹੋ?",
-
   "checkout.selectDeliveryAddress": "ਡਿਲੀਵਰੀ ਪਤਾ ਚੁਣੋ",
   "checkout.orderSummary": "ਆਰਡਰ ਸਾਰ",
   "checkout.payment": "ਭੁਗਤਾਨ",
@@ -532,6 +507,7 @@
   "checkout.deliveryBy": "{eta} ਤੱਕ ਡਿਲੀਵਰੀ",
   "checkout.deliveryFeeNote": "ਡਿਲੀਵਰੀ ਫ਼ੀਸ ਆਰਡਰ ਦੇਣ ਵੇਲੇ ਸਰਵਰ-ਸਾਈਡ ਤਸਦੀਕ ਕੀਤੀ ਜਾਂਦੀ ਹੈ।",
   "checkout.continueToPayment": "ਭੁਗਤਾਨ ਲਈ ਜਾਰੀ ਰੱਖੋ",
+  "checkout.checkingDelivery": "ਡਿਲੀਵਰੀ ਉਪਲਬਧਤਾ ਦੀ ਜਾਂਚ ਹੋ ਰਹੀ ਹੈ...",
   "checkout.priceMrp": "ਕੀਮਤ (MRP, {count} ਆਈਟਮ)",
   "checkout.priceMrp_plural": "ਕੀਮਤ (MRP, {count} ਆਈਟਮਾਂ)",
   "checkout.couponLabel": "ਕੂਪਨ ({code})",

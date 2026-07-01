@@ -651,6 +651,42 @@ export function CheckoutPage({
     )
   }, [deliveryOptions, selectedDeliveryOption])
 
+  // ── Delivery availability guard for "Continue to Payment" ──────────
+  // Determines whether the customer is allowed to proceed to the payment
+  // step. The button is BLOCKED when:
+  //   1. No address is selected yet.
+  //   2. Delivery options are still loading (checking serviceability).
+  //   3. The selected address has an invalid pincode (no options returned).
+  //   4. The pincode is not serviceable — all returned options have
+  //      `available: false` (e.g. blocked pincode).
+  // `deliveryBlockReason` holds a user-friendly message explaining WHY
+  // the button is disabled, so the customer knows what to fix.
+  const { canContinueToPayment, deliveryBlockReason } = useMemo(() => {
+    // No address selected
+    if (!selectedAddressId) {
+      return { canContinueToPayment: false, deliveryBlockReason: t('checkout.pleaseSelectAddress') }
+    }
+    // Still checking delivery serviceability
+    if (deliveryOptionLoading) {
+      return { canContinueToPayment: false, deliveryBlockReason: t('checkout.checkingDelivery') }
+    }
+    // Address selected but no options returned (invalid pincode or empty cart)
+    if (deliveryOptions.length === 0) {
+      return { canContinueToPayment: false, deliveryBlockReason: t('checkout.selectValidAddress') }
+    }
+    // Options returned but NONE are serviceable (blocked / non-serviceable pincode)
+    const hasServiceableOption = deliveryOptions.some((o) => o.available)
+    if (!hasServiceableOption) {
+      const unavailableOpt = deliveryOptions.find((o) => !o.available)
+      return {
+        canContinueToPayment: false,
+        deliveryBlockReason: unavailableOpt?.unavailableReason || t('checkout.selectValidAddress'),
+      }
+    }
+    // All checks passed — delivery is available
+    return { canContinueToPayment: true, deliveryBlockReason: null }
+  }, [selectedAddressId, deliveryOptionLoading, deliveryOptions, t])
+
   // Cleanup UPI polling interval on unmount
   useEffect(() => {
     return () => {
@@ -2081,14 +2117,36 @@ export function CheckoutPage({
                 {renderPriceBreakup()}
               </div>
 
-              {/* Continue to Payment */}
+              {/* Continue to Payment — disabled when delivery is unavailable */}
               <button
-                onClick={() => setStep('payment')}
-                className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+                onClick={() => { if (canContinueToPayment) setStep('payment') }}
+                disabled={!canContinueToPayment}
+                className={cn(
+                  'w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors',
+                  canContinueToPayment
+                    ? 'bg-emerald-500 hover:bg-emerald-600'
+                    : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed',
+                )}
               >
-                {t('checkout.continueToPayment')}
-                <ChevronRight className="h-4 w-4" />
+                {deliveryOptionLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('checkout.checkingDelivery')}
+                  </>
+                ) : (
+                  <>
+                    {t('checkout.continueToPayment')}
+                    <ChevronRight className="h-4 w-4" />
+                  </>
+                )}
               </button>
+              {/* Show reason when button is disabled (not during loading) */}
+              {!canContinueToPayment && !deliveryOptionLoading && deliveryBlockReason && (
+                <p className="text-xs text-red-500 text-center flex items-center justify-center gap-1.5 -mt-1">
+                  <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>{deliveryBlockReason}</span>
+                </p>
+              )}
             </motion.div>
           )}
 

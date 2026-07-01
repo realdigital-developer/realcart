@@ -1,7 +1,6 @@
 {
   "brand": "RealCart",
   "brand.tagline": "স্মার্ট কিনুন, ভালো বাঁচুন",
-
   "common.back": "ফিরে যান",
   "common.search": "খুঁজুন",
   "common.wishlist": "উইশলিস্ট",
@@ -49,32 +48,25 @@
   "common.other": "অন্যান্য",
   "common.justNow": "এইমাত্র",
   "common.yesterday": "গতকাল",
-
   "nav.home": "হোম",
   "nav.categories": "বিভাগ",
   "nav.cart": "কার্ট",
   "nav.orders": "অর্ডার",
   "nav.account": "অ্যাকাউন্ট",
-
   "header.searchPlaceholder": "কীওয়ার্ড বা পণ্যের নাম দিয়ে খুঁজুন",
   "header.searchByImage": "ছবি দিয়ে খুঁজুন",
-
   "exitToast.pressBackAgain": "বের হতে আবার ব্যাক চাপুন",
-
   "payment.success": "পেমেন্ট সফল!",
   "payment.successOrder": "অর্ডার: {orderNumber}",
   "payment.failed": "পেমেন্ট ব্যর্থ",
-
   "categories.title": "সব বিভাগ",
   "categories.searchPlaceholder": "বিভাগ খুঁজুন...",
   "categories.noCategories": "কোনো বিভাগ নেই",
-
   "language.title": "ভাষা পরিবর্তন করুন",
   "language.description": "অ্যাপ ইন্টারফেসের জন্য আপনার পছন্দের ভাষা নির্বাচন করুন",
   "language.moreComingSoon": "আরও ভাষা শীঘ্রই আসছে",
   "language.changedToast": "ভাষা পরিবর্তন করে {language} করা হয়েছে",
   "language.english": "ইংরেজি",
-
   "account.title": "আমার অ্যাকাউন্ট",
   "account.customer": "গ্রাহক",
   "account.tapToViewProfile": "প্রোফাইল দেখতে ট্যাপ করুন",
@@ -105,7 +97,6 @@
   "account.followedSellers": "ফলো করা বিক্রেতা",
   "account.followedSellersDesc": "আপনি যে বিক্রেতাদের ফলো করেন",
   "account.logout": "লগ আউট",
-
   "wallet.title": "RealCart ব্যালেন্স",
   "wallet.availableToSpend": "আপনার পরবর্তী অর্ডারে খরচ করার জন্য উপলব্ধ",
   "wallet.howYouEarn": "আপনি কীভাবে ব্যালেন্স আয় করেন",
@@ -130,7 +121,6 @@
   "wallet.emptyDesc2": "লেনদেন এখানে দেখা যাবে",
   "wallet.infoNote": "RealCart ব্যালেন্স রেফারেল পুরস্কার, প্রমোশনাল ক্যাশব্যাক এবং রিফান্ড থেকে অর্জিত হয় — এটি ম্যানুয়ালি লোড করা যায় না। চেকআউটে কেনাকাটার জন্য এটি ব্যবহার করুন। ব্যালেন্স স্থানান্তরযোগ্য নয় এবং ব্যাংক অ্যাকাউন্টে তুলে নেওয়া যায় না।",
   "wallet.loadFailed": "ওয়ালেট ডেটা লোড করতে ব্যর্থ",
-
   "notifications.title": "বিজ্ঞপ্তি",
   "notifications.markAllRead": "সব পঠিত চিহ্নিত করুন",
   "notifications.marking": "চিহ্নিত হচ্ছে...",
@@ -150,7 +140,6 @@
   "notifications.hourAgo": "{count} ঘণ্টা আগে",
   "notifications.hoursAgo": "{count} ঘণ্টা আগে",
   "notifications.daysAgo": "{count} দিন আগে",
-
   "help.title": "সাহায্য ও সহায়তা",
   "help.browseTopics": "সাহায্য বিষয় দেখুন",
   "help.searchPlaceholder": "সাহায্য খুঁজুন...",
@@ -163,7 +152,6 @@
   "help.emailUs": "আমাদের ইমেল করুন",
   "help.emailHours": "২৪/৭ প্রতিক্রিয়া",
   "help.loadFailed": "সাহায্য ডেটা লোড করতে ব্যর্থ",
-
   "followedSellers.title": "ফলো করা বিক্রেতা",
   "followedSellers.loadFailed": "ফলো করা বিক্রেতা লোড করতে ব্যর্থ",
   "followedSellers.empty": "এখনও কোনো ফলো করা বিক্রেতা নেই",
@@ -176,7 +164,6 @@
   "followedSellers.unfollowSeller": "বিক্রেতা আনফলো করুন",
   "followedSellers.unfollowConfirm": "{name} ফলো করা বন্ধ করবেন? আপনি পরে সবসময় আবার তাদের ফলো করতে পারবেন।",
   "followedSellers.unfollowResult": "আপনার ফলো তালিকায় এই বিক্রেতার আপডেট আর দেখতে পাবেন না।",
-
   "paymentRefund.title": "পেমেন্ট ও রিফান্ড",
   "paymentRefund.totalSpent": "মোট খরচ",
   "paymentRefund.totalRefunded": "মোট রিফান্ড",
@@ -191,7 +178,6 @@
   "paymentRefund.pending": "অপেক্ষমান",
   "paymentRefund.failed": "ব্যর্থ",
   "paymentRefund.refunded": "রিফান্ড করা হয়েছে",
-
   "bankUpi.title": "ব্যাংক ও UPI বিবরণ",
   "bankUpi.tabBank": "ব্যাংক",
   "bankUpi.tabUpi": "UPI",
@@ -217,7 +203,6 @@
   "bankUpi.noWalletsDesc": "চেকআউটের সময় 'পেমেন্ট পদ্ধতি সংরক্ষণ করুন' নির্বাচন করলে ওয়ালেট স্বয়ংক্রিয়ভাবে সংরক্ষিত হয়",
   "bankUpi.savings": "সঞ্চয়",
   "bankUpi.current": "চলতি",
-
   "sharedProducts.title": "শেয়ার করা পণ্য",
   "sharedProducts.itemCount": "{count} আইটেম",
   "sharedProducts.itemCount_plural": "{count} আইটেম",
@@ -225,7 +210,6 @@
   "sharedProducts.empty": "এখনও কোনো শেয়ার করা পণ্য নেই",
   "sharedProducts.emptyDesc": "আপনি যখন কোনো পণ্য তার বিস্তারিত পেজ থেকে শেয়ার করেন, তখন এটি এখানে দেখা যাবে যাতে আপনি সহজেই খুঁজে পান এবং পুনরায় শেয়ার করতে পারেন।",
   "sharedProducts.hAgo": "{count} ঘণ্টা আগে",
-
   "referral.title": "রেফার করুন ও আয় করুন",
   "referral.loadFailed": "রেফারেল ডেটা লোড করতে ব্যর্থ",
   "referral.heroTitle": "রেফার করুন ও আয় করুন",
@@ -265,7 +249,6 @@
   "referral.referralCodeLabel": "রেফারেল কোড *",
   "referral.referralCodePlaceholder": "যেমন, USER99-7K3X",
   "referral.referralCodeNote": "নোট: আপনি রেফারেল কোড কেবল একবারই প্রয়োগ করতে পারবেন। জমা দেওয়ার আগে সঠিক কোড লিখতে নিশ্চিত হোন।",
-
   "cart.title": "আমার কার্ট",
   "cart.emptyItems": "(0 আইটেম)",
   "cart.itemCount": "({count} আইটেম)",
@@ -293,7 +276,6 @@
   "cart.couponsOffers": "কুপন ও অফার",
   "cart.applicable": "{count} প্রযোজ্য",
   "cart.minOrder": "ন্যূনতম অর্ডার {amount}",
-
   "wishlist.title": "উইশলিস্ট",
   "wishlist.itemCount": "({count} আইটেম)",
   "wishlist.itemCount_plural": "({count} আইটেম)",
@@ -307,7 +289,6 @@
   "wishlist.selectOptions": "অনুগ্রহ করে পণ্যের বিকল্প নির্বাচন করুন",
   "wishlist.movedToCart": "কার্টে সরানো হয়েছে",
   "wishlist.addToCartFailed": "কার্টে যোগ করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।",
-
   "orders.title": "আমার অর্ডার",
   "orders.orderCount": "({count} অর্ডার)",
   "orders.orderCount_plural": "({count} অর্ডার)",
@@ -334,7 +315,6 @@
   "orders.return": "রিটার্ন",
   "orders.viewInvoice": "ইনভয়েস দেখুন",
   "orders.viewCreditNote": "ক্রেডিট নোট দেখুন",
-
   "imageSearch.title": "ভিজ্যুয়াল সার্চ",
   "imageSearch.subtitle": "আপনার ক্যামেরা দিয়ে পণ্য খুঁজুন",
   "imageSearch.description": "ছবি আপলোড বা ক্যাপচার করে পণ্য খুঁজুন",
@@ -354,9 +334,7 @@
   "imageSearch.errorFileType": "অসমর্থিত ফাইল প্রকার। অনুগ্রহ করে JPEG, PNG বা WebP ছবি ব্যবহার করুন।",
   "imageSearch.errorFileSize": "ছবিটি খুব বড় ({size}MB)। অনুগ্রহ করে 5MB এর নিচের ছবি নির্বাচন করুন।",
   "imageSearch.errorNetwork": "নেটওয়ার্ক ত্রুটি। অনুগ্রহ করে আপনার সংযোগ পরীক্ষা করুন।",
-
   "notifications.emptyTitleAll": "এখনও কোনো বিজ্ঞপ্তি নেই",
-
   "search.recentSearches": "সাম্প্রতিক খোঁজ",
   "search.clearAll": "সব মুছুন",
   "search.popularSearches": "জনপ্রিয় খোঁজ",
@@ -371,7 +349,6 @@
   "search.noSpeech": "কোনো কথা শনাক্ত করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।",
   "search.micDenied": "মাইক্রোফোন অ্যাক্সেস অস্বীকৃত। অনুগ্রহ করে মাইক্রোফোন অনুমতি দিন।",
   "search.voiceError": "ভয়েস সার্চ ত্রুটি: {error}",
-
   "productDetail.productNotFound": "পণ্য পাওয়া যায়নি",
   "productDetail.productUnavailable": "এই পণ্যটি সরানো হয়েছে বা অনুপলব্ধ।",
   "productDetail.failedToLoad": "লোড করতে ব্যর্থ",
@@ -447,7 +424,6 @@
   "productDetail.customerVideo": "গ্রাহক ভিডিও {index}",
   "productDetail.imageCounter": "{current} / {total}",
   "productDetail.videoNotSupported": "আপনার ব্রাউজার ভিডিও ট্যাগ সমর্থন করে না।",
-
   "reviews.terrible": "ভয়ানক",
   "reviews.poor": "খারাপ",
   "reviews.average": "গড়",
@@ -481,7 +457,6 @@
   "reviews.maxVideos": "সর্বোচ্চ ৫ ভিডিও অনুমোদিত",
   "reviews.selectRating": "অনুগ্রহ করে একটি রেটিং নির্বাচন করুন",
   "reviews.commentTooShort": "মন্তব্য কমপক্ষে ১০ অক্ষরের হতে হবে",
-
   "addresses.editAddress": "ঠিকানা সম্পাদনা করুন",
   "addresses.addNewAddress": "নতুন ঠিকানা যোগ করুন",
   "addresses.home": "বাড়ি",
@@ -512,7 +487,6 @@
   "addresses.noSavedAddressesDesc": "শুরু করতে আপনার প্রথম ডেলিভারি ঠিকানা যোগ করুন",
   "addresses.addAddress": "ঠিকানা যোগ করুন",
   "addresses.deleteConfirm": "আপনি কি নিশ্চিত যে এই ঠিকানাটি মুছতে চান?",
-
   "checkout.selectDeliveryAddress": "ডেলিভারি ঠিকানা নির্বাচন করুন",
   "checkout.orderSummary": "অর্ডার সারাংশ",
   "checkout.payment": "পেমেন্ট",
@@ -533,6 +507,7 @@
   "checkout.deliveryBy": "{eta} দ্বারা ডেলিভারি",
   "checkout.deliveryFeeNote": "অর্ডার দেওয়ার সময় ডেলিভারি ফি সার্ভার-সাইডে যাচাই করা হয়।",
   "checkout.continueToPayment": "পেমেন্টে চলুন",
+  "checkout.checkingDelivery": "ডেলিভারি প্রাপ্যতা যাচাই করা হচ্ছে...",
   "checkout.priceMrp": "মূল্য (MRP, {count} আইটেম)",
   "checkout.priceMrp_plural": "মূল্য (MRP, {count} আইটেম)",
   "checkout.couponLabel": "কুপন ({code})",

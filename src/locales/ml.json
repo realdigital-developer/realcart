@@ -507,6 +507,7 @@
   "checkout.deliveryBy": "{eta} ആണ് ഡെലിവറി",
   "checkout.deliveryFeeNote": "ഓർഡർ നൽകുമ്പോൾ ഡെലിവറി ഫീ സെർവർ-സൈഡ് പരിശോധിക്കുന്നു.",
   "checkout.continueToPayment": "പേയ്മെന്റിലേക്ക് തുടരുക",
+  "checkout.checkingDelivery": "ഡെലിവറി ലഭ്യത പരിശോധിക്കുന്നു...",
   "checkout.priceMrp": "വില (MRP, {count} ഇനം)",
   "checkout.priceMrp_plural": "വില (MRP, {count} ഇനങ്ങൾ)",
   "checkout.couponLabel": "കൂപ്പൺ ({code})",

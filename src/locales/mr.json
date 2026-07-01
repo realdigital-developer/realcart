@@ -507,6 +507,7 @@
   "checkout.deliveryBy": "{eta} पर्यंत डिलिव्हरी",
   "checkout.deliveryFeeNote": "डिलिव्हरी शुल्क ऑर्डर देताना सर्व्हर-साइड वर पडताळले जाते.",
   "checkout.continueToPayment": "पेमेंटकडे सुरू ठेवा",
+  "checkout.checkingDelivery": "डिलिव्हरी उपलब्धता तपासली जात आहे...",
   "checkout.priceMrp": "किंमत (MRP, {count} वस्तू)",
   "checkout.priceMrp_plural": "किंमत (MRP, {count} वस्तू)",
   "checkout.couponLabel": "कूपन ({code})",

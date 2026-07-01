@@ -507,6 +507,7 @@
   "checkout.deliveryBy": "{eta} ರಂದು ವಿತರಣೆ",
   "checkout.deliveryFeeNote": "ವಿತರಣಾ ಶುಲ್ಕ ಆರ್ಡರ್ ನೀಡುವಾಗ ಸರ್ವರ್‌ನಲ್ಲಿ ಪರಿಶೀಲಿಸಲಾಗುತ್ತದೆ.",
   "checkout.continueToPayment": "ಪಾವತಿಗೆ ಮುಂದುವರಿಸಿ",
+  "checkout.checkingDelivery": "ವಿತರಣಾ ಲಭ್ಯತೆ ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ...",
   "checkout.priceMrp": "ಬೆಲೆ (MRP, {count} ಐಟಂ)",
   "checkout.priceMrp_plural": "ಬೆಲೆ (MRP, {count} ಐಟಂಗಳು)",
   "checkout.couponLabel": "ಕೂಪನ್ ({code})",

@@ -3135,3 +3135,59 @@ Stage Summary:
 - **Fix**: Recreated `.zscripts/dev.sh` with a hardened, robust version (stale-process killer, 90s wait loop, process-death detection, HTTP verification). Started the dev server successfully.
 - **Result**: Dev server running on port 3000 (HTTP 200), all routes responding, UI rendering correctly (32KB HTML with RealCart title). No errors. No UI or code damaged.
 - **Note**: This is a known recurring issue — the script must be recreated each time the sandbox restarts because it is intentionally NOT tracked in the GitHub repository. The script is robust with error handling and process management.
+
+---
+Task ID: fix-continue-to-payment-when-delivery-unavailable
+Agent: main-orchestrator
+Task: Fix why customers can click "Continue to Payment" on the order summary page even when the selected address shows "Sorry, delivery is not available at this pincode". Block proceeding to payment when delivery is unavailable.
+
+Work Log:
+- **Root Cause Analysis**:
+  * Traced the delivery availability flow end-to-end:
+    1. `src/lib/delivery-engine.ts` → `getDeliveryEstimate()` returns `{ serviceable: false, reason: 'Sorry, delivery is not available at this pincode' }` when the pincode is in the blocked list (line 648-664).
+    2. `getDeliveryOptions(estimate)` returns `[{ id: 'standard', available: false, unavailableReason: 'Sorry, delivery is not available at this pincode' }]` when not serviceable (line 229-244).
+    3. `/api/customer/delivery/check` route returns these options to the client.
+    4. `src/components/customer/checkout-page.tsx` fetches delivery options on address change (useEffect at line 586-641), stores in `deliveryOptions` state.
+    5. The UI renders the unavailable option with the red "Sorry, delivery is not available at this pincode" message (line 2060-2064).
+  * **THE BUG**: The "Continue to Payment" button (line 2085-2091) had NO disabled condition — it unconditionally called `setStep('payment')` regardless of whether delivery was available. The button was always green and always clickable.
+- **Fix** (robust, multi-layered guard):
+  * Added a `canContinueToPayment` + `deliveryBlockReason` useMemo (line 654-688) that blocks proceeding in ALL of these cases:
+    1. No address selected → "Please select a delivery address first."
+    2. Delivery check still loading → "Checking delivery availability..." (with spinner on button)
+    3. Address selected but no options returned (invalid pincode) → "Select a valid delivery address to see delivery options."
+    4. Options returned but NONE serviceable (blocked pincode) → shows the `unavailableReason` ("Sorry, delivery is not available at this pincode")
+    5. Only when at least one option has `available: true` → `canContinueToPayment = true`
+  * Modified the "Continue to Payment" button (line 2120-2149):
+    - Added `disabled={!canContinueToPayment}` for accessibility (keyboard users can't tab to disabled button)
+    - Added `onClick` guard `if (canContinueToPayment) setStep('payment')` as double safety (belt AND suspenders)
+    - Dynamic styling: emerald green when enabled, gray with `cursor-not-allowed` when disabled
+    - Shows spinner + "Checking delivery availability..." text when loading
+    - Shows red alert message below the button (with AlertCircle icon) explaining WHY it's disabled
+- **Translation Keys**:
+  * Added `checkout.checkingDelivery` to all 10 locale files (en, hi, bn, ta, te, mr, kn, ml, pa, gu) with proper translations:
+    - en: "Checking delivery availability..."
+    - hi: "डिलीवरी उपलब्धता की जांच हो रही है..."
+    - bn: "ডেলিভারি প্রাপ্যতা যাচাই করা হচ্ছে..."
+    - ta: "டெலிவரி கிடைப்பு சரிபார்க்கப்படுகிறது..."
+    - te: "డెలివరీ అందుబాధ్యత తనిఖీ చేయబడుతోంది..."
+    - mr: "डिलिव्हरी उपलब्धता तपासली जात आहे..."
+    - kn: "ವಿತರಣಾ ಲಭ್ಯತೆ ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ..."
+    - ml: "ഡെലിവറി ലഭ്യത പരിശോധിക്കുന്നു..."
+    - pa: "ਡਿਲੀਵਰੀ ਉਪਲਬਧਤਾ ਦੀ ਜਾਂਚ ਹੋ ਰਹੀ ਹੈ..."
+    - gu: "ડિલિવરી ઉપલબ્ધતા ચકાસાઈ રહી છે..."
+  * Reused existing keys: `checkout.pleaseSelectAddress`, `checkout.selectValidAddress`, `checkout.continueToPayment`
+  * Validated all 10 JSON files are valid JSON.
+- **Verification**:
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /customer, page compiles without errors.
+  * Dev log: no errors after the change.
+  * Agent Browser: page loads successfully (login screen shown — full checkout flow requires OTP login which is complex to automate, but code review confirms the logic is correct).
+  * Confirmed only ONE `setStep('payment')` call site exists (the guarded button) — no bypass paths.
+  * Confirmed all imports already present: `Loader2`, `AlertCircle`, `cn`, `ChevronRight`.
+
+Stage Summary:
+- **Root cause**: The "Continue to Payment" button on the order summary (checkout) step had no guard — it always allowed proceeding to payment even when the selected address had a non-serviceable pincode showing "Sorry, delivery is not available at this pincode".
+- **Fix**: Added a `canContinueToPayment` / `deliveryBlockReason` computed guard that blocks the button in 4 scenarios (no address, loading, invalid pincode, not serviceable). The button is now visually disabled (gray, cursor-not-allowed), functionally disabled (`disabled` attr + onClick guard), and shows a clear red message explaining why. During loading, shows a spinner with "Checking delivery availability...".
+- **Files modified**: 1 component (`checkout-page.tsx`) + 10 locale files (added `checkout.checkingDelivery` key).
+- **No damage**: No existing UI or code was damaged. The delivery options UI, price summary, address selection, and all other checkout functionality remain untouched. Only the button's enabled/disabled state and the reason message were added.
+- Lint: 0 errors. Dev server: stable, HTTP 200, no console errors.

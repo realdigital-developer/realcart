@@ -1,7 +1,6 @@
 {
   "brand": "RealCart",
   "brand.tagline": "Shop Smarter, Live Better",
-
   "common.back": "Go back",
   "common.search": "Search",
   "common.wishlist": "Wishlist",
@@ -49,32 +48,25 @@
   "common.other": "Other",
   "common.justNow": "Just now",
   "common.yesterday": "Yesterday",
-
   "nav.home": "Home",
   "nav.categories": "Categories",
   "nav.cart": "Cart",
   "nav.orders": "Orders",
   "nav.account": "Account",
-
   "header.searchPlaceholder": "Search by Keyword or Product Name",
   "header.searchByImage": "Search by image",
-
   "exitToast.pressBackAgain": "Press back again to exit",
-
   "payment.success": "Payment Successful!",
   "payment.successOrder": "Order: {orderNumber}",
   "payment.failed": "Payment Failed",
-
   "categories.title": "All Categories",
   "categories.searchPlaceholder": "Search categories...",
   "categories.noCategories": "No categories available",
-
   "language.title": "Change Language",
   "language.description": "Select your preferred language for the app interface",
   "language.moreComingSoon": "More languages coming soon",
   "language.changedToast": "Language changed to {language}",
   "language.english": "English",
-
   "account.title": "My Account",
   "account.customer": "Customer",
   "account.tapToViewProfile": "Tap to view profile",
@@ -105,7 +97,6 @@
   "account.followedSellers": "Followed Sellers",
   "account.followedSellersDesc": "Sellers you follow",
   "account.logout": "Logout",
-
   "wallet.title": "RealCart Balance",
   "wallet.availableToSpend": "Available to spend on your next order",
   "wallet.howYouEarn": "How You Earn Balance",
@@ -130,7 +121,6 @@
   "wallet.emptyDesc2": "Transactions will appear here",
   "wallet.infoNote": "RealCart Balance is earned through referral rewards, promotional cashback, and refunds — it cannot be loaded manually. Use it for purchases at checkout. Balance is non-transferable and cannot be withdrawn to bank accounts.",
   "wallet.loadFailed": "Failed to load wallet data",
-
   "notifications.title": "Notifications",
   "notifications.markAllRead": "Mark all read",
   "notifications.marking": "Marking...",
@@ -150,7 +140,6 @@
   "notifications.hourAgo": "{count} hour ago",
   "notifications.hoursAgo": "{count} hours ago",
   "notifications.daysAgo": "{count} days ago",
-
   "help.title": "Help & Support",
   "help.browseTopics": "Browse Help Topics",
   "help.searchPlaceholder": "Search for help...",
@@ -163,7 +152,6 @@
   "help.emailUs": "Email Us",
   "help.emailHours": "24/7 response",
   "help.loadFailed": "Failed to load help & support data",
-
   "followedSellers.title": "Followed Sellers",
   "followedSellers.loadFailed": "Failed to load followed sellers",
   "followedSellers.empty": "No followed sellers yet",
@@ -176,7 +164,6 @@
   "followedSellers.unfollowSeller": "Unfollow Seller",
   "followedSellers.unfollowConfirm": "Stop following {name}? You can always follow them again later.",
   "followedSellers.unfollowResult": "You will no longer see updates from this seller in your followed list.",
-
   "paymentRefund.title": "Payment & Refund",
   "paymentRefund.totalSpent": "Total Spent",
   "paymentRefund.totalRefunded": "Total Refunded",
@@ -191,7 +178,6 @@
   "paymentRefund.pending": "Pending",
   "paymentRefund.failed": "Failed",
   "paymentRefund.refunded": "Refunded",
-
   "bankUpi.title": "Bank & UPI Details",
   "bankUpi.tabBank": "Bank",
   "bankUpi.tabUpi": "UPI",
@@ -217,7 +203,6 @@
   "bankUpi.noWalletsDesc": "Wallets are saved automatically when you check 'Save payment method' during checkout",
   "bankUpi.savings": "Savings",
   "bankUpi.current": "Current",
-
   "sharedProducts.title": "Shared Products",
   "sharedProducts.itemCount": "{count} item",
   "sharedProducts.itemCount_plural": "{count} items",
@@ -225,7 +210,6 @@
   "sharedProducts.empty": "No shared products yet",
   "sharedProducts.emptyDesc": "When you share a product from its detail page, it will appear here so you can easily find and reshare it.",
   "sharedProducts.hAgo": "{count}h ago",
-
   "referral.title": "Refer & Earn",
   "referral.loadFailed": "Failed to load referral data",
   "referral.heroTitle": "Refer & Earn",
@@ -265,7 +249,6 @@
   "referral.referralCodeLabel": "Referral Code *",
   "referral.referralCodePlaceholder": "e.g., USER99-7K3X",
   "referral.referralCodeNote": "Note: You can only apply a referral code once. Make sure to enter the correct code before submitting.",
-
   "cart.title": "My Cart",
   "cart.emptyItems": "(0 items)",
   "cart.itemCount": "({count} item)",
@@ -293,7 +276,6 @@
   "cart.couponsOffers": "Coupons & Offers",
   "cart.applicable": "{count} applicable",
   "cart.minOrder": "Min order {amount}",
-
   "wishlist.title": "Wishlist",
   "wishlist.itemCount": "({count} item)",
   "wishlist.itemCount_plural": "({count} items)",
@@ -307,7 +289,6 @@
   "wishlist.selectOptions": "Please select product options",
   "wishlist.movedToCart": "Moved to cart",
   "wishlist.addToCartFailed": "Could not add to cart. Please try again.",
-
   "orders.title": "My Orders",
   "orders.orderCount": "({count} order)",
   "orders.orderCount_plural": "({count} orders)",
@@ -334,7 +315,6 @@
   "orders.return": "Return",
   "orders.viewInvoice": "View Invoice",
   "orders.viewCreditNote": "View Credit Note",
-
   "imageSearch.title": "Visual Search",
   "imageSearch.subtitle": "Find products with your camera",
   "imageSearch.description": "Search products by uploading or capturing a photo",
@@ -354,9 +334,7 @@
   "imageSearch.errorFileType": "Unsupported file type. Please use a JPEG, PNG, or WebP image.",
   "imageSearch.errorFileSize": "Image is too large ({size}MB). Please choose an image under 5MB.",
   "imageSearch.errorNetwork": "Network error. Please check your connection.",
-
   "notifications.emptyTitleAll": "No notifications yet",
-
   "search.recentSearches": "Recent Searches",
   "search.clearAll": "Clear All",
   "search.popularSearches": "Popular Searches",
@@ -371,7 +349,6 @@
   "search.noSpeech": "No speech detected. Please try again.",
   "search.micDenied": "Microphone access denied. Please allow microphone permission.",
   "search.voiceError": "Voice search error: {error}",
-
   "productDetail.productNotFound": "Product not found",
   "productDetail.productUnavailable": "This product may have been removed or is unavailable.",
   "productDetail.failedToLoad": "Failed to load",
@@ -480,7 +457,6 @@
   "reviews.maxVideos": "Maximum 5 videos allowed",
   "reviews.selectRating": "Please select a rating",
   "reviews.commentTooShort": "Comment must be at least 10 characters",
-
   "addresses.editAddress": "Edit Address",
   "addresses.addNewAddress": "Add New Address",
   "addresses.home": "Home",
@@ -511,7 +487,6 @@
   "addresses.noSavedAddressesDesc": "Add your first delivery address to get started",
   "addresses.addAddress": "ADD ADDRESS",
   "addresses.deleteConfirm": "Are you sure you want to delete this address?",
-
   "checkout.selectDeliveryAddress": "Select Delivery Address",
   "checkout.orderSummary": "Order Summary",
   "checkout.payment": "Payment",
@@ -532,6 +507,7 @@
   "checkout.deliveryBy": "Delivery by {eta}",
   "checkout.deliveryFeeNote": "Delivery fee is verified server-side at order placement.",
   "checkout.continueToPayment": "CONTINUE TO PAYMENT",
+  "checkout.checkingDelivery": "Checking delivery availability...",
   "checkout.priceMrp": "Price (MRP, {count} item)",
   "checkout.priceMrp_plural": "Price (MRP, {count} items)",
   "checkout.couponLabel": "Coupon ({code})",
