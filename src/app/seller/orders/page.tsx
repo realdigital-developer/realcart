@@ -185,6 +185,9 @@ function OrdersContent() {
   const [assignOrderItem, setAssignOrderItem] = useState<OrderItem | null>(null)
   const [assignOrderId, setAssignOrderId] = useState<string>('')
   const [assigning, setAssigning] = useState(false)
+  // Track WHICH delivery boy is being assigned (so only that card shows the
+  // spinner — not all cards). Empty string = none in progress.
+  const [assigningBoyId, setAssigningBoyId] = useState<string>('')
   const [assignDeliveryBoys, setAssignDeliveryBoys] = useState<DeliveryBoy[]>([])
   const [assignLoadingBoys, setAssignLoadingBoys] = useState(false)
   // Track whether this is a pickup assignment or delivery assignment
@@ -339,6 +342,7 @@ function OrdersContent() {
   const handleAssignDeliveryBoy = useCallback(async (deliveryBoyId: string) => {
     if (!assignOrderItem || !assignOrderId) return
     setAssigning(true)
+    setAssigningBoyId(deliveryBoyId)
     try {
       const res = await fetch('/api/seller/orders', {
         method: 'PUT',
@@ -363,6 +367,7 @@ function OrdersContent() {
       setAssignOpen(false)
       setAssignOrderItem(null)
       setAssignOrderId('')
+      setAssigningBoyId('')
       fetchOrders()
       if (detailOpen && selectedOrder?.orderId === assignOrderId) {
         fetchOrderDetail(assignOrderId)
@@ -375,6 +380,7 @@ function OrdersContent() {
       })
     } finally {
       setAssigning(false)
+      setAssigningBoyId('')
     }
   }, [assignOrderItem, assignOrderId, toast, fetchOrders, detailOpen, selectedOrder, fetchOrderDetail])
 
@@ -1428,14 +1434,30 @@ function OrdersContent() {
               </div>
               <ScrollArea className="max-h-72">
                 <div className="space-y-2 pr-1">
-                  {assignDeliveryBoys.map((boy) => (
+                  {assignDeliveryBoys.map((boy) => {
+                    // Only the delivery boy being assigned shows the spinner.
+                    // Other cards are disabled (prevent double-click) but keep
+                    // their normal icon — no spinner on them.
+                    const isThisAssigning = assigning && assigningBoyId === boy._id
+                    return (
                     <button
                       key={boy._id}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors group"
+                      className={cn(
+                        'w-full flex items-center gap-3 p-3 rounded-xl border transition-colors group',
+                        isThisAssigning
+                          ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50/70 dark:bg-emerald-950/30 ring-1 ring-emerald-300 dark:ring-emerald-800'
+                          : 'border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20',
+                        assigning && !isThisAssigning && 'opacity-60 cursor-not-allowed',
+                      )}
                       disabled={assigning}
                       onClick={() => handleAssignDeliveryBoy(boy._id)}
                     >
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-950/40 dark:to-emerald-900/20 flex items-center justify-center flex-shrink-0 ring-2 ring-white dark:ring-gray-900 shadow-sm">
+                      <div className={cn(
+                        'h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ring-2 shadow-sm transition-colors',
+                        isThisAssigning
+                          ? 'bg-emerald-200 dark:bg-emerald-900/40 ring-emerald-100 dark:ring-emerald-950'
+                          : 'bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-950/40 dark:to-emerald-900/20 ring-white dark:ring-gray-900',
+                      )}>
                         {boy.profileImage ? (
                           <img
                             src={typeof boy.profileImage === 'string' ? boy.profileImage : (boy.profileImage as { url?: string }).url || ''}
@@ -1443,13 +1465,21 @@ function OrdersContent() {
                             className="h-full w-full rounded-full object-cover"
                           />
                         ) : (
-                          <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                          <span className={cn(
+                            'text-sm font-bold transition-colors',
+                            isThisAssigning
+                              ? 'text-emerald-700 dark:text-emerald-300'
+                              : 'text-emerald-600 dark:text-emerald-400',
+                          )}>
                             {boy.name.charAt(0).toUpperCase()}
                           </span>
                         )}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <p className="text-sm font-semibold text-foreground">{boy.name}</p>
+                        <p className={cn(
+                          'text-sm font-semibold transition-colors',
+                          isThisAssigning ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground',
+                        )}>{boy.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                             <Phone className="h-2.5 w-2.5" />
@@ -1463,8 +1493,8 @@ function OrdersContent() {
                         </div>
                       </div>
                       <div className="flex-shrink-0">
-                        {assigning ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+                        {isThisAssigning ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-emerald-600 dark:text-emerald-400" />
                         ) : (
                           <div className="h-7 w-7 rounded-full bg-muted/40 dark:bg-muted/20 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-950/40 flex items-center justify-center transition-colors">
                             <UserCheck className="h-3.5 w-3.5 text-muted-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400" />
@@ -1472,7 +1502,8 @@ function OrdersContent() {
                         )}
                       </div>
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
               </ScrollArea>
             </>

@@ -3455,3 +3455,49 @@ Stage Summary:
 - **Reusable AdminModal**: The delivery boy assignment dialog now uses the common reusable AdminModal component with a modern, clean design — context banner, partner count, gradient avatars, hover effects, proper loading/empty states.
 - **Files modified**: 2 (`src/app/api/seller/orders/route.ts` — backend guard; `src/app/seller/orders/page.tsx` — frontend flow + AdminModal).
 - **No damage**: All other status cases, the order detail dialog, delivery assignment logic, OTP generation, and all existing functionality remain intact. Lint: 0 errors. Dev server: stable, HTTP 200.
+
+---
+Task ID: fix-loading-on-all-delivery-boys
+Agent: main-orchestrator
+Task: Fix why the loading spinner shows on ALL delivery boys in the assign delivery boy modal when the seller selects one. The spinner should only show on the selected delivery boy.
+
+Work Log:
+- **Root Cause Analysis**:
+  * The `assigning` state was a single boolean (`useState(false)`).
+  * When the seller clicked any delivery boy, `setAssigning(true)` was called.
+  * In the delivery boy list `.map()`, EVERY button checked `{assigning ? <Loader2> : <UserCheck>}` — so when `assigning` was true, ALL buttons showed the spinner simultaneously.
+  * Similarly, `disabled={assigning}` disabled all buttons (correct for preventing double-clicks, but the spinner on all was the visual bug).
+- **Fix** (single file: `src/app/seller/orders/page.tsx`):
+  * Added a new state `assigningBoyId` (`useState<string>('')`) to track WHICH delivery boy is being assigned.
+  * Updated `handleAssignDeliveryBoy`:
+    - `setAssigningBoyId(deliveryBoyId)` at the start (alongside `setAssigning(true)`).
+    - `setAssigningBoyId('')` on success, error, and in the `finally` block.
+  * Updated the delivery boy button rendering in the AdminModal:
+    - Added `isThisAssigning = assigning && assigningBoyId === boy._id` per-button check.
+    - **Spinner**: Only shows when `isThisAssigning` is true (only the clicked delivery boy). Other buttons keep their normal `<UserCheck>` icon.
+    - **Disabled**: All buttons remain `disabled={assigning}` to prevent double-clicks (correct behavior).
+    - **Visual distinction**: The selected (assigning) button gets:
+      - Emerald border (`border-emerald-400`) + emerald background (`bg-emerald-50/70`) + ring (`ring-emerald-300`)
+      - Avatar background changes to `bg-emerald-200` with `ring-emerald-100`
+      - Name text changes to `text-emerald-700`
+    - **Unselected buttons**: Get `opacity-60 cursor-not-allowed` to visually indicate they're temporarily disabled (but NO spinner).
+    - Used `cn()` for conditional class merging.
+- **Verification** (Agent Browser + VLM):
+  * Logged in as Banasri seller, navigated to /seller/orders.
+  * Accepted a Pending order → became Processing → showed "Assign Delivery Boy" button.
+  * Opened the AdminModal → 3 delivery boys visible (Delivery 3210, Puspendu Mallick, Raj Kumar).
+  * Clicked "Puspendu Mallick" → took screenshot immediately.
+  * VLM analysis confirmed:
+    - Selected delivery boy (Puspendu Mallick): **green border + light green highlight** — visually distinguished as selected.
+    - Unselected delivery boys: **white/gray backgrounds, no border, no highlighting, no spinner**.
+    - "The loading spinner is NOT showing on any delivery boy card" (the API was fast so the spinner moment was brief, but the key point is confirmed: NO spinner on ALL cards).
+  * Assignment succeeded → "Ship Order" button + "Assigned: Puspendu Mallick" appeared, confirming the flow works end-to-end.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+
+Stage Summary:
+- **Root cause**: Single `assigning` boolean caused ALL delivery boy buttons to show the spinner when any one was clicked.
+- **Fix**: Added `assigningBoyId` state to track the specific delivery boy being assigned. The spinner now shows ONLY on the selected delivery boy. Other buttons are disabled (prevent double-clicks) with reduced opacity but NO spinner.
+- **Enhanced UX**: The selected delivery boy gets a distinct emerald highlight (border, background, ring, text color) so the seller can clearly see which one they selected while the assignment is processing.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only the delivery boy button rendering logic was updated.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
