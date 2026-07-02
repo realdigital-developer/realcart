@@ -3910,3 +3910,42 @@ Stage Summary:
 - **Approach**: Added an explicit `case 'Out for Delivery': return null` in the `renderActions` switch statement, so this status no longer falls through to the default View button.
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only 6 lines added (the new case + comment). All other statuses remain unchanged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified in both order list and detail modal.
+
+---
+Task ID: hide-view-button-terminal-statuses
+Agent: main-orchestrator
+Task: Hide the View icon button for "Delivered", "Cancelled", "Not Delivered", "Return Completed", and "Return Cancelled" statuses — same as "Out for Delivery".
+
+Work Log:
+- **Previous State**: The `renderActions` function had an explicit `case 'Out for Delivery': return null` (from the previous task), but the `default` case still showed a "View" button for Delivered, Cancelled, Not Delivered, Return Completed, and Return Cancelled.
+- **Fix** (single file: `src/app/seller/orders/page.tsx`, committed as `6bff110`):
+  * Added 5 more statuses to the same `return null` block using fall-through case labels:
+    ```tsx
+    case 'Out for Delivery':
+    case 'Delivered':
+    case 'Cancelled':
+    case 'Not Delivered':
+    case 'Return Completed':
+    case 'Return Cancelled':
+      return null
+    ```
+  * Updated the comment to explain ALL 6 terminal/in-transit statuses:
+    - Out for Delivery: in transit with delivery boy
+    - Delivered: order is complete
+    - Cancelled: order was cancelled
+    - Not Delivered: delivery attempt failed
+    - Return Completed: return process is finished
+    - Return Cancelled: return was cancelled
+  * The `default` case now only handles truly unknown statuses as a safety fallback.
+- **Verification** (Agent Browser + VLM):
+  * **Delivered tab**: VLM confirmed — "No 'View' icon buttons on any order cards. Action area is empty."
+  * **Cancelled tab**: VLM confirmed — "No 'View' icon button visible. Action area is empty."
+  * **All tab** (verify active statuses still work): VLM confirmed — "Shipped orders show the delivery boy name button (Raj). Out for Delivery has no action buttons." Active statuses (Pending, Processing, Shipped, Return Requested, Return Approved) still show their respective action buttons.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+
+Stage Summary:
+- **Fixed**: The View icon button is now hidden for ALL 6 terminal/in-transit statuses: Out for Delivery, Delivered, Cancelled, Not Delivered, Return Completed, Return Cancelled. These statuses have no seller action — the order is either complete, cancelled, or in transit.
+- **Active statuses preserved**: Pending (Accept), Processing (Assign/Ship), Shipped (delivery boy info), Return Requested (Approve/Reject), Return Approved (Assign for Pickup) — all still show their respective action buttons.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only 13 lines changed (5 new case labels + updated comment).
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on Delivered, Cancelled, and All tabs.
