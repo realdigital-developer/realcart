@@ -3884,3 +3884,29 @@ Stage Summary:
 - **Changed**: Replaced the status filter dropdown with ALL 13 statuses as horizontal scrollable filter tabs. No more dropdown — every status is a clickable tab with status-specific active colors and count badges.
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). Removed 6 unused imports (Filter icon + 5 Select components). No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
+
+---
+Task ID: hide-view-button-out-for-delivery
+Agent: main-orchestrator
+Task: Hide the View icon button in the seller panel orders page and order detail modal when the order status is "Out for Delivery".
+
+Work Log:
+- **Root Cause**: The `renderActions` function in `src/app/seller/orders/page.tsx` had a `default` case that showed a "View" button (with Eye icon) for ALL statuses that didn't have explicit cases. The explicit cases were: Pending, Processing, Shipped, Return Requested, Return Approved. The `default` case covered: Out for Delivery, Delivered, Cancelled, Not Delivered, Return Completed, Return Cancelled — all showing the "View" button.
+- **Fix** (single file: `src/app/seller/orders/page.tsx`, committed as `6c13e06`):
+  * Added an explicit `case 'Out for Delivery'` that returns `null` — no action button at all.
+  * Placed it right before the `default` case, so "Out for Delivery" status no longer falls through to the default View button.
+  * Added a comment explaining: "No action button — the order is already with the delivery boy and in transit. The seller has no action to take at this stage. The order detail can still be opened by clicking the order ID or product thumbnail."
+  * The `default` case still handles other statuses (Delivered, Cancelled, Not Delivered, Return Completed, Return Cancelled) with the View button — only "Out for Delivery" is affected.
+- **Verification** (Agent Browser + VLM):
+  * Logged in as Banasri seller, navigated to /seller/orders.
+  * Clicked "Out for Delivery" filter tab.
+  * **Order list**: VLM confirmed — "No 'View' icon button on the order card. No action button at all on the right side. The action area is empty (no buttons)."
+  * **Order detail modal**: Clicked an order to open the detail modal. VLM confirmed — "No 'View' icon button next to the order item. No action buttons in the order item area. The action area for the order item is empty."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+
+Stage Summary:
+- **Fixed**: The View icon button is now hidden for "Out for Delivery" status — both in the orders list and in the order detail modal. The seller has no action to take when an order is in transit with the delivery boy.
+- **Approach**: Added an explicit `case 'Out for Delivery': return null` in the `renderActions` switch statement, so this status no longer falls through to the default View button.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only 6 lines added (the new case + comment). All other statuses remain unchanged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified in both order list and detail modal.
