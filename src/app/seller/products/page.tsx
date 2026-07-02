@@ -2464,9 +2464,13 @@ export default function SellerProductsPage() {
                   </div>
                   <span>All Categories</span>
                 </button>
-                {/* Category list */}
-                {categories.map((cat) => {
+                {/* Category list — only categories the seller has products in */}
+                {categories
+                  .filter(cat => sellerCategories.includes(cat.name))
+                  .map((cat) => {
                   const isSelected = categoryFilter === cat.name
+                  // Count only subcategories the seller has products in
+                  const sellerSubsCount = (cat.subcategories || []).filter(s => sellerSubcategories.includes(s.name)).length
                   return (
                     <button
                       key={cat._id}
@@ -2485,14 +2489,14 @@ export default function SellerProductsPage() {
                         {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
                       </div>
                       <span>{cat.name}</span>
-                      {cat.subcategories && cat.subcategories.length > 0 && (
-                        <span className="ml-auto text-[10px] text-muted-foreground">{cat.subcategories.length}</span>
+                      {sellerSubsCount > 0 && (
+                        <span className="ml-auto text-[10px] text-muted-foreground">{sellerSubsCount}</span>
                       )}
                     </button>
                   )
                 })}
-                {/* Fallback */}
-                {categories.length === 0 && sellerCategories.map((cat) => {
+                {/* Fallback — if categories API didn't load, use sellerCategories directly */}
+                {categories.filter(cat => sellerCategories.includes(cat.name)).length === 0 && sellerCategories.map((cat) => {
                   const isSelected = categoryFilter === cat
                   return (
                     <button
@@ -2518,14 +2522,22 @@ export default function SellerProductsPage() {
               </div>
             )}
 
-            {/* Subcategory tab */}
+            {/* Subcategory tab — only subcategories the seller has products in */}
             {activeFilterTab === 'subcategory' && (
               <div>
                 <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Select Subcategories</h3>
-                {categories.flatMap(cat => cat.subcategories || []).length === 0 ? (
+                {sellerSubcategories.length === 0 ? (
                   <p className="text-sm text-gray-400 py-4 text-center">No subcategories available</p>
                 ) : (
-                  categories.flatMap(cat => (cat.subcategories || []).map(sub => ({ sub, catName: cat.name }))).map(({ sub, catName }) => {
+                  // Build list from categories API (filtered by sellerSubcategories), fallback to sellerSubcategories directly
+                  (categories.length > 0
+                    ? categories.flatMap(cat =>
+                        (cat.subcategories || [])
+                          .filter(s => sellerSubcategories.includes(s.name))
+                          .map(sub => ({ sub, catName: cat.name }))
+                      )
+                    : sellerSubcategories.map(sub => ({ sub: { _id: sub, name: sub }, catName: '' }))
+                  ).map(({ sub, catName }) => {
                     const isSelected = categoryFilter === sub.name
                     return (
                       <button
@@ -2546,7 +2558,7 @@ export default function SellerProductsPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className="block truncate">{sub.name}</span>
-                          <span className="text-[10px] text-muted-foreground">{catName}</span>
+                          {catName && <span className="text-[10px] text-muted-foreground">{catName}</span>}
                         </div>
                       </button>
                     )
