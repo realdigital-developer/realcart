@@ -872,19 +872,19 @@ function OrdersContent() {
                         <Package className="h-2.5 w-2.5" />
                         {sellerItems.length} {sellerItems.length === 1 ? 'item' : 'items'}
                       </span>
-                      <span className="text-[10px] sm:text-[11px] text-muted-foreground hidden sm:inline">{formatDate(order.createdAt)}</span>
+                      <span className="text-[10px] sm:text-[11px] text-muted-foreground whitespace-nowrap">{formatDate(order.createdAt)}</span>
                     </div>
                     <span className="text-sm sm:text-base font-bold text-foreground flex-shrink-0">{fmtPrice(totalAmount)}</span>
                   </div>
 
-                  {/* Action buttons row — below the amount, full width */}
+                  {/* Action buttons row — below the amount+items row, RIGHT-aligned */}
                   {sellerItems.length === 1 && renderActions(order, sellerItems[0]) && (
-                    <div className="flex items-center gap-1.5 flex-wrap pl-[46px] sm:pl-[50px] pt-2 mt-1 border-t border-border/50">
+                    <div className="flex items-center justify-end gap-1.5 flex-wrap pt-2 mt-1 border-t border-border/50">
                       {renderActions(order, sellerItems[0])}
                     </div>
                   )}
                   {sellerItems.length > 1 && (
-                    <div className="flex items-center gap-1.5 flex-wrap pl-[46px] sm:pl-[50px] pt-2 mt-1 border-t border-border/50">
+                    <div className="flex items-center justify-end gap-1.5 flex-wrap pt-2 mt-1 border-t border-border/50">
                       <Button
                         size="sm"
                         variant="ghost"
