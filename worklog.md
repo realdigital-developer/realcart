@@ -5014,3 +5014,34 @@ Stage Summary:
 - **Robustness**: The `isProductOutOfStock` check uses AND of two conditions (product.stock === 0 AND no active variant has stock) to guard against stock-field sync mismatches, and correctly handles `trackInventory: false` (unlimited stock) without false positives.
 - **Files modified**: 1 (`src/components/customer/product-detail-page.tsx`). 13 insertions, 1 deletion. No UI or existing code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. Browser-verified end-to-end (both scenarios). Test data cleaned up.
+
+---
+Task ID: fix-attribute-selector-x-badge
+Agent: main-orchestrator
+Task: Remove the close icon (X) badge showing on top of attribute selectors when an attribute value is out of stock. User provided a screenshot reference showing Size 30 (out of stock) on the jeans product with an X badge. Robust solution with double-check, no errors, no damage to existing UI/code.
+
+Work Log:
+- **Image analysis**: Used VLM (z-ai vision CLI) to deeply analyze the uploaded screenshot (`Screenshot_2026-07-03-00-19-05-41_820b80da67ca34a12f493dfc8307f092.jpg`). The image shows the customer product details page for "Attractive modern Men denim jeans" with a Select Size area containing 3 pills: 28, 30, 32. The **30** pill (out of stock) has a small gray circular **X badge** on its top-right corner. Pills 28 and 32 (in stock) have no X badge. This is the jeans product (`6a46a7f31ed9171de731e1e8`) where Size 30 has stock 0 while the product total stock is 30.
+- **Code study**: Read `src/components/customer/product-detail-page.tsx`. Found the attribute selector at the variant groups loop (lines ~2524-2555). Each attribute pill (size, color, etc.) had an X badge that rendered exclusively when `!hasStock && !isSelected` — i.e., ONLY when an attribute value was out of stock. The X badge was therefore exclusively an "out-of-stock" indicator on individual pills.
+- **Root cause**: The X badge was redundant. The out-of-stock state for an attribute value is ALREADY fully conveyed by the pill's own styling: `disabled` button + `line-through` strikethrough + `text-gray-300 dark:text-gray-600` grayed text + `cursor-not-allowed` + `border-gray-200 dark:border-gray-800` light border. The X badge added visual clutter with no new information.
+- **Previous fix context**: The prior task (fix-size-selector-x-badge-oos) only hid the X badge when the ENTIRE product was out of stock (`isProductOutOfStock`). The user's screenshot shows the X badge still appearing when an INDIVIDUAL attribute value is out of stock (but the product has stock). The complete solution is to remove the X badge entirely.
+- **Fix applied** (1 file — `src/components/customer/product-detail-page.tsx`, 21 deletions, 0 insertions):
+  1. Removed the entire X badge block (`{!hasStock && !isSelected && !isProductOutOfStock && (...)}`) from the attribute pill render. Since the badge ONLY ever rendered for out-of-stock values, removing it fully satisfies "do not show the X badge when an attribute value is out of stock".
+  2. Removed the now-unused `isProductOutOfStock` computation (12 lines incl. comment) — would have caused an unused-variable lint error.
+  3. Removed the now-unused `hasStock` variable (4 lines incl. comment) — would have caused an unused-variable lint error.
+  4. The `X` icon import remains valid (used 13 times elsewhere: review modal close, image/video remove buttons, etc.).
+- **End-to-end verification** (Agent Browser + VLM):
+  * **Jeans product** (`6a46a7f31ed9171de731e1e8` — the screenshot scenario): DOM eval confirmed Size 28 (`hasXBadge: false, isDisabled: false`), Size 30 (`hasXBadge: false, isDisabled: true, hasLineThrough: true`), Size 32 (`hasXBadge: false, isDisabled: false`). The X badge is GONE on Size 30, and the out-of-stock state is preserved via disabled + strikethrough + grayed text.
+  * **Multi-attribute product** (`6a4018b25887f90a007ac3ff` — size + color): DOM eval confirmed ALL pills (S, M, L, XL, Red-Black) have `hasXBadge: false`. No X badges on any attribute group.
+  * **VLM screenshot analysis**: Took a screenshot of the fixed jeans product size selector and analyzed it with z-ai vision. VLM confirmed: "No X badge appears on any size pill."
+  * **No errors**: Browser `errors` — empty. Console — no error/fail/exception. Dev log — all HTTP 200, no 500s.
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new). No unused-variable warnings (cleaned up `isProductOutOfStock` and `hasStock`).
+- **Git**: Committed as `52cd47a` — 1 file changed, 21 deletions(-), 0 insertions. Only `src/components/customer/product-detail-page.tsx` touched.
+
+Stage Summary:
+- **Root cause fixed**: The X badge is completely removed from all attribute selector pills (size, color, fabric, etc.). It no longer shows when an attribute value is out of stock — whether the product has other stock or not.
+- **No UI damage**: The out-of-stock state is still clearly conveyed by the pill's own styling (disabled button + strikethrough + grayed text + cursor-not-allowed + light border). The X badge was redundant and its removal makes the UI cleaner.
+- **No code damage**: Removed 21 lines, 0 insertions. Cleaned up the now-unused `isProductOutOfStock` and `hasStock` variables to avoid dead code. The `X` icon import remains valid (13 other usages). All existing UI/code preserved.
+- **Robustness**: By removing the X badge entirely (rather than adding another conditional), the fix is maximally robust — there is no conditional logic that could misfire. The out-of-stock indication relies solely on the pill's styling which was already correct and unchanged.
+- **Files modified**: 1 (`src/components/customer/product-detail-page.tsx`). 21 deletions, 0 insertions.
+- Lint: 0 errors. Dev server: stable, HTTP 200. Browser-verified end-to-end (DOM + VLM screenshot). Test data not needed (used existing products).
