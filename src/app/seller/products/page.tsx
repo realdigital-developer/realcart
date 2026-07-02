@@ -2289,11 +2289,11 @@ export default function SellerProductsPage() {
             onClick={() => {
               // Sync current filter state to selection state when opening
               if (categoryFilter !== 'all') {
-                // Check if it's a category or subcategory
-                const isCat = sellerCategories.includes(categoryFilter)
-                const isSub = sellerSubcategories.includes(categoryFilter)
-                setSelectedCategories(isCat ? [categoryFilter] : [])
-                setSelectedSubcategories(isSub ? [categoryFilter] : [])
+                const filters = categoryFilter.split(',').map(f => f.trim())
+                const cats = filters.filter(f => sellerCategories.includes(f))
+                const subs = filters.filter(f => sellerSubcategories.includes(f))
+                setSelectedCategories(cats)
+                setSelectedSubcategories(subs)
               } else {
                 setSelectedCategories([])
                 setSelectedSubcategories([])
@@ -2449,18 +2449,30 @@ export default function SellerProductsPage() {
               size="sm"
               className="flex-1 text-xs rounded-lg bg-violet-600 hover:bg-violet-700 text-white"
               onClick={() => {
-                // Apply: combine selected subcategories and categories
-                // Subcategories take priority (more specific), but if none selected,
-                // use categories. If both empty, reset to 'all'.
-                const allSelected = [...selectedSubcategories, ...selectedCategories]
-                const applied = allSelected.length > 0 ? allSelected.join(',') : 'all'
+                // Apply: if subcategories are selected, ONLY use subcategories (more specific).
+                // If no subcategories but categories are selected, use categories.
+                // If nothing selected, reset to 'all'.
+                let applied: string
+                let appliedCount: number
+                if (selectedSubcategories.length > 0) {
+                  // Subcategories selected → only filter by subcategories (ignore categories)
+                  applied = selectedSubcategories.join(',')
+                  appliedCount = selectedSubcategories.length
+                } else if (selectedCategories.length > 0) {
+                  // Only categories selected → filter by categories
+                  applied = selectedCategories.join(',')
+                  appliedCount = selectedCategories.length
+                } else {
+                  applied = 'all'
+                  appliedCount = 0
+                }
                 setCategoryFilter(applied)
                 setPage(1)
                 setFilterModalOpen(false)
               }}
             >
               {selectedSubcategories.length > 0 || selectedCategories.length > 0
-                ? `Apply (${selectedSubcategories.length + selectedCategories.length})`
+                ? `Apply (${selectedSubcategories.length > 0 ? selectedSubcategories.length : selectedCategories.length})`
                 : 'Apply'}
             </Button>
           </div>

@@ -114,7 +114,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter by category — supports comma-separated values for multi-select.
-    // Each value can be a category name or a subcategory name.
+    // The frontend sends EITHER category names OR subcategory names (not both).
+    // If subcategories are selected, only subcategory names are sent.
+    // If only categories are selected, only category names are sent.
+    // We check both fields with $or to handle both cases.
     if (category && category !== 'all') {
       const values = category.split(',').map(v => v.trim()).filter(Boolean)
       if (values.length === 1) {
