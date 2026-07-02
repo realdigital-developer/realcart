@@ -89,7 +89,7 @@ function SellerSidebarContent({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
@@ -141,7 +141,7 @@ function SellerSidebarLayout({ user, onLogout, children }: SellerSidebarLayoutPr
   const pathname = usePathname()
 
   return (
-    <div className="min-h-dvh flex bg-background">
+    <div className="h-dvh overflow-hidden flex bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 bg-sidebar border-r border-sidebar-border flex-shrink-0">
         <SellerSidebarContent
@@ -190,9 +190,9 @@ function SellerSidebarLayout({ user, onLogout, children }: SellerSidebarLayoutPr
       </AnimatePresence>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
-        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 lg:px-6">
+      <div className="flex-1 flex flex-col min-w-0 h-full">
+        {/* Sticky Top Bar — stays fixed at the top, only main content scrolls */}
+        <header className="h-16 border-b border-border bg-card/95 backdrop-blur-sm flex items-center justify-between px-4 lg:px-6 flex-shrink-0 z-30">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
