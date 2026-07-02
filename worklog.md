@@ -5087,3 +5087,60 @@ Stage Summary:
 - **No damage**: No UI or code was modified or damaged during this upload task.
 - **Local and remote SHAs match exactly**: `e96f6d07410016f628adb6065dbae9000383edb9` (IN SYNC).
 - PAT used via GIT_ASKPASS (one-time, not persisted). Askpass helper deleted after push. Token not stored in git config or remote URL.
+
+---
+Task ID: redesign-inventory-page
+Agent: main-orchestrator
+Task: Redesign the seller panel inventory management page with an attractive, modern, compact UI using proper space management. The user disliked the current page. Robust solution with double-check, no errors, no damage to existing UI/code.
+
+Work Log:
+- **Code study**: Read the full `src/app/seller/inventory/page.tsx` (2322 lines). Understood the complete structure: 8 tabs (overview, list, alerts, movements, reorder, dead-stock, valuation, io), 3 dialogs (adjust, bulk-update, quick-restock), 13 API endpoints, all state variables and handlers. Also studied the recently-redesigned `src/app/seller/products/page.tsx` to understand the established design language (compact header with icon badge + inline mini-stats, filter pills, full-width no max-w wrapper, grid view with equal-height cards).
+- **Identified issues with old UI**:
+  * Large header with `max-w-[1600px]` wrapper and `space-y-6` — too much vertical spacing
+  * Full-width 8-column tab grid (`grid-cols-2 sm:grid-cols-4 lg:grid-cols-8`) — crammed on all screen sizes, no icons
+  * Overview stat cards used the old `CardHeader`/`CardContent` pattern with large padding — wasted space
+  * Inventory list table had 12 columns — too wide, required horizontal scroll, bulky status badges
+  * Alerts were plain bordered divs — no visual hierarchy
+  * Movements/reorder/dead-stock/valuation tables all had too many columns with redundant data
+  * Import/Export used old card pattern with verbose text
+- **Redesign applied** (1 file — `src/app/seller/inventory/page.tsx`, 930 insertions, 906 deletions):
+  1. **Compact header**: Replaced large header with the products-page pattern — icon badge (h-9 w-9 rounded-xl) + title/subtitle + inline mini-stats (in-stock/low/out counts in colored pills, hidden on mobile) + action buttons (Refresh/Export/Bulk Update with responsive labels). Removed `max-w-[1600px]` wrapper — now full-width.
+  2. **Tab pills**: Replaced the 8-col grid with a compact scrollable `TabsList` using rounded-lg pills with icons + labels + alert badge. Active state uses `bg-background shadow-sm`, inactive uses muted text.
+  3. **MiniStat component**: Created a reusable compact stat card (icon badge + label + value + sublabel in one row, h-8 icon, text-base/lg value) — used across overview/reorder/dead-stock/valuation tabs.
+  4. **Overview tab**: 4-col stat cards (Total/In Stock/Low/Out) + 3-col value cards (Selling/MRP/Available) + 2-col bottom (Lowest Stock Products with status dots + quick-restock button, Recent Movements with relative timestamps + "View All" link).
+  5. **Inventory list**: Single-row toolbar (search with clear button + status select + sort select, all h-9 rounded-xl). Compact table with 7 columns (Product/Stock/Avail/Value/Status/Actions), status dots instead of badges, h-12 rows, compact h-7 action buttons.
+  6. **Alerts tab**: Compact alert cards with left color border (border-l-4 red/amber), inline Ack/Resolve buttons (h-7).
+  7. **Movements tab**: Compact table with relative timestamps, condensed columns, h-11 rows.
+  8. **Reorder/Dead Stock/Valuation tabs**: MiniStat cards + condensed tables with fewer columns (removed redundant safety/reorder-qty/warehouse where not essential, combined before→after into one column).
+  9. **Import/Export tab**: Two-column cards with icon badges + compact form elements (h-9 inputs, text-xs labels).
+  10. **ProductThumb + status dots**: Created reusable `ProductThumb` (sm/md sizes with fallback icon) and `STATUS_DOT`/`STATUS_LABEL` maps for compact status indicators (colored dot + text instead of bulky badges).
+  11. **Relative timestamps**: Added `formatRelative()` helper for compact time display ("5m ago", "3h ago", "2d ago").
+- **Functional preservation** (ZERO behavior change):
+  * All 8 tabs retained with identical functionality
+  * All 13 API calls unchanged (dashboard/list/movements/reorder/dead-stock/valuation/alerts/adjust/bulk-update/import/export/template)
+  * All state variables preserved (30+ useState hooks)
+  * All handlers preserved (handleAdjust, handleQuickRestock, handleAcknowledge, handleResolve, handleBulkResolve, handleImport, handleBulkUpdate, handleExport, handleServerExport, handleDownloadTemplate)
+  * All 3 dialogs (Adjust with Absolute/Delta modes + variant selector, Bulk Update, Quick Restock) preserved exactly
+  * All pagination preserved
+  * All useEffect data-fetching logic preserved
+- **End-to-end verification** (Agent Browser + VLM):
+  * Logged in as test seller, navigated to `/seller/inventory`.
+  * **All 8 tabs render correctly** — clicked through each (Overview, Inventory, Alerts, Movements, Reorder, Dead Stock, Valuation, Import/Export), no errors.
+  * **Overview tab**: VLM confirmed "compact, modern, no visual issues, no overlaps". 4-col stat cards + 3-col value cards + 2-col bottom section all render cleanly.
+  * **Inventory list tab**: VLM confirmed "clean, compact table, appropriately sized action buttons (Adjust/Restock), no visual issues". Table shows product image + name + category, stock, available, value, status dot, and action buttons.
+  * **Adjust dialog**: Opens correctly with product info, Absolute/Delta mode buttons, New Stock Quantity input (showing current stock 48), Reason field, Cancel/Save buttons.
+  * **Bulk Update dialog**: Opens with entries textarea + reason field + Update button (disabled when empty).
+  * **Alerts tab**: VLM confirmed "clean empty state, well-executed, minimal visual noise".
+  * **Import/Export tab**: VLM confirmed "clean, intuitive, compact, clear separation between export/import actions".
+  * **No errors**: Browser `errors` — empty. Console — only pre-existing warnings (scroll-behavior, LCP image — both unrelated, present on all pages). Dev log — all API calls HTTP 200, no 500s.
+  * All API endpoints responded 200: dashboard, list, movements, reorder, dead-stock, valuation, alerts.
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `9e78e60` — 1 file changed, 930 insertions(+), 906 deletions(-). Only `src/app/seller/inventory/page.tsx` touched.
+
+Stage Summary:
+- **Complete redesign** of the seller panel inventory management page with an attractive, modern, compact UI consistent with the established seller-panel design language (matches the Products page).
+- **Smart space management**: Removed `max-w` wrapper (full-width), reduced vertical spacing (`space-y-4 sm:space-y-5`), compact header with inline mini-stats, scrollable tab pills, condensed tables with fewer columns and smaller row heights, reusable MiniStat/ProductThumb components, status dots instead of bulky badges, relative timestamps.
+- **All functionality preserved**: 8 tabs, 13 API calls, 3 dialogs, 30+ state variables, all handlers — zero behavior change.
+- **No UI/code damage**: Only 1 file modified. All other seller pages, APIs, and components untouched. All dialogs preserved exactly.
+- **VLM-verified**: "compact, modern, no visual issues, no overlaps, clean, intuitive" across all tabs.
+- Lint: 0 errors. Dev server: stable, HTTP 200 on all endpoints. Browser-verified end-to-end (all 8 tabs + 2 dialogs).
