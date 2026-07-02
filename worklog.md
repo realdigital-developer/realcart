@@ -4160,3 +4160,26 @@ Stage Summary:
 - **Approach**: Expanded the `OrderStats` interface, `fetchStats` function, and filter tab config to cover all 13 statuses. The `fetchStats` function makes 13 parallel API calls with `limit=1` to get accurate counts for each status.
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only the stats interface, fetch logic, and tab config were updated.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
+
+---
+Task ID: count-badge-active-tab-only
+Agent: main-orchestrator
+Task: Show count badge only on the selected/active status tab, not on every tab.
+
+Work Log:
+- **Root Cause**: The count badge rendering condition was `tab.count !== null && tab.count > 0` — this showed badges on ALL tabs that had a count > 0, regardless of which tab was selected.
+- **Fix** (committed as `f809f5e`): Added `isActive &&` to the condition so the count badge only renders on the currently selected tab:
+  - Before: `{tab.count !== null && tab.count > 0 && (...)}`
+  - After: `{isActive && tab.count !== null && tab.count > 0 && (...)}`
+  - Also simplified the badge styling since it only shows when active (always uses `bg-white/20` — no need for the `isActive ? ... : ...` conditional).
+- **Verification** (Agent Browser + VLM):
+  * **All tab selected**: VLM confirmed — "ONLY the 'All' tab shows a count badge (45). Other tabs show NO count badges."
+  * **Pending tab selected**: VLM confirmed — "ONLY the 'Pending' tab shows a count badge (19). The 'All' tab is no longer showing its count badge."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200, no errors.
+  * Only 2 lines changed — minimal, surgical fix.
+
+Stage Summary:
+- **Fixed**: The count badge now shows ONLY on the selected/active status tab. When the seller clicks "Pending", only the Pending tab shows its count badge (19) — all other tabs show no badges. When they click "All", only the All tab shows its count (45).
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). Only 2 lines changed. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on All and Pending tabs.
