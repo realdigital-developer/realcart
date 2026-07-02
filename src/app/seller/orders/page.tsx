@@ -777,8 +777,8 @@ function OrdersContent() {
               >
                 {isActive && <span className="h-1.5 w-1.5 rounded-full bg-white/80" />}
                 {tab.label}
-                {tab.count !== null && tab.count > 0 && (
-                  <span className={cn('ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold', isActive ? 'bg-white/20' : 'bg-background')}>{tab.count}</span>
+                {isActive && tab.count !== null && tab.count > 0 && (
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-white/20">{tab.count}</span>
                 )}
               </button>
             )
