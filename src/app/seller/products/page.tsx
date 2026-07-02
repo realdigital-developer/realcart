@@ -1176,7 +1176,7 @@ export default function SellerProductsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
       >
-        <Card className="overflow-hidden hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-200 group">
+        <Card className="overflow-hidden hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-200 group py-0 gap-0">
           <div className="relative aspect-square bg-muted">
             <img src={primaryImg} alt={product.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
             <Badge variant="outline" className={cn(statusCfg.color, statusCfg.bg, statusCfg.border, 'gap-1 absolute top-2 left-2 text-[9px] backdrop-blur-sm')}>
@@ -2290,7 +2290,7 @@ export default function SellerProductsPage() {
         {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden">
+              <Card key={i} className="overflow-hidden py-0 gap-0">
                 <Skeleton className="aspect-square" />
                 <CardContent className="p-2.5 space-y-1.5">
                   <Skeleton className="h-3.5 w-3/4" />
