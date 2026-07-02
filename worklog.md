@@ -4324,3 +4324,28 @@ Stage Summary:
 - **Fixed**: Action buttons (Edit, Duplicate, Toggle, Delete) are now always visible at the bottom of each product card — no longer hidden behind a hover overlay. Works on all devices (mobile, tablet, desktop).
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). No UI or code damaged — only the action button area was restructured.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on desktop and mobile.
+
+---
+Task ID: remove-list-view
+Agent: main-orchestrator
+Task: Remove the list/table view and always show products in grid view in the seller panel products page.
+
+Work Log:
+- **Changes** (committed as `b3b8ea4`):
+  1. **Removed `viewMode` state** — replaced with a comment: "Grid view is always used — no list/table view toggle".
+  2. **Removed grid/list toggle buttons** — the `LayoutGrid` and `List` icon buttons that toggled between grid and table views.
+  3. **Simplified loading skeleton** — removed the conditional `viewMode === 'grid' ? ... : ...` logic, now always uses grid skeleton.
+  4. **Removed table view section** — the `{!loading && products.length > 0 && viewMode === 'table' && (...)}` block that rendered `renderProductRow` is gone.
+  5. **Simplified grid view condition** — changed from `viewMode === 'grid' &&` to just `products.length > 0 &&`.
+  6. **Removed `renderProductRow` function** — the entire ~65-line function for rendering list/table rows is deleted.
+  7. **Removed unused imports** — `LayoutGrid` and `List` from lucide-react.
+- **Net change**: 11 insertions, 127 deletions — significant code cleanup.
+- **Verification** (Agent Browser + VLM):
+  * VLM confirmed: "Products displayed in grid view. No grid/list toggle button. Product cards show images, info, and action buttons. Layout is clean."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/products, no errors.
+
+Stage Summary:
+- **Changed**: Products are now always shown in grid view. The list/table view toggle and all related code (renderProductRow function, toggle buttons, conditional skeleton) have been removed.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). 11 insertions, 127 deletions — cleaner code. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
