@@ -2311,27 +2311,6 @@ export default function SellerProductsPage() {
           </button>
         </div>
 
-        {/* ── Active filter indicator ── */}
-        {categoryFilter !== 'all' && (
-          <div className="flex items-center gap-1.5 flex-wrap -mt-2 mb-1">
-            {categoryFilter.split(',').map((filter, i) => (
-              <Badge key={i} variant="secondary" className="gap-1.5 text-[11px] py-1 px-2.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
-                {filter.trim()}
-                <button onClick={() => {
-                  const filters = categoryFilter.split(',').filter((_, idx) => idx !== i).join(',')
-                  setCategoryFilter(filters || 'all')
-                  setPage(1)
-                }} className="hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-full p-0.5">
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-            <button onClick={() => { setCategoryFilter('all'); setPage(1) }} className="text-[10px] text-muted-foreground hover:text-foreground ml-1">
-              Clear all
-            </button>
-          </div>
-        )}
-
         {/* ── Loading Skeleton ── */}
         {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
