@@ -658,190 +658,172 @@ function OrdersContent() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-6"
+      className="space-y-4 sm:space-y-5"
     >
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
+      {/* ── Compact Page Header with Inline Stats ────────────────────── */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center flex-shrink-0">
               <ShoppingCart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Orders</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Manage your store orders
-              </p>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">Orders</h1>
+              <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">Manage your store orders</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 mt-3 ml-[46px]">
-            <button
-              onClick={() => setStatusFilter('all')}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                statusFilter === 'all'
-                  ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-              )}
-            >
-              <span className={cn('h-1.5 w-1.5 rounded-full', statusFilter === 'all' ? 'bg-emerald-500' : 'bg-muted-foreground/40')} />
-              All ({stats.total})
-            </button>
-            <button
-              onClick={() => setStatusFilter('Pending')}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                statusFilter === 'Pending'
-                  ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-              )}
-            >
-              <span className={cn('h-1.5 w-1.5 rounded-full', statusFilter === 'Pending' ? 'bg-amber-500' : 'bg-muted-foreground/40')} />
-              Pending
-            </button>
-            <button
-              onClick={() => setStatusFilter('Processing')}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                statusFilter === 'Processing'
-                  ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-              )}
-            >
-              <span className={cn('h-1.5 w-1.5 rounded-full', statusFilter === 'Processing' ? 'bg-blue-500' : 'bg-muted-foreground/40')} />
-              Processing
-            </button>
-            <button
-              onClick={() => setStatusFilter('Delivered')}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                statusFilter === 'Delivered'
-                  ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-              )}
-            >
-              <span className={cn('h-1.5 w-1.5 rounded-full', statusFilter === 'Delivered' ? 'bg-emerald-500' : 'bg-muted-foreground/40')} />
-              Delivered
-            </button>
+          {/* Inline mini-stats — compact pills */}
+          <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/30">
+              <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{stats.pending}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30">
+              <Package className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+              <span className="text-xs font-bold text-blue-700 dark:text-blue-300">{stats.processing}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{stats.delivered}</span>
+            </div>
           </div>
+        </div>
+
+        {/* Quick Filter Pills — horizontal scroll on mobile */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0',
+              statusFilter === 'all'
+                ? 'bg-emerald-500 text-white shadow-sm'
+                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+            )}
+          >
+            <ShoppingCart className="h-3 w-3" />
+            All
+            <span className={cn('ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold', statusFilter === 'all' ? 'bg-white/20' : 'bg-background')}>{stats.total}</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('Pending')}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0',
+              statusFilter === 'Pending'
+                ? 'bg-amber-500 text-white shadow-sm'
+                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+            )}
+          >
+            <Clock className="h-3 w-3" />
+            Pending
+            {stats.pending > 0 && <span className={cn('ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold', statusFilter === 'Pending' ? 'bg-white/20' : 'bg-background')}>{stats.pending}</span>}
+          </button>
+          <button
+            onClick={() => setStatusFilter('Processing')}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0',
+              statusFilter === 'Processing'
+                ? 'bg-blue-500 text-white shadow-sm'
+                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+            )}
+          >
+            <Package className="h-3 w-3" />
+            Processing
+            {stats.processing > 0 && <span className={cn('ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold', statusFilter === 'Processing' ? 'bg-white/20' : 'bg-background')}>{stats.processing}</span>}
+          </button>
+          <button
+            onClick={() => setStatusFilter('Delivered')}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0',
+              statusFilter === 'Delivered'
+                ? 'bg-emerald-500 text-white shadow-sm'
+                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+            )}
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Delivered
+            {stats.delivered > 0 && <span className={cn('ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold', statusFilter === 'Delivered' ? 'bg-white/20' : 'bg-background')}>{stats.delivered}</span>}
+          </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {[
-          { label: 'Total Orders', value: stats.total, icon: ShoppingCart, bgClass: 'bg-emerald-50 dark:bg-emerald-950/30', textClass: 'text-emerald-600 dark:text-emerald-400', gradient: 'bg-gradient-to-r from-emerald-500 to-teal-400' },
-          { label: 'Pending', value: stats.pending, icon: Clock, bgClass: 'bg-amber-50 dark:bg-amber-950/30', textClass: 'text-amber-600 dark:text-amber-400', gradient: 'bg-gradient-to-r from-amber-500 to-orange-400' },
-          { label: 'Processing', value: stats.processing, icon: Package, bgClass: 'bg-blue-50 dark:bg-blue-950/30', textClass: 'text-blue-600 dark:text-blue-400', gradient: 'bg-gradient-to-r from-blue-500 to-cyan-400' },
-          { label: 'Delivered', value: stats.delivered, icon: CheckCircle2, bgClass: 'bg-emerald-50 dark:bg-emerald-950/30', textClass: 'text-emerald-600 dark:text-emerald-400', gradient: 'bg-gradient-to-r from-emerald-500 to-green-400' },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            variants={fadeInUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: i * 0.05 }}
-            className="group relative overflow-hidden bg-card rounded-xl border border-border hover:shadow-lg transition-all duration-300"
-          >
-            <div className={cn('absolute top-0 left-0 right-0 h-1 rounded-t-xl', stat.gradient)} />
-            <div className="p-4 sm:p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center', stat.bgClass)}>
-                  <stat.icon className={cn('h-5 w-5', stat.textClass)} />
+      {/* ── Search + Status Select — Compact Filter Bar ──────────────── */}
+      <div className="flex flex-col sm:flex-row gap-2.5">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by order ID or customer name..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 bg-card border-border h-10 rounded-xl"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[180px] h-10 rounded-xl bg-card border-border">
+            <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="Pending">Pending</SelectItem>
+            <SelectItem value="Processing">Processing</SelectItem>
+            <SelectItem value="Shipped">Shipped</SelectItem>
+            <SelectItem value="Out for Delivery">Out for Delivery</SelectItem>
+            <SelectItem value="Delivered">Delivered</SelectItem>
+            <SelectItem value="Cancelled">Cancelled</SelectItem>
+            <SelectItem value="Not Delivered">Not Delivered</SelectItem>
+            <SelectItem value="Return Requested">Return Requested</SelectItem>
+            <SelectItem value="Return Approved">Return Approved</SelectItem>
+            <SelectItem value="Out for Pickup">Out for Pickup</SelectItem>
+            <SelectItem value="Return Completed">Return Completed</SelectItem>
+            <SelectItem value="Return Cancelled">Return Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* ── Loading Skeleton ─────────────────────────────────────────── */}
+      {loadingData && (
+        <div className="space-y-2.5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border">
+              <Skeleton className="h-10 w-10 rounded-lg flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-4 w-16" />
                 </div>
               </div>
-              <p className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">{stat.value}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Filter Bar */}
-      <div className="bg-card rounded-xl border border-border p-3 sm:p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by order ID or customer name..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9 bg-background"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Pending">Pending</SelectItem>
-              <SelectItem value="Processing">Processing</SelectItem>
-              <SelectItem value="Shipped">Shipped</SelectItem>
-              <SelectItem value="Out for Delivery">Out for Delivery</SelectItem>
-              <SelectItem value="Delivered">Delivered</SelectItem>
-              <SelectItem value="Cancelled">Cancelled</SelectItem>
-              <SelectItem value="Not Delivered">Not Delivered</SelectItem>
-              <SelectItem value="Return Requested">Return Requested</SelectItem>
-              <SelectItem value="Return Approved">Return Approved</SelectItem>
-              <SelectItem value="Out for Pickup">Out for Pickup</SelectItem>
-              <SelectItem value="Return Completed">Return Completed</SelectItem>
-              <SelectItem value="Return Cancelled">Return Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Loading Skeleton */}
-      {loadingData && (
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <Skeleton className="h-4 w-40" />
-          </div>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 border-b border-border last:border-0">
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-6 w-20 rounded-full" />
-              <div className="flex gap-2">
-                <Skeleton className="h-7 w-16 rounded-md" />
-              </div>
+              <Skeleton className="h-7 w-16 rounded-lg flex-shrink-0" />
             </div>
           ))}
         </div>
       )}
 
-      {/* Empty State */}
+      {/* ── Empty State ──────────────────────────────────────────────── */}
       {!loadingData && orders.length === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card rounded-xl border border-border p-12 text-center"
+          className="bg-card rounded-2xl border border-border p-10 sm:p-14 text-center"
         >
           <div className="h-16 w-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mx-auto mb-4">
             <ShoppingCart className="h-8 w-8 text-emerald-400" />
           </div>
           <h3 className="text-base font-semibold text-foreground mb-1">
-            {searchQuery || statusFilter !== 'all'
-              ? 'No orders found'
-              : 'No orders yet'}
+            {searchQuery || statusFilter !== 'all' ? 'No orders found' : 'No orders yet'}
           </h3>
-          <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
             {searchQuery || statusFilter !== 'all'
               ? 'Try adjusting your filters or search query.'
               : 'Orders from customers will appear here when they place orders.'}
@@ -849,105 +831,99 @@ function OrdersContent() {
         </motion.div>
       )}
 
-      {/* Orders Table */}
+      {/* ── Orders List — Unified Card Design (works on all devices) ─── */}
       {!loadingData && orders.length > 0 && (
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
-          className="bg-card rounded-xl border border-border overflow-hidden"
+          className="space-y-2.5"
         >
-          {/* Desktop Header */}
-          <div className="hidden md:grid grid-cols-[1fr_1fr_80px_120px_100px_140px] items-center gap-3 px-4 py-3 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            <span>Order ID</span>
-            <span>Customer</span>
-            <span>Items</span>
-            <span>Amount</span>
-            <span>Status</span>
-            <span className="text-right">Actions</span>
-          </div>
-
           {orders.map((order) => {
             const sellerItems = getSellerItems(order)
             const primaryStatus = getPrimaryStatus(order)
             const totalAmount = sellerItems.reduce((sum, item) => sum + (item.total || 0), 0)
             const config = STATUS_CONFIG[primaryStatus]
+            const firstItem = sellerItems[0]
+            const hasThumb = firstItem?.productImage
 
             return (
               <motion.div
                 key={order.orderId}
                 variants={rowVariants}
-                className="group border-b border-border last:border-0 hover:bg-muted/20 transition-colors"
+                className={cn(
+                  'group relative bg-card rounded-xl border border-border hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-200 overflow-hidden',
+                )}
               >
-                {/* Desktop Row */}
-                <div className="hidden md:grid grid-cols-[1fr_1fr_80px_120px_100px_140px] items-center gap-3 px-4 py-3">
-                  <div>
-                    <button
-                      onClick={() => openDetail(order)}
-                      className="text-sm font-medium text-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-mono"
-                    >
-                      {order.orderId}
-                    </button>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{formatDate(order.createdAt)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-foreground truncate">{order.customerName}</p>
-                    {order.customerPhone && (
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Phone className="h-2.5 w-2.5" />
-                        {order.customerPhone}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-sm text-muted-foreground">{sellerItems.length} item{sellerItems.length !== 1 ? 's' : ''}</div>
-                  <div className="text-sm font-semibold text-foreground">{fmtPrice(totalAmount)}</div>
-                  <div>
-                    <StatusBadge status={primaryStatus} />
-                  </div>
-                  <div className="flex items-center justify-end gap-1">
-                    {sellerItems.length === 1 ? (
-                      renderActions(order, sellerItems[0])
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                        onClick={() => openDetail(order)}
-                      >
-                        <Eye className="h-3 w-3" />
-                        View
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                {/* Left status accent bar */}
+                <div className={cn('absolute left-0 top-0 bottom-0 w-1', config?.bgColor || 'bg-muted/30')} />
 
-                {/* Mobile Card */}
-                <div className="md:hidden p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
+                <div className="pl-3.5 pr-3 sm:pl-4 sm:pr-4 py-3">
+                  {/* Top row: Order ID + Status + Amount */}
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {/* Product thumbnail */}
                       <button
                         onClick={() => openDetail(order)}
-                        className="text-sm font-medium text-foreground hover:text-emerald-600 transition-colors font-mono"
+                        className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-muted/50 border border-border flex items-center justify-center flex-shrink-0 overflow-hidden hover:ring-2 hover:ring-emerald-200 dark:hover:ring-emerald-800 transition-all"
                       >
-                        {order.orderId}
+                        {hasThumb ? (
+                          <img src={firstItem.productImage} alt={firstItem.productName} className="h-full w-full object-cover" />
+                        ) : (
+                          <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+                        )}
                       </button>
-                      <p className="text-xs text-muted-foreground mt-0.5">{order.customerName}</p>
+                      <div className="min-w-0 flex-1">
+                        <button
+                          onClick={() => openDetail(order)}
+                          className="text-xs sm:text-sm font-semibold text-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-mono block truncate text-left"
+                        >
+                          {order.orderId}
+                        </button>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{order.customerName}</p>
+                          {order.customerPhone && (
+                            <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                              <Phone className="h-2.5 w-2.5" />
+                              {order.customerPhone}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <StatusBadge status={primaryStatus} />
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <StatusBadge status={primaryStatus} />
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-foreground">{fmtPrice(totalAmount)}</span>
-                      <span className="text-xs text-muted-foreground">{sellerItems.length} item{sellerItems.length !== 1 ? 's' : ''}</span>
+
+                  {/* Bottom row: Items + Date + Amount + Actions */}
+                  <div className="flex items-center justify-between gap-2 pl-[46px] sm:pl-[50px]">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded-md">
+                        <Package className="h-2.5 w-2.5" />
+                        {sellerItems.length} {sellerItems.length === 1 ? 'item' : 'items'}
+                      </span>
+                      <span className="text-[10px] sm:text-[11px] text-muted-foreground hidden sm:inline">{formatDate(order.createdAt)}</span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">{formatDate(order.createdAt)}</span>
+                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                      <span className="text-sm sm:text-base font-bold text-foreground">{fmtPrice(totalAmount)}</span>
+                      <div className="flex items-center gap-1">
+                        {sellerItems.length === 1 ? (
+                          renderActions(order, sellerItems[0])
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            onClick={() => openDetail(order)}
+                          >
+                            <Eye className="h-3 w-3" />
+                            <span className="hidden sm:inline">View</span>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  {/* Action buttons for first seller item on mobile */}
-                  {sellerItems.length > 0 && (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {renderActions(order, sellerItems[0])}
-                    </div>
-                  )}
                 </div>
               </motion.div>
             )
@@ -955,14 +931,14 @@ function OrdersContent() {
         </motion.div>
       )}
 
-      {/* Pagination */}
+      {/* ── Pagination ───────────────────────────────────────────────── */}
       {!loadingData && totalPages > 1 && (
-        <div className="flex items-center justify-between bg-card rounded-xl border border-border px-4 py-3">
-          <p className="text-xs text-muted-foreground">
-            Showing {((currentPage - 1) * itemsPerPage) + 1}&ndash;{Math.min(currentPage * itemsPerPage, totalOrders)} of {totalOrders} orders
+        <div className="flex items-center justify-between gap-3 px-1">
+          <p className="text-[11px] sm:text-xs text-muted-foreground">
+            <span className="hidden sm:inline">Showing </span>{((currentPage - 1) * itemsPerPage) + 1}&ndash;{Math.min(currentPage * itemsPerPage, totalOrders)} <span className="hidden sm:inline">of </span>{totalOrders} <span className="hidden sm:inline">orders</span>
           </p>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="h-8 w-8 p-0">
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="h-8 w-8 p-0 rounded-lg">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
@@ -972,12 +948,12 @@ function OrdersContent() {
               else if (currentPage >= totalPages - 2) { pageNum = totalPages - 4 + i }
               else { pageNum = currentPage - 2 + i }
               return (
-                <Button key={pageNum} variant={currentPage === pageNum ? 'default' : 'outline'} size="sm" onClick={() => setCurrentPage(pageNum)} className={cn('h-8 w-8 p-0 text-xs', currentPage === pageNum && 'bg-emerald-600 hover:bg-emerald-700 text-white')}>
+                <Button key={pageNum} variant={currentPage === pageNum ? 'default' : 'outline'} size="sm" onClick={() => setCurrentPage(pageNum)} className={cn('h-8 w-8 p-0 text-xs rounded-lg', currentPage === pageNum && 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600')}>
                   {pageNum}
                 </Button>
               )
             })}
-            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="h-8 w-8 p-0">
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="h-8 w-8 p-0 rounded-lg">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
