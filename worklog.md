@@ -4670,3 +4670,49 @@ Stage Summary:
 - **Fixed**: The filter modal now shows ONLY categories and subcategories that the seller has products in. Category list is filtered by `sellerCategories`, subcategory list is filtered by `sellerSubcategories`, and subcategory counts per category only count the seller's subcategories.
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). 22 insertions, 10 deletions. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on both Category and Sub tabs.
+
+---
+Task ID: multi-select-category-subcategory
+Agent: main-orchestrator
+Task: Allow seller to select categories first, then see only subcategories of selected categories. Multi-select with Apply.
+
+Work Log:
+- **Root Cause**: The filter modal used a single `categoryFilter` string — only ONE category OR subcategory could be selected at a time. The Category and Sub tabs were independent — selecting a subcategory didn't require selecting a category first. The Sub tab showed ALL seller subcategories, not just ones under selected categories.
+- **Fix** (committed as `825ec3d`):
+
+  **1. Added multi-select state**:
+  - `selectedCategories: string[]` — array of selected category names
+  - `selectedSubcategories: string[]` — array of selected subcategory names
+  - These are local to the modal, applied to `categoryFilter` on "Apply"
+
+  **2. Sync on modal open**: When opening the filter modal, the current `categoryFilter` value is synced to the selection state (checked if it's a category or subcategory and populated the appropriate array).
+
+  **3. Category tab — multi-select checkboxes**:
+  - "All Categories" option clears both `selectedCategories` and `selectedSubcategories`
+  - Each category can be toggled on/off independently (multi-select)
+  - When unselecting a category, its subcategories are automatically removed from `selectedSubcategories`
+  - Hint button appears after selecting categories: "Select subcategories for chosen categories →" (switches to Sub tab)
+
+  **4. Sub tab — dependent on selected categories**:
+  - If NO categories selected: Shows "Select categories first" with "← Go to Categories" link
+  - If categories selected: Shows "Showing subcategories for: [selected categories]" + only subcategories that belong to the selected categories AND that the seller has products in
+  - Subcategories can be toggled on/off independently (multi-select)
+
+  **5. Footer — 3 buttons**:
+  - "Clear All" — clears all selections and applied filter, closes modal
+  - "Close" — closes modal without applying
+  - "Apply (N)" — applies the filter (prefers subcategory if selected, else category, else 'all'), shows count of total selections
+
+  **6. Left sidebar count badges**: Updated to show `selectedCategories.length` and `selectedSubcategories.length` instead of the old single-value check.
+
+- **Verification** (Agent Browser + VLM):
+  * **Category tab**: VLM confirmed — "Select Categories with hint. Checkboxes for Men's Fashion and Women's Fashion. All Categories checked. Clear All, Close, Apply buttons."
+  * **Sub tab without categories**: VLM confirmed — "Select categories first message with Go to Categories link."
+  * **Sub tab after selecting Men's Fashion**: VLM confirmed — "Showing subcategories for: Men's Fashion. Checkbox item for Shirts with parent category label. Apply (1) button."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200, no errors.
+
+Stage Summary:
+- **Fixed**: Seller can now select multiple categories first (multi-select checkboxes), then switch to the Sub tab to see ONLY subcategories of the selected categories. The subcategory list is dependent on category selection — no categories selected = "Select categories first" message. Both categories and subcategories support multi-select. Apply button shows total selection count.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). 180 insertions, 81 deletions. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on Category tab, Sub tab (empty), and Sub tab (after selecting category).
