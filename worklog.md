@@ -4946,3 +4946,34 @@ Work Log:
 - Push succeeded: `52f6daa..e2cd43b main -> main` (exit 0).
 - Local and remote in sync: `e2cd43b17ec3f02bd19a88378556baa18eef4a9a` ✓
 - PAT via GIT_ASKPASS (one-time, not persisted). Helper deleted.
+
+---
+Task ID: fix-size-chart-selection
+Agent: main-orchestrator
+Task: Fix why the seller cannot select a size chart in the seller panel when creating a product. Robust solution with double-check, no errors, no damage to existing UI/code.
+
+Work Log:
+- **Code study**: Read `src/app/seller/products/page.tsx` (2804 lines) focusing on size chart logic — `SizeChartTemplate` interface (line 128), `sizeChartTemplates` state (line 430), `fetchSizeChartTemplates` useCallback (line 507), initial-mount fetch in useEffect (line 530), `selectSizeChartTemplate` handler (line 894), and the Step 5 UI with the Select dropdown (lines 1845-1876).
+- **API verification**: `GET /api/size-chart-templates?status=Active` returns HTTP 200 with 13 templates, all with `status: "Active"` and string `_id`s. API is healthy — not the cause.
+- **Root cause identified**: The `closeForm()` function (line 622) contained `setSizeChartTemplates([])` which **wiped all size chart templates** when the product form was closed. Since `fetchSizeChartTemplates()` was only called once on initial page mount (line 530) and never when reopening the form (`openAddForm`/`startEditForm`), the templates array stayed empty after the first form close. Result: reopening "Add Product" showed "No size chart templates available" and the seller could not select a size chart.
+- **Fix applied** (3 surgical changes, 1 file — `src/app/seller/products/page.tsx`):
+  1. **Removed** `setSizeChartTemplates([])` from `closeForm()` — templates are reference data, not form data; they must persist across form open/close cycles. (Root cause fix.)
+  2. **Added** `fetchSizeChartTemplates()` to `openAddForm()` — safety net ensuring templates are always fresh and available when creating a new product, even if the initial page-load fetch failed.
+  3. **Added** `fetchSizeChartTemplates()` to `startEditForm()` — same safety net for the edit form path.
+  4. **Added** `setSelectedSizeChartTemplateId('')` to `openAddForm()` — prevents stale selection state from a previous edit bleeding into a new product form (consistency with `startEditForm` which already had this reset).
+- **End-to-end browser verification** (Agent Browser):
+  * Registered a test seller (`testsizechart2@test.com` / `TestSizeChartStore99`), logged in, navigated to `/seller/products`.
+  * **First form open**: Filled Step 1 (name, category, description) → Step 2 (uploaded test image) → Step 3 (MRP/selling/stock) → Step 4 (skip variants) → Step 5 (Specifications & Size Chart). Opened the size chart dropdown: **all 13 templates appeared**. Selected "Men's T-Shirts & Tops": preview table rendered with columns (Size, Chest, Waist, Length, Sleeve). ✓
+  * **Form close**: Clicked "Close" — form closed, returned to products page. ✓
+  * **Form reopen (CRITICAL TEST)**: Clicked "Add Product" again, filled all steps, reached Step 5. Opened the size chart dropdown: **all 13 templates STILL appeared** (before the fix, this showed "No size chart templates available"). Selected "Men's Footwear": preview table rendered with columns (UK Size, US Size, EU Size, Foot Length). ✓
+  * **No errors**: Browser `errors` command — empty. Console — no error/fail/exception lines. Dev log — multiple `GET /api/size-chart-templates?status=Active 200` calls (one per form open, confirming the safety-net re-fetch fires correctly).
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Dev server**: HTTP 200, stable, no errors.
+- **Git**: Committed as `b23550c` — 1 file changed, 3 insertions(+), 1 deletion(-). Only `src/app/seller/products/page.tsx` touched.
+
+Stage Summary:
+- **Root cause fixed**: `closeForm()` no longer clears the `sizeChartTemplates` array. Templates persist across form open/close cycles. Both `openAddForm` and `startEditForm` proactively re-fetch templates as a safety net.
+- **Seller can now select a size chart** every time they create or edit a product — on first open AND after closing/reopening the form.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). 3 insertions, 1 deletion. No UI or existing code damaged.
+- **Double protection**: (1) templates persist (root cause fix) + (2) templates re-fetched on every form open (safety net). Either alone would fix the bug; both together make it robust.
+- Lint: 0 errors. Dev server: stable, HTTP 200. Browser-verified end-to-end.
