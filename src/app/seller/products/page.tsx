@@ -1175,9 +1175,10 @@ export default function SellerProductsPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
+        className="h-full"
       >
-        <Card className="overflow-hidden hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-200 group py-0 gap-0">
-          <div className="relative aspect-square bg-muted">
+        <Card className="overflow-hidden hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-200 group py-0 gap-0 h-full flex flex-col">
+          <div className="relative aspect-square bg-muted flex-shrink-0">
             <img src={primaryImg} alt={product.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
             <Badge variant="outline" className={cn(statusCfg.color, statusCfg.bg, statusCfg.border, 'gap-1 absolute top-2 left-2 text-[9px] backdrop-blur-sm')}>
               <StatusIcon className="h-2.5 w-2.5" />
@@ -1189,7 +1190,7 @@ export default function SellerProductsPage() {
               </Badge>
             )}
           </div>
-          <CardContent className="p-2.5">
+          <CardContent className="p-2.5 flex flex-col flex-1 min-h-0">
             <h3 className="font-medium text-xs sm:text-sm truncate" title={product.name}>{product.name}</h3>
             <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 truncate">{product.category}{product.subcategory ? ` › ${product.subcategory}` : ''}</p>
             <div className="flex items-baseline gap-1.5 mt-1">
@@ -1209,8 +1210,8 @@ export default function SellerProductsPage() {
                 <AlertTriangle className="h-2.5 w-2.5 inline mr-1" />{product.approvalNotes}
               </div>
             )}
-            {/* Always-visible action buttons row */}
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+            {/* Always-visible action buttons row — pushed to bottom for equal card heights */}
+            <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
               <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1 px-2 text-foreground hover:bg-muted" onClick={() => openEditForm(product)}>
                 <Pencil className="h-3 w-3" /> Edit
               </Button>
