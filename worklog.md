@@ -3998,3 +3998,27 @@ Stage Summary:
 - **Smart conditional rendering**: Cards with no action buttons (terminal statuses) don't show an empty row or divider — the card simply ends after the amount.
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only the order card bottom section was restructured.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on desktop, mobile, and Delivered tab.
+
+---
+Task ID: revert-last-2-tasks
+Agent: main-orchestrator
+Task: Revert the last 2 tasks to bring back everything before them.
+
+Work Log:
+- **Identified the last 2 tasks to revert**:
+  1. "right-column-amount-actions" (commits `1fce8e0` + `754faba`) — moved action buttons to right column below amount, fixed date with whitespace-nowrap
+  2. "action-buttons-right-side" (commits `70f13b7` + `73be3a8`) — moved action buttons to right side of card, fixed date hidden on mobile
+- **Target state**: `4201f83` — the "move-action-buttons-below-amount" task (the task before the 2 tasks to revert). In this state, action buttons are BELOW the amount on a separate row.
+- **Verification that commits were local-only** (not pushed to remote): Local was 10 commits ahead of `origin/main` (`d4dc208`). The 4 commits from the 2 tasks were all local — safe to reset.
+- **Reverted**: `git reset --hard 4201f83` — brought HEAD back to `4201f834a994d4a7e3bd4f07231e84e3707188d8`.
+- **Verification**:
+  * Code markers confirmed: "Action buttons row — below the amount" found (1 match) — action buttons are below amount, not in right column.
+  * Date marker confirmed: `hidden sm:inline` present on the date span — this is the original behavior from "move-action-buttons-below-amount" (date hidden on mobile).
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+  * Agent Browser + VLM: Confirmed "Action buttons are BELOW the amount section on a separate row. Action buttons are NOT in a right-side column. Amount is on the right side of the items/date row."
+
+Stage Summary:
+- **Reverted**: The last 2 tasks ("action-buttons-right-side" and "right-column-amount-actions") have been undone. The code is now back to the "move-action-buttons-below-amount" state where action buttons are below the amount on a separate row.
+- **No damage**: No UI or code was damaged — the reset cleanly restored the exact state from commit `4201f83`.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
