@@ -4977,3 +4977,40 @@ Stage Summary:
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). 3 insertions, 1 deletion. No UI or existing code damaged.
 - **Double protection**: (1) templates persist (root cause fix) + (2) templates re-fetched on every form open (safety net). Either alone would fix the bug; both together make it robust.
 - Lint: 0 errors. Dev server: stable, HTTP 200. Browser-verified end-to-end.
+
+---
+Task ID: fix-size-selector-x-badge-oos
+Agent: main-orchestrator
+Task: Hide the close icon (X) on top of the size selector in the customer panel product details page when the product stock quantity is 0. Robust solution with double-check, no errors, no damage to existing UI/code.
+
+Work Log:
+- **Code study**: Read `src/components/customer/product-detail-page.tsx` (3466 lines). Found the size selector at lines 2503-2570 — variant group pills (S, M, L, etc.) rendered when `variantGroups` is non-empty. The "close icon (X) on top of the size selector" is the small X badge at lines 2553-2557:
+  ```tsx
+  {!hasStock && !isSelected && (
+    <span className="absolute -top-1 -right-1 ..."><X className="h-2 w-2 ..." /></span>
+  )}
+  ```
+  where `hasStock = product.variants?.some(v => v.isActive && v.attributes[attribute] === val && v.stock > 0)`. This X shows on each individual size pill when that specific size is out of stock.
+- **Stock data model** (studied `src/lib/product-utils.ts`): The API computes `product.stock = computeTotalStock(...)` = sum of active variant stocks for variant products, and `product.inStock = stock > 0`. So "product stock quantity 0" ⟺ no active variant has stock > 0.
+- **Root cause of unwanted behavior**: When the ENTIRE product is out of stock (all variants have 0 stock), every size pill's `hasStock` is false, so EVERY pill shows an X badge — redundant with the product-level out-of-stock indicator and visually cluttered.
+- **Fix applied** (1 file — `src/components/customer/product-detail-page.tsx`, 13 insertions, 1 deletion):
+  1. Added `isProductOutOfStock` computed value after `showSizeChartButton` (line 2048). It uses an AND of two conditions for robustness against any stock-field sync mismatch:
+     - `(product?.stock ?? 0) === 0` — the API-computed total stock is 0 (literal "product stock quantity 0").
+     - `!(product?.variants?.some(v => v.isActive && v.stock > 0))` — no active variant has stock (source-of-truth check).
+     Both must be true → the X badges are only hidden when the product is genuinely, fully out of stock. This also correctly handles `trackInventory: false` (unlimited stock → product.stock = 999 ≠ 0 → X badges not hidden).
+  2. Added `&& !isProductOutOfStock` to the X badge render condition (line 2565), so the per-size X badge is suppressed when the whole product is out of stock.
+- **End-to-end browser verification** (Agent Browser):
+  * Created an isolated test product in MongoDB (`ZZ Test OOS Size Product DELETEME`, id `6a46b1b41b385698648a34b4`) with 3 size variants (S/M/L) all at stock 0, product.stock 0, status Published/active. Verified via API: `stock: 0, inStock: false`.
+  * **Scenario 1 (the fix)**: Navigated to `/customer/product/6a46b1b41b385698648a34b4`. Inspected DOM via JS eval — all 3 size pills (S, M, L) returned `hasXBadge: false`. ✓ X badges are HIDDEN when product stock is 0. Also confirmed the product-level "out of stock" text is still present (`hasOutOfStockText=true`), so UX remains clear.
+  * **Scenario 2 (control — no regression)**: Navigated to `/customer/product/6a46a7f31ed9171de731e1e8` (jeans, product.stock 30, Size 30 has stock 0). Inspected DOM — Size 28: `hasXBadge: false` (in stock ✓), Size 30: `hasXBadge: true` (out of stock, X SHOWS ✓), Size 32: `hasXBadge: false` (in stock ✓). Per-size X badges still work correctly when the product has stock.
+  * **No errors**: Browser `errors` — empty. Console — no error/fail/exception. Dev log — both pages HTTP 200, no 500s.
+- **Cleanup**: Deleted the test product from MongoDB (`DELETED=1`), removed all temporary scripts, closed the browser.
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `1cd8a78` — 1 file changed, 13 insertions(+), 1 deletion(-). Only `src/components/customer/product-detail-page.tsx` touched.
+
+Stage Summary:
+- **Root cause fixed**: When the product's total stock quantity is 0 (all variants out of stock), the per-size X badges on the size selector are now hidden, eliminating redundancy with the product-level out-of-stock indicator.
+- **No regression**: When the product has stock but individual sizes are out of stock, the X badges still show on those specific sizes (per-size info preserved).
+- **Robustness**: The `isProductOutOfStock` check uses AND of two conditions (product.stock === 0 AND no active variant has stock) to guard against stock-field sync mismatches, and correctly handles `trackInventory: false` (unlimited stock) without false positives.
+- **Files modified**: 1 (`src/components/customer/product-detail-page.tsx`). 13 insertions, 1 deletion. No UI or existing code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. Browser-verified end-to-end (both scenarios). Test data cleaned up.
