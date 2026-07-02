@@ -1178,7 +1178,7 @@ export default function SellerProductsPage() {
         className="h-full"
       >
         <Card className="overflow-hidden hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-200 group py-0 gap-0 h-full flex flex-col">
-          <div className="relative aspect-square bg-muted flex-shrink-0">
+          <div className="relative aspect-square bg-muted flex-shrink-0 flex-grow-0">
             <img src={primaryImg} alt={product.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
             <Badge variant="outline" className={cn(statusCfg.color, statusCfg.bg, statusCfg.border, 'gap-1 absolute top-2 left-2 text-[9px] backdrop-blur-sm')}>
               <StatusIcon className="h-2.5 w-2.5" />
