@@ -4528,3 +4528,46 @@ Stage Summary:
 - **Fixed**: The filter icon is now correctly positioned at the RIGHT SIDE of the search bar, inside the input field. The root cause was a conflicting `relative` class that overrode the `absolute` positioning.
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). Only 2 lines changed in the final fix. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified and DOM-position-verified.
+
+---
+Task ID: redesign-filter-modal-customer-style
+Agent: main-orchestrator
+Task: Redesign the seller panel products page filters modal to match the customer panel products page filters modal UI style.
+
+Work Log:
+- **Studied the customer panel filter UI** (`src/components/customer/products-page.tsx`):
+  - Uses **checkbox-style list** — each item is a row with a square checkbox (`w-[18px] h-[18px] rounded-[5px] border-2`)
+  - Selected items have a dark checkbox with a Check icon (`strokeWidth={3}`)
+  - Clean rows: `px-3 py-3 text-sm font-medium rounded-xl flex items-center gap-3`
+  - Selected: `bg-gray-50 dark:bg-gray-800`, unselected: `hover:bg-gray-50 dark:hover:bg-gray-800`
+  - Minimal design — no icons, no badges, just checkbox + name
+
+- **Redesigned seller filter modal** (committed as `eba384b`):
+  
+  **Before**: Used bordered cards with Package icons, emerald highlights, emerald pills for subcategories.
+  
+  **After**: Matches customer panel checkbox-style:
+  
+  1. **All Categories** — checkbox row with `w-[18px] h-[18px] rounded-[5px] border-2` checkbox. Selected: dark bg + Check icon.
+  
+  2. **Category rows** — same checkbox style. Each category shows its name + subcategory count on the right (`ml-auto text-[10px] text-muted-foreground`).
+  
+  3. **Subcategory list** — nested under each category with:
+     - `ml-6 pl-3 border-l border-gray-100 dark:border-gray-800` — left border line connecting subcategories to parent
+     - Smaller checkboxes: `w-[16px] h-[16px] rounded-[4px] border-2`
+     - Smaller text: `text-[13px]` vs `text-sm` for categories
+     - Lighter text color: `text-gray-500 dark:text-gray-400` vs `text-gray-600 dark:text-gray-400`
+  
+  4. **Fallback** — sellerCategories from the products API shown as simple checkbox rows.
+  
+  5. **Color scheme** — uses neutral grays (not emerald) to match customer panel style: `bg-gray-50 dark:bg-gray-800` for selected, `border-gray-300 dark:border-gray-600` for unselected, `bg-gray-900 dark:bg-white` for checked checkbox.
+
+- **Verification** (Agent Browser + VLM):
+  * VLM confirmed: "Checkbox-style list with square checkboxes and check marks. Categories as rows with checkboxes. Subcategories as nested list with smaller checkboxes. Clean and consistent design. Standard e-commerce filter conventions."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/products, no errors.
+
+Stage Summary:
+- **Redesigned**: The seller filter modal now uses the same checkbox-style UI as the customer panel — square checkboxes, clean rows, nested subcategories with smaller checkboxes and a left border line.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). 76 insertions, 67 deletions. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
