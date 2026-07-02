@@ -4398,3 +4398,31 @@ Stage Summary:
 - **Fixed**: Removed the extra `py-6` (24px) vertical padding and `gap-6` (24px) gap from the Card component by adding `py-0 gap-0`. Product cards are now compact with no extra spacing on top/bottom.
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). Only 2 lines changed. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. Computed-styles verified.
+
+---
+Task ID: fix-product-card-height
+Agent: main-orchestrator
+Task: Fix why product card heights differ in the seller panel products page. Make all cards the same height.
+
+Work Log:
+- **Root Cause**: Product cards had different heights because:
+  1. The "Rejected" notes section only renders for rejected products — adding extra height.
+  2. The MRP strikethrough only renders when there's a discount — products without discount are shorter.
+  3. The `motion.div` wrapper and `Card` didn't have `h-full` — so cards didn't stretch to match their grid row height.
+  4. The action buttons used `mt-2` (fixed margin) instead of `mt-auto` (push to bottom) — so buttons floated at different positions.
+- **Fix** (committed as `2d15579`):
+  1. Added `className="h-full"` to the `motion.div` wrapper — makes it fill the grid cell height.
+  2. Added `h-full flex flex-col` to the `Card` — makes the card stretch to full height and use flex column layout.
+  3. Added `flex-shrink-0` to the image div — prevents the image from shrinking.
+  4. Changed `CardContent` to `flex flex-col flex-1 min-h-0` — makes the content area flex to fill remaining space.
+  5. Changed the action buttons row from `mt-2` to `mt-auto` — pushes the action buttons to the BOTTOM of the card, so all buttons align at the same vertical position regardless of content differences above.
+- **Verification** (Agent Browser + VLM):
+  * VLM confirmed: "All product cards in the same row have the same height. Action buttons are at the same vertical position (bottom) across all cards. No card is taller or shorter than others. Card heights are consistent."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/products, no errors.
+  * Only 6 lines changed — minimal, surgical fix.
+
+Stage Summary:
+- **Fixed**: All product cards now have the same height in each grid row. The `h-full flex flex-col` on the card + `mt-auto` on the action buttons ensures that even if some cards have extra content (rejected notes, MRP strikethrough), the action buttons always align at the bottom.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). Only 6 lines changed. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
