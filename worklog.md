@@ -4277,3 +4277,22 @@ Stage Summary:
 - **Key improvements**: Inline stats (removed 5 large cards), filter pills (replaced dropdown), modern product cards with hover action overlays, card-style list view (replaced HTML table), responsive 5-column grid on desktop / 2-column on mobile.
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). No backend or API code damaged. All functionality intact (add/edit/delete/duplicate/toggle products, form sheet, search, filter, pagination).
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on desktop and mobile.
+
+---
+Task ID: fix-products-page-width
+Agent: main-orchestrator
+Task: Fix why the seller products page width doesn't match the orders page width.
+
+Work Log:
+- **Root Cause**: The products page wrapped all content in `<div className="min-h-screen bg-background"><div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">` — the `max-w-7xl mx-auto` constrained the content to 1280px max width. The orders page used `<div className="space-y-4 sm:space-y-5">` — no max-width constraint, using the full width of the `<main>` container from the layout.
+- **Fix** (committed as `0b3529e`): Removed the `min-h-screen bg-background` and `mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8` wrapper divs. Changed the outer container to `<div className="space-y-4 sm:space-y-5">` — matching the orders page exactly. Also removed the corresponding closing `</div>` tag.
+- **Verification** (Agent Browser + VLM):
+  * VLM confirmed: "The product grid spans the full width of the main content area (the space between the left sidebar and the right edge of the page). It is not constrained to a narrower width."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/products, no errors.
+  * Only 1 line changed (replaced 2 lines with 1), removed 1 closing div — minimal, surgical fix.
+
+Stage Summary:
+- **Fixed**: The products page now uses the same full-width layout as the orders page — no `max-w-7xl mx-auto` constraint. All seller panel pages now have consistent width.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). Only 1 line changed. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
