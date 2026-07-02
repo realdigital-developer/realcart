@@ -4022,3 +4022,26 @@ Stage Summary:
 - **Reverted**: The last 2 tasks ("action-buttons-right-side" and "right-column-amount-actions") have been undone. The code is now back to the "move-action-buttons-below-amount" state where action buttons are below the amount on a separate row.
 - **No damage**: No UI or code was damaged — the reset cleanly restored the exact state from commit `4201f83`.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
+
+---
+Task ID: revert-last-1-task
+Agent: main-orchestrator
+Task: Revert the last 1 task to bring back everything before it.
+
+Work Log:
+- **Identified the last 1 task to revert**:
+  - "right-column-amount-actions-v2" (commits `3fbd9f0` + `9f1aa3f`) — moved action buttons to right column below amount, fixed date with whitespace-nowrap
+- **Target state**: `f685209` — the "revert-last-2-tasks" commit (the state before the last task). In this state, action buttons are below the amount on a separate row (the "move-action-buttons-below-amount" layout).
+- **Verification that commits were local-only** (not pushed to remote): Local was ahead of `origin/main` (`d4dc208`). The 2 commits from the last task were all local — safe to reset.
+- **Reverted**: `git reset --hard f685209` — brought HEAD back to `f6852091040ce49025481e0f6bf10016efcb7b05`.
+- **Verification**:
+  * Code markers confirmed: "Action buttons row — below the amount" found (1 match) — action buttons are below amount, not in right column.
+  * Date marker confirmed: `hidden sm:inline` present on the date span — this is the original behavior from "move-action-buttons-below-amount".
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+  * Agent Browser + VLM: Confirmed "Action buttons are BELOW the amount section on a separate row. Action buttons are NOT in a right-side column. Amount is on the right side of the items/date row."
+
+Stage Summary:
+- **Reverted**: The last task ("right-column-amount-actions-v2") has been undone. The code is now back to the "revert-last-2-tasks" state where action buttons are below the amount on a separate row.
+- **No damage**: No UI or code was damaged — the reset cleanly restored the exact state from commit `f685209`.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
