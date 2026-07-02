@@ -382,6 +382,7 @@ export default function SellerProductsPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([])
   const [sellerCategories, setSellerCategories] = useState<string[]>([])
   const [sellerSubcategories, setSellerSubcategories] = useState<string[]>([])
+  const [categorySubcategoryMap, setCategorySubcategoryMap] = useState<Record<string, string[]>>({})
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -459,6 +460,7 @@ export default function SellerProductsPage() {
       if (data.counts) setCounts(data.counts)
       if (data.categories) setSellerCategories(data.categories)
       if (data.subcategories) setSellerSubcategories(data.subcategories)
+      if (data.categorySubcategoryMap) setCategorySubcategoryMap(data.categorySubcategoryMap)
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to load products', variant: 'destructive' })
     } finally {
@@ -2524,7 +2526,7 @@ export default function SellerProductsPage() {
                   .filter(cat => sellerCategories.includes(cat.name))
                   .map((cat) => {
                     const isSelected = selectedCategories.includes(cat.name)
-                    const sellerSubsCount = (cat.subcategories || []).filter(s => sellerSubcategories.includes(s.name)).length
+                    const sellerSubsCount = (categorySubcategoryMap[cat.name] || []).length
                     return (
                       <button
                         key={cat._id}
@@ -2618,31 +2620,19 @@ export default function SellerProductsPage() {
                     <p className="text-[11px] text-muted-foreground mb-3">
                       Showing subcategories for: {selectedCategories.join(', ')}
                     </p>
-                    {/* Subcategories of selected categories only */}
-                    {(categories.length > 0
-                      ? categories
-                          .filter(cat => selectedCategories.includes(cat.name))
-                          .flatMap(cat =>
-                            (cat.subcategories || [])
-                              .filter(s => sellerSubcategories.includes(s.name))
-                              .map(sub => ({ sub, catName: cat.name }))
-                          )
-                      : sellerSubcategories
-                          .map(sub => ({ sub: { _id: sub, name: sub }, catName: '' }))
-                    ).length === 0 ? (
-                      <p className="text-sm text-gray-400 py-4 text-center">No subcategories available for selected categories</p>
-                    ) : (
-                      (categories.length > 0
-                        ? categories
-                            .filter(cat => selectedCategories.includes(cat.name))
-                            .flatMap(cat =>
-                              (cat.subcategories || [])
-                                .filter(s => sellerSubcategories.includes(s.name))
-                                .map(sub => ({ sub, catName: cat.name }))
-                            )
-                        : sellerSubcategories
-                            .map(sub => ({ sub: { _id: sub, name: sub }, catName: '' }))
-                      ).map(({ sub, catName }) => {
+                    {/* Subcategories of selected categories — from the seller's actual products */}
+                    {(() => {
+                      // Build subcategory list from categorySubcategoryMap (from seller's products)
+                      const subList = selectedCategories.flatMap(catName =>
+                        (categorySubcategoryMap[catName] || []).map(subName => ({
+                          sub: { _id: subName, name: subName },
+                          catName,
+                        }))
+                      )
+                      return subList.length === 0 ? (
+                        <p className="text-sm text-gray-400 py-4 text-center">No subcategories available for selected categories</p>
+                      ) : (
+                        subList.map(({ sub, catName }) => {
                         const isSelected = selectedSubcategories.includes(sub.name)
                         return (
                           <button
@@ -2672,7 +2662,8 @@ export default function SellerProductsPage() {
                           </button>
                         )
                       })
-                    )}
+                      )
+                    })()}
                   </>
                 )}
               </div>

@@ -160,6 +160,20 @@ export async function GET(request: NextRequest) {
       db.collection('products').distinct('subcategory', { seller: sellerMatch }),
     ])
 
+    // Build category → subcategory mapping from the seller's actual products
+    const sellerProducts = await db.collection('products')
+      .find({ seller: sellerMatch }, { projection: { category: 1, subcategory: 1 } })
+      .toArray()
+    const categorySubcategoryMap: Record<string, string[]> = {}
+    for (const p of sellerProducts) {
+      if (p.category) {
+        if (!categorySubcategoryMap[p.category]) categorySubcategoryMap[p.category] = []
+        if (p.subcategory && !categorySubcategoryMap[p.category].includes(p.subcategory)) {
+          categorySubcategoryMap[p.category].push(p.subcategory)
+        }
+      }
+    }
+
     return NextResponse.json({
       products: products.map(serializeProduct),
       total: filteredTotal,
@@ -176,6 +190,7 @@ export async function GET(request: NextRequest) {
       },
       categories: categories.filter(Boolean).sort(),
       subcategories: subcategories.filter(Boolean).sort(),
+      categorySubcategoryMap,
     })
   } catch (error) {
     console.error('[Seller Products GET Error]', error)
