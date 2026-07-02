@@ -4798,3 +4798,43 @@ Stage Summary:
 - **Fixed**: All available product subcategories now show correctly in the filter modal based on selected categories. The `categorySubcategoryMap` is built from the seller's actual products (not from the categories API which has empty subcategory arrays), ensuring accurate category→subcategory mapping.
 - **Files modified**: 2 (`src/app/api/seller/products/route.ts`, `src/app/seller/products/page.tsx`). 33 insertions, 27 deletions. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified with both Men's Fashion and Women's Fashion categories.
+
+---
+Task ID: fix-subcategory-filter-priority
+Agent: main-orchestrator
+Task: Fix why selecting subcategories shows all category products instead of only subcategory products.
+
+Work Log:
+- **Root Cause**: The Apply button combined BOTH subcategories and categories into one comma-separated string: `[...selectedSubcategories, ...selectedCategories].join(',')`. When both "Shirts" (subcategory) and "Men's Fashion" (category) were selected, the API received `category=Shirts,Men's Fashion`. The API used `$or` with `$in` on both `category` and `subcategory` fields — so `category: { $in: ["Shirts", "Men's Fashion"] }` matched ALL Men's Fashion products (because `category === "Men's Fashion"`), returning the entire category instead of just Shirts.
+
+- **Fix** (committed as `c0faa73`, 2 files):
+
+  **Frontend** (`src/app/seller/products/page.tsx`):
+  - Apply button now uses **priority logic**: if subcategories are selected, ONLY subcategories are sent (categories are ignored). If no subcategories but categories are selected, only categories are sent:
+    ```tsx
+    if (selectedSubcategories.length > 0) {
+      applied = selectedSubcategories.join(',')  // Only subcategories
+    } else if (selectedCategories.length > 0) {
+      applied = selectedCategories.join(',')     // Only categories
+    } else {
+      applied = 'all'
+    }
+    ```
+  - Apply button count shows only the relevant count (subcategories count if subcategories selected, else categories count).
+  - Updated sync-on-open logic to handle comma-separated values properly (split by comma, categorize each as category or subcategory).
+
+  **Backend** (`src/app/api/seller/products/route.ts`):
+  - Updated the comment to clarify that the frontend now sends EITHER category names OR subcategory names (not both mixed together).
+  - The `$or` logic remains the same (checks both `category` and `subcategory` fields), but since only subcategory names are sent when subcategories are selected, the `category: { $in: ["Shirts"] }` part won't match any products (no product has `category === "Shirts"`), and only `subcategory: { $in: ["Shirts"] }` will match.
+
+- **Verification** (Agent Browser + VLM):
+  * Test: Selected "Men's Fashion" category → switched to Sub tab → selected "Shirts" subcategory → clicked Apply.
+  * VLM confirmed: "5 products visible. All products are shirts (no t-shirts, sherwani, or sarees). Filter badge showing 'Shirts'. No non-shirt products visible."
+  * Products shown: Sky Blue Oxford Cotton Shirt (x2), Red Black Checkered Shirt, White Casual Linen Shirt, Navy Blue Formal Cotton Shirt — ALL shirts, no other subcategories.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200, no errors.
+
+Stage Summary:
+- **Fixed**: When subcategories are selected, ONLY subcategory products are shown — not all category products. The Apply button now uses priority logic: subcategories take precedence over categories. If both are selected, only subcategories are sent to the API.
+- **Files modified**: 2 (`src/app/seller/products/page.tsx`, `src/app/api/seller/products/route.ts`). 27 insertions, 12 deletions. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified with actual product filtering.
