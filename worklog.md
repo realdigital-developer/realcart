@@ -4426,3 +4426,31 @@ Stage Summary:
 - **Fixed**: All product cards now have the same height in each grid row. The `h-full flex flex-col` on the card + `mt-auto` on the action buttons ensures that even if some cards have extra content (rejected notes, MRP strikethrough), the action buttons always align at the bottom.
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). Only 6 lines changed. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
+
+---
+Task ID: fix-product-card-image-height
+Agent: main-orchestrator
+Task: Fix why product card image heights differ in the seller panel products page. Make all images the same height.
+
+Work Log:
+- **Root Cause**: The image container used `aspect-square` (Tailwind) which sets `aspect-ratio: 1/1`. However, in a flex column context (`Card` has `h-full flex flex-col` from the previous equal-height fix), the image div was being STRETCHED beyond its aspect ratio to fill available space. This caused:
+  - Row 1 images: 245px tall (stretched because row 1 had more content)
+  - Row 2 images: 184px tall (natural square = card width 186px)
+- **Attempted fixes** (3 iterations):
+  1. `flex-grow-0` — didn't work because flex still stretched the element.
+  2. `self-start w-full` — didn't work because the flex container's height was still forcing growth.
+  3. Inline `style={{ aspectRatio: '1/1' }}` — didn't work, same issue as Tailwind's `aspect-square`.
+- **Final fix** (committed as `3dc054c`): Used the classic CSS **padding-bottom trick**:
+  - Container: `style={{ height: '0', paddingBottom: '100%' }}` — creates a perfect square that CANNOT be stretched by flex because the height is explicitly 0 and the "height" comes from padding (which is based on width, not flex).
+  - Image: Changed from `h-full w-full` to `absolute inset-0 h-full w-full` — positioned absolutely to fill the padding-bottom square.
+  - Container also has `overflow-hidden` to clip the absolutely-positioned image.
+- **Verification** (Agent Browser):
+  * Computed image heights: ALL 12 images are exactly **184px** — `uniqueHeights: [184]`. Perfect consistency.
+  * VLM confirmed: "All product card images have the same height across all rows. Action buttons at the same vertical position. Overall grid neat and uniform."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200, no errors.
+
+Stage Summary:
+- **Fixed**: All product card images now have the same height (184px) across all rows. The padding-bottom 100% trick creates a fixed square that can't be stretched by the flex column layout.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). Only 2 lines changed. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. Computed-styles verified — all images exactly 184px.
