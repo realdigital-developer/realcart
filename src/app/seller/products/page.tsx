@@ -1262,18 +1262,6 @@ export default function SellerProductsPage() {
                 Inactive
               </Badge>
             )}
-            {/* Quick actions overlay on hover */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/90 hover:bg-white text-foreground rounded-lg" onClick={() => openEditForm(product)} title="Edit">
-                <Pencil className="h-3 w-3" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/90 hover:bg-white text-foreground rounded-lg" onClick={() => duplicateProduct(product)} title="Duplicate">
-                <Copy className="h-3 w-3" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/90 hover:bg-white text-destructive rounded-lg" onClick={() => setDeleteDialog({ open: true, product })} title="Delete">
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
           </div>
           <CardContent className="p-2.5">
             <h3 className="font-medium text-xs sm:text-sm truncate" title={product.name}>{product.name}</h3>
@@ -1295,6 +1283,23 @@ export default function SellerProductsPage() {
                 <AlertTriangle className="h-2.5 w-2.5 inline mr-1" />{product.approvalNotes}
               </div>
             )}
+            {/* Always-visible action buttons row */}
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+              <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1 px-2 text-foreground hover:bg-muted" onClick={() => openEditForm(product)}>
+                <Pencil className="h-3 w-3" /> Edit
+              </Button>
+              <div className="flex items-center gap-0.5">
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted" onClick={() => duplicateProduct(product)} title="Duplicate">
+                  <Copy className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted" onClick={() => toggleActive(product)} title={product.active ? 'Deactivate' : 'Activate'}>
+                  {product.active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => setDeleteDialog({ open: true, product })} title="Delete">
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
