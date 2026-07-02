@@ -4760,3 +4760,41 @@ Stage Summary:
 - **Fixed**: Products now properly filter by selected subcategories. The API checks both `category` and `subcategory` fields using `$or`, and the frontend sends comma-separated values for multi-select. Individual filter badges can be removed one at a time.
 - **Files modified**: 2 (`src/app/api/seller/products/route.ts`, `src/app/seller/products/page.tsx`). 35 insertions, 11 deletions. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified with actual product filtering.
+
+---
+Task ID: fix-subcategory-not-showing
+Agent: main-orchestrator
+Task: Fix why all available product subcategories are not showing in the filter modal based on selected categories.
+
+Work Log:
+- **Root Cause**: The categories collection (from `/api/categories`) has `"Men's Fashion"` and `"Women's Fashion"` as top-level categories, but their `subcategories` arrays are **EMPTY** (`[]`). The actual subcategories like `"T-shirts"`, `"Shirts"`, `"Sherwani"`, `"Sarees"` exist as separate top-level categories in the DB, not as nested subcategories. So when the filter modal tried to show subcategories of "Men's Fashion" using `cat.subcategories`, it got an empty array — no subcategories appeared.
+
+- **Fix** (committed as `8fc4a9b`, 2 files):
+
+  **Backend** (`src/app/api/seller/products/route.ts`):
+  - Added a new query that fetches all the seller's products' `category` and `subcategory` fields.
+  - Builds a `categorySubcategoryMap: Record<string, string[]>` — a mapping from each category to its actual subcategories, based on the seller's real products.
+  - Example: `{ "Men's Fashion": ["Sherwani", "T-shirts", "Shirts"], "Women's Fashion": ["Sarees"] }`
+  - Returns this map in the API response alongside the existing `categories` and `subcategories` arrays.
+
+  **Frontend** (`src/app/seller/products/page.tsx`):
+  - Added `categorySubcategoryMap` state, populated from the API response.
+  - **Category tab**: Updated the subcategory count per category to use `categorySubcategoryMap[cat.name].length` instead of the empty `cat.subcategories`.
+  - **Sub tab**: Replaced the old logic (which used `categories.filter(...).flatMap(cat => cat.subcategories)`) with a new IIFE that uses `categorySubcategoryMap`:
+    ```tsx
+    const subList = selectedCategories.flatMap(catName =>
+      (categorySubcategoryMap[catName] || []).map(subName => ({ sub: { _id: subName, name: subName }, catName }))
+    )
+    ```
+    This builds the subcategory list directly from the seller's actual product data, not from the (empty) categories API.
+
+- **Verification** (Agent Browser + VLM):
+  * **Men's Fashion selected**: VLM confirmed 3 subcategories: "Shirts (Men's Fashion), Sherwani (Men's Fashion), T-shirts (Men's Fashion)"
+  * **Women's Fashion also selected**: VLM confirmed 4 subcategories: "Shirts (Men's Fashion), Sherwani (Men's Fashion), T-shirts (Men's Fashion), Sarees (Women's Fashion)"
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200, no errors.
+
+Stage Summary:
+- **Fixed**: All available product subcategories now show correctly in the filter modal based on selected categories. The `categorySubcategoryMap` is built from the seller's actual products (not from the categories API which has empty subcategory arrays), ensuring accurate category→subcategory mapping.
+- **Files modified**: 2 (`src/app/api/seller/products/route.ts`, `src/app/seller/products/page.tsx`). 33 insertions, 27 deletions. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified with both Men's Fashion and Women's Fashion categories.
