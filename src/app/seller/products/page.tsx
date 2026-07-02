@@ -2391,7 +2391,7 @@ export default function SellerProductsPage() {
         type="form"
         size="md"
         title="Filter by Category"
-        description="Select a category to filter your products"
+        description="Select a category or subcategory to filter your products"
         footer={
           <Button
             variant="outline"
@@ -2403,99 +2403,108 @@ export default function SellerProductsPage() {
           </Button>
         }
       >
-        <div className="space-y-1.5">
-          {/* All Categories option */}
+        <div className="space-y-1">
+          {/* All Categories option — checkbox style like customer panel */}
           <button
             className={cn(
-              'w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left',
+              'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3',
               categoryFilter === 'all'
-                ? 'border-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 ring-1 ring-emerald-300 dark:ring-emerald-800'
-                : 'border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-muted/40'
+                ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
             )}
             onClick={() => { setCategoryFilter('all'); setPage(1); setFilterModalOpen(false) }}
           >
-            <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
-              <Package className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <div className={cn(
+              'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
+              categoryFilter === 'all' ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
+            )}>
+              {categoryFilter === 'all' && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className={cn('text-sm font-semibold', categoryFilter === 'all' ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground')}>All Categories</p>
-              <p className="text-[10px] text-muted-foreground">Show products from all categories</p>
-            </div>
-            {categoryFilter === 'all' && <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />}
+            <span>All Categories</span>
           </button>
 
-          {/* Category list with subcategories */}
+          {/* Category list — checkbox style with collapsible subcategories */}
           {categories.map((cat) => {
-            const isActive = categoryFilter === cat.name
+            const isSelected = categoryFilter === cat.name
+            const hasSubs = cat.subcategories && cat.subcategories.length > 0
             return (
               <div key={cat._id}>
                 <button
                   className={cn(
-                    'w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left',
-                    isActive
-                      ? 'border-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 ring-1 ring-emerald-300 dark:ring-emerald-800'
-                      : 'border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-muted/40'
+                    'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3',
+                    isSelected
+                      ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                   )}
                   onClick={() => { setCategoryFilter(cat.name); setPage(1); setFilterModalOpen(false) }}
                 >
                   <div className={cn(
-                    'h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                    isActive ? 'bg-emerald-200 dark:bg-emerald-900/40' : 'bg-muted/50'
+                    'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
+                    isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
                   )}>
-                    <Package className={cn('h-4 w-4', isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground')} />
+                    {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn('text-sm font-semibold truncate', isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground')}>{cat.name}</p>
-                    {cat.subcategories && cat.subcategories.length > 0 && (
-                      <p className="text-[10px] text-muted-foreground">{cat.subcategories.length} subcategories</p>
-                    )}
-                  </div>
-                  {isActive && <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />}
+                  <span>{cat.name}</span>
+                  {hasSubs && (
+                    <span className="ml-auto text-[10px] text-muted-foreground">{cat.subcategories!.length}</span>
+                  )}
                 </button>
-                {/* Show subcategories when category is active or if there are subcategories */}
-                {cat.subcategories && cat.subcategories.length > 0 && (
-                  <div className="ml-11 mt-1 mb-1.5 flex flex-wrap gap-1.5">
-                    {cat.subcategories.map((sub) => (
-                      <button
-                        key={sub._id}
-                        className={cn(
-                          'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium transition-all',
-                          categoryFilter === sub.name
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-muted/60 text-muted-foreground hover:bg-muted'
-                        )}
-                        onClick={() => { setCategoryFilter(sub.name); setPage(1); setFilterModalOpen(false) }}
-                      >
-                        {sub.name}
-                      </button>
-                    ))}
+                {/* Subcategories — checkbox list under each category */}
+                {hasSubs && (
+                  <div className="ml-6 pl-3 border-l border-gray-100 dark:border-gray-800 space-y-0.5 mt-0.5 mb-0.5">
+                    {cat.subcategories!.map((sub) => {
+                      const subSelected = categoryFilter === sub.name
+                      return (
+                        <button
+                          key={sub._id}
+                          className={cn(
+                            'w-full text-left px-3 py-2 text-[13px] font-medium transition-colors rounded-lg flex items-center gap-3',
+                            subSelected
+                              ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
+                              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                          )}
+                          onClick={() => { setCategoryFilter(sub.name); setPage(1); setFilterModalOpen(false) }}
+                        >
+                          <div className={cn(
+                            'w-[16px] h-[16px] rounded-[4px] border-2 flex items-center justify-center flex-shrink-0',
+                            subSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
+                          )}>
+                            {subSelected && <Check className="h-2.5 w-2.5 text-white dark:text-gray-900" strokeWidth={3} />}
+                          </div>
+                          <span>{sub.name}</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </div>
             )
           })}
 
-          {/* Seller categories fallback (if categories API didn't load) */}
-          {categories.length === 0 && sellerCategories.length > 0 && sellerCategories.map((cat) => (
-            <button
-              key={cat}
-              className={cn(
-                'w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left',
-                categoryFilter === cat
-                  ? 'border-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 ring-1 ring-emerald-300 dark:ring-emerald-800'
-                  : 'border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-muted/40'
-              )}
-              onClick={() => { setCategoryFilter(cat); setPage(1); setFilterModalOpen(false) }}
-            >
-              <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={cn('text-sm font-semibold truncate', categoryFilter === cat ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground')}>{cat}</p>
-              </div>
-              {categoryFilter === cat && <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />}
-            </button>
-          ))}
+          {/* Seller categories fallback */}
+          {categories.length === 0 && sellerCategories.length > 0 && sellerCategories.map((cat) => {
+            const isSelected = categoryFilter === cat
+            return (
+              <button
+                key={cat}
+                className={cn(
+                  'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3',
+                  isSelected
+                    ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                )}
+                onClick={() => { setCategoryFilter(cat); setPage(1); setFilterModalOpen(false) }}
+              >
+                <div className={cn(
+                  'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
+                  isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
+                )}>
+                  {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
+                </div>
+                <span>{cat}</span>
+              </button>
+            )
+          })}
         </div>
       </AdminModal>
 
