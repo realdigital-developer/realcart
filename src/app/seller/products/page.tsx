@@ -391,6 +391,9 @@ export default function SellerProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [filterModalOpen, setFilterModalOpen] = useState(false)
   const [activeFilterTab, setActiveFilterTab] = useState<'category' | 'subcategory'>('category')
+  // Multi-select state for the filter modal (local, applied on "Apply")
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([])
   // Grid view is always used — no list/table view toggle
 
   /* ── Form State ── */
@@ -2281,7 +2284,21 @@ export default function SellerProductsPage() {
           )}
           {/* Filter icon button — inside the search bar, right side */}
           <button
-            onClick={() => setFilterModalOpen(true)}
+            onClick={() => {
+              // Sync current filter state to selection state when opening
+              if (categoryFilter !== 'all') {
+                // Check if it's a category or subcategory
+                const isCat = sellerCategories.includes(categoryFilter)
+                const isSub = sellerSubcategories.includes(categoryFilter)
+                setSelectedCategories(isCat ? [categoryFilter] : [])
+                setSelectedSubcategories(isSub ? [categoryFilter] : [])
+              } else {
+                setSelectedCategories([])
+                setSelectedSubcategories([])
+              }
+              setActiveFilterTab('category')
+              setFilterModalOpen(true)
+            }}
             className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
             title="Filter by category"
           >
@@ -2392,9 +2409,23 @@ export default function SellerProductsPage() {
         type="form"
         size="md"
         title="Filters"
-        description="Select a category or subcategory to filter your products"
+        description="Select categories first, then subcategories to filter your products"
         footer={
           <div className="flex items-center gap-2 w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs rounded-lg"
+              onClick={() => {
+                setSelectedCategories([])
+                setSelectedSubcategories([])
+                setCategoryFilter('all')
+                setPage(1)
+                setFilterModalOpen(false)
+              }}
+            >
+              Clear All
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -2406,9 +2437,17 @@ export default function SellerProductsPage() {
             <Button
               size="sm"
               className="flex-1 text-xs rounded-lg bg-violet-600 hover:bg-violet-700 text-white"
-              onClick={() => setFilterModalOpen(false)}
+              onClick={() => {
+                // Apply: prefer subcategory if selected, else category, else 'all'
+                const applied = selectedSubcategories[0] || selectedCategories[0] || 'all'
+                setCategoryFilter(applied)
+                setPage(1)
+                setFilterModalOpen(false)
+              }}
             >
-              {categoryFilter !== 'all' ? `Apply (${1})` : 'Apply'}
+              {selectedSubcategories.length > 0 || selectedCategories.length > 0
+                ? `Apply (${selectedSubcategories.length + selectedCategories.length})`
+                : 'Apply'}
             </Button>
           </div>
         }
@@ -2417,8 +2456,8 @@ export default function SellerProductsPage() {
           {/* Left Sidebar — Filter type tabs */}
           <div className="w-[100px] flex-shrink-0 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto rounded-l-lg">
             {[
-              { id: 'category' as const, label: 'Category', count: categoryFilter !== 'all' && categories.some(c => c.name === categoryFilter) ? 1 : 0 },
-              { id: 'subcategory' as const, label: 'Sub', count: categoryFilter !== 'all' && categories.some(c => c.subcategories?.some(s => s.name === categoryFilter)) ? 1 : 0 },
+              { id: 'category' as const, label: 'Category', count: selectedCategories.length },
+              { id: 'subcategory' as const, label: 'Sub', count: selectedSubcategories.length },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -2442,25 +2481,29 @@ export default function SellerProductsPage() {
 
           {/* Right Content — Filter options */}
           <div className="flex-1 overflow-y-auto p-3">
-            {/* Category tab */}
+            {/* Category tab — multi-select */}
             {activeFilterTab === 'category' && (
               <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Select Categories</h3>
-                {/* All Categories */}
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">Select Categories</h3>
+                <p className="text-[11px] text-muted-foreground mb-3">Select categories first, then go to Sub tab to pick subcategories</p>
+                {/* All Categories — clears selection */}
                 <button
                   className={cn(
                     'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3 mb-0.5',
-                    categoryFilter === 'all'
+                    selectedCategories.length === 0
                       ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                   )}
-                  onClick={() => { setCategoryFilter('all'); setPage(1) }}
+                  onClick={() => {
+                    setSelectedCategories([])
+                    setSelectedSubcategories([])
+                  }}
                 >
                   <div className={cn(
                     'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
-                    categoryFilter === 'all' ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
+                    selectedCategories.length === 0 ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
                   )}>
-                    {categoryFilter === 'all' && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
+                    {selectedCategories.length === 0 && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
                   </div>
                   <span>All Categories</span>
                 </button>
@@ -2468,36 +2511,45 @@ export default function SellerProductsPage() {
                 {categories
                   .filter(cat => sellerCategories.includes(cat.name))
                   .map((cat) => {
-                  const isSelected = categoryFilter === cat.name
-                  // Count only subcategories the seller has products in
-                  const sellerSubsCount = (cat.subcategories || []).filter(s => sellerSubcategories.includes(s.name)).length
-                  return (
-                    <button
-                      key={cat._id}
-                      className={cn(
-                        'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3 mb-0.5',
-                        isSelected
-                          ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                      )}
-                      onClick={() => { setCategoryFilter(cat.name); setPage(1) }}
-                    >
-                      <div className={cn(
-                        'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
-                        isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
-                      )}>
-                        {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
-                      </div>
-                      <span>{cat.name}</span>
-                      {sellerSubsCount > 0 && (
-                        <span className="ml-auto text-[10px] text-muted-foreground">{sellerSubsCount}</span>
-                      )}
-                    </button>
-                  )
-                })}
-                {/* Fallback — if categories API didn't load, use sellerCategories directly */}
+                    const isSelected = selectedCategories.includes(cat.name)
+                    const sellerSubsCount = (cat.subcategories || []).filter(s => sellerSubcategories.includes(s.name)).length
+                    return (
+                      <button
+                        key={cat._id}
+                        className={cn(
+                          'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3 mb-0.5',
+                          isSelected
+                            ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        )}
+                        onClick={() => {
+                          setSelectedCategories(prev =>
+                            isSelected ? prev.filter(c => c !== cat.name) : [...prev, cat.name]
+                          )
+                          // Remove any selected subcategories that belong to this category when unselecting
+                          if (isSelected) {
+                            const catSubNames = (cat.subcategories || []).map(s => s.name)
+                            setSelectedSubcategories(prev => prev.filter(s => !catSubNames.includes(s)))
+                          }
+                        }}
+                      >
+                        <div className={cn(
+                          'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
+                          isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
+                        )}>
+                          {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
+                        </div>
+                        <span>{cat.name}</span>
+                        {sellerSubsCount > 0 && (
+                          <span className="ml-auto text-[10px] text-muted-foreground">{sellerSubsCount}</span>
+                        )}
+                      </button>
+                    )
+                  })
+                }
+                {/* Fallback */}
                 {categories.filter(cat => sellerCategories.includes(cat.name)).length === 0 && sellerCategories.map((cat) => {
-                  const isSelected = categoryFilter === cat
+                  const isSelected = selectedCategories.includes(cat)
                   return (
                     <button
                       key={cat}
@@ -2507,7 +2559,11 @@ export default function SellerProductsPage() {
                           ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
                           : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                       )}
-                      onClick={() => { setCategoryFilter(cat); setPage(1) }}
+                      onClick={() => {
+                        setSelectedCategories(prev =>
+                          isSelected ? prev.filter(c => c !== cat) : [...prev, cat]
+                        )
+                      }}
                     >
                       <div className={cn(
                         'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
@@ -2519,50 +2575,93 @@ export default function SellerProductsPage() {
                     </button>
                   )
                 })}
+                {/* Hint to go to Sub tab */}
+                {selectedCategories.length > 0 && (
+                  <button
+                    onClick={() => setActiveFilterTab('subcategory')}
+                    className="w-full mt-2 py-2 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"
+                  >
+                    Select subcategories for chosen categories →
+                  </button>
+                )}
               </div>
             )}
 
-            {/* Subcategory tab — only subcategories the seller has products in */}
+            {/* Subcategory tab — only subcategories of selected categories */}
             {activeFilterTab === 'subcategory' && (
               <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Select Subcategories</h3>
-                {sellerSubcategories.length === 0 ? (
-                  <p className="text-sm text-gray-400 py-4 text-center">No subcategories available</p>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">Select Subcategories</h3>
+                {selectedCategories.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <p className="text-sm text-gray-400 mb-2">Select categories first</p>
+                    <button
+                      onClick={() => setActiveFilterTab('category')}
+                      className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      ← Go to Categories
+                    </button>
+                  </div>
                 ) : (
-                  // Build list from categories API (filtered by sellerSubcategories), fallback to sellerSubcategories directly
-                  (categories.length > 0
-                    ? categories.flatMap(cat =>
-                        (cat.subcategories || [])
-                          .filter(s => sellerSubcategories.includes(s.name))
-                          .map(sub => ({ sub, catName: cat.name }))
-                      )
-                    : sellerSubcategories.map(sub => ({ sub: { _id: sub, name: sub }, catName: '' }))
-                  ).map(({ sub, catName }) => {
-                    const isSelected = categoryFilter === sub.name
-                    return (
-                      <button
-                        key={sub._id}
-                        className={cn(
-                          'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3 mb-0.5',
-                          isSelected
-                            ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                        )}
-                        onClick={() => { setCategoryFilter(sub.name); setPage(1) }}
-                      >
-                        <div className={cn(
-                          'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
-                          isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
-                        )}>
-                          {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="block truncate">{sub.name}</span>
-                          {catName && <span className="text-[10px] text-muted-foreground">{catName}</span>}
-                        </div>
-                      </button>
-                    )
-                  })
+                  <>
+                    <p className="text-[11px] text-muted-foreground mb-3">
+                      Showing subcategories for: {selectedCategories.join(', ')}
+                    </p>
+                    {/* Subcategories of selected categories only */}
+                    {(categories.length > 0
+                      ? categories
+                          .filter(cat => selectedCategories.includes(cat.name))
+                          .flatMap(cat =>
+                            (cat.subcategories || [])
+                              .filter(s => sellerSubcategories.includes(s.name))
+                              .map(sub => ({ sub, catName: cat.name }))
+                          )
+                      : sellerSubcategories
+                          .map(sub => ({ sub: { _id: sub, name: sub }, catName: '' }))
+                    ).length === 0 ? (
+                      <p className="text-sm text-gray-400 py-4 text-center">No subcategories available for selected categories</p>
+                    ) : (
+                      (categories.length > 0
+                        ? categories
+                            .filter(cat => selectedCategories.includes(cat.name))
+                            .flatMap(cat =>
+                              (cat.subcategories || [])
+                                .filter(s => sellerSubcategories.includes(s.name))
+                                .map(sub => ({ sub, catName: cat.name }))
+                            )
+                        : sellerSubcategories
+                            .map(sub => ({ sub: { _id: sub, name: sub }, catName: '' }))
+                      ).map(({ sub, catName }) => {
+                        const isSelected = selectedSubcategories.includes(sub.name)
+                        return (
+                          <button
+                            key={sub._id}
+                            className={cn(
+                              'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3 mb-0.5',
+                              isSelected
+                                ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
+                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                            )}
+                            onClick={() => {
+                              setSelectedSubcategories(prev =>
+                                isSelected ? prev.filter(s => s !== sub.name) : [...prev, sub.name]
+                              )
+                            }}
+                          >
+                            <div className={cn(
+                              'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
+                              isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
+                            )}>
+                              {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="block truncate">{sub.name}</span>
+                              {catName && <span className="text-[10px] text-muted-foreground">{catName}</span>}
+                            </div>
+                          </button>
+                        )
+                      })
+                    )}
+                  </>
                 )}
               </div>
             )}
