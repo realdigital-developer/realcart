@@ -4075,3 +4075,51 @@ Stage Summary:
 - **Smart conditional rendering**: Cards with no action buttons don't show the action row — no empty divider.
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). Only 4 lines changed — minimal, surgical fix. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on desktop and mobile.
+
+---
+Task ID: fix-status-tab-counts
+Agent: main-orchestrator
+Task: Fix why the Pending tab doesn't show total pending count properly and the All tab shows pending count instead of total orders count.
+
+Work Log:
+- **Root Cause Analysis**:
+  The bug was in the `fetchOrders` function (lines 216-228). The stats were computed from the filtered, paginated order list:
+  
+  1. **When filtering by "Pending"**: The API returned only pending orders, so `data.total` = pending count. The code set `stats.total = data.total` — this **OVERWROTE** the total orders count with the pending count! So the "All" tab showed the pending count instead of the total orders count.
+  
+  2. **When showing "All"**: The per-status counts (pending, processing, delivered) were computed by iterating over only the FIRST PAGE of orders (limited to `itemsPerPage` = 10), not the full dataset. So these counts were always too low (only counting items on the visible page).
+  
+  3. **When switching tabs**: The stats were recomputed from the new filtered list each time, so the counts kept changing depending on which tab was selected — they were never the TRUE total for each status.
+
+- **Fix** (committed as `71796be`):
+  Added a separate `fetchStats` function that makes 4 parallel API calls with `limit=1` to get the TRUE total count for each status:
+  ```typescript
+  const fetchStats = useCallback(async () => {
+    const [allRes, pendingRes, processingRes, deliveredRes] = await Promise.all([
+      fetch('/api/seller/orders?page=1&limit=1'),
+      fetch('/api/seller/orders?page=1&limit=1&status=Pending'),
+      fetch('/api/seller/orders?page=1&limit=1&status=Processing'),
+      fetch('/api/seller/orders?page=1&limit=1&status=Delivered'),
+    ])
+    // ... set stats from the total field of each response
+  }, [])
+  ```
+  
+  Key design decisions:
+  - `limit=1` — minimizes data transfer (only need the `total` count, not the actual orders)
+  - `Promise.all` — all 4 calls run in parallel for speed
+  - Called from `fetchOrders` in the background (non-blocking) — stats refresh after every order fetch
+  - Independent of `statusFilter` — always fetches the TRUE total for each status regardless of which tab is selected
+  - Removed the broken stats computation from `fetchOrders` (the loop that counted items from the first page)
+
+- **Verification** (Agent Browser + VLM):
+  * **All tab selected**: VLM confirmed — "All: 45, Pending: 19, Processing: 4, Delivered: 4. The 'All' tab is showing a large number (45), which represents the total orders count."
+  * **Pending tab selected**: VLM confirmed — "All: 45 (still showing total orders — did NOT change to pending count). Pending: 19."
+  * **Snapshot verification**: All 45, Pending 19, Processing 4, Delivered 4 — all counts correct and independent of the selected tab.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors. Stats API calls (limit=1) visible in dev.log.
+
+Stage Summary:
+- **Root cause fixed**: The stats are now fetched independently via a separate `fetchStats` function that makes parallel API calls with `limit=1` to get the TRUE total for each status. The "All" tab always shows the total orders count (45), and each status tab shows its correct total (Pending: 19, Processing: 4, Delivered: 4) — regardless of which tab is currently selected.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only the stats fetching logic was fixed. All other functionality (filters, search, pagination, order detail, actions) remains intact.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on All and Pending tabs.
