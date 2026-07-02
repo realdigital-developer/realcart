@@ -11,7 +11,6 @@ import { normalizeStatus } from '@/lib/order-state-machine'
 import {
   ShoppingCart,
   Search,
-  Filter,
   X,
   Loader2,
   ChevronLeft,
@@ -35,13 +34,6 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import AdminModal from '@/components/admin/admin-modal'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -689,103 +681,63 @@ function OrdersContent() {
           </div>
         </div>
 
-        {/* Quick Filter Pills — horizontal scroll on mobile */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-          <button
-            onClick={() => setStatusFilter('all')}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0',
-              statusFilter === 'all'
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
-            )}
-          >
-            <ShoppingCart className="h-3 w-3" />
-            All
-            <span className={cn('ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold', statusFilter === 'all' ? 'bg-white/20' : 'bg-background')}>{stats.total}</span>
-          </button>
-          <button
-            onClick={() => setStatusFilter('Pending')}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0',
-              statusFilter === 'Pending'
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
-            )}
-          >
-            <Clock className="h-3 w-3" />
-            Pending
-            {stats.pending > 0 && <span className={cn('ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold', statusFilter === 'Pending' ? 'bg-white/20' : 'bg-background')}>{stats.pending}</span>}
-          </button>
-          <button
-            onClick={() => setStatusFilter('Processing')}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0',
-              statusFilter === 'Processing'
-                ? 'bg-blue-500 text-white shadow-sm'
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
-            )}
-          >
-            <Package className="h-3 w-3" />
-            Processing
-            {stats.processing > 0 && <span className={cn('ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold', statusFilter === 'Processing' ? 'bg-white/20' : 'bg-background')}>{stats.processing}</span>}
-          </button>
-          <button
-            onClick={() => setStatusFilter('Delivered')}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0',
-              statusFilter === 'Delivered'
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted'
-            )}
-          >
-            <CheckCircle2 className="h-3 w-3" />
-            Delivered
-            {stats.delivered > 0 && <span className={cn('ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold', statusFilter === 'Delivered' ? 'bg-white/20' : 'bg-background')}>{stats.delivered}</span>}
-          </button>
+        {/* ── Status Filter Tabs — ALL statuses as horizontal scrollable tabs ── */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5 -mx-1 px-1">
+          {[
+            { value: 'all', label: 'All', count: stats.total, activeClass: 'bg-emerald-500 text-white shadow-sm' },
+            { value: 'Pending', label: 'Pending', count: stats.pending, activeClass: 'bg-amber-500 text-white shadow-sm' },
+            { value: 'Processing', label: 'Processing', count: stats.processing, activeClass: 'bg-blue-500 text-white shadow-sm' },
+            { value: 'Shipped', label: 'Shipped', count: null, activeClass: 'bg-indigo-500 text-white shadow-sm' },
+            { value: 'Out for Delivery', label: 'Out for Delivery', count: null, activeClass: 'bg-purple-500 text-white shadow-sm' },
+            { value: 'Delivered', label: 'Delivered', count: stats.delivered, activeClass: 'bg-emerald-500 text-white shadow-sm' },
+            { value: 'Cancelled', label: 'Cancelled', count: null, activeClass: 'bg-red-500 text-white shadow-sm' },
+            { value: 'Not Delivered', label: 'Not Delivered', count: null, activeClass: 'bg-orange-500 text-white shadow-sm' },
+            { value: 'Return Requested', label: 'Return Requested', count: null, activeClass: 'bg-cyan-500 text-white shadow-sm' },
+            { value: 'Return Approved', label: 'Return Approved', count: null, activeClass: 'bg-teal-500 text-white shadow-sm' },
+            { value: 'Out for Pickup', label: 'Out for Pickup', count: null, activeClass: 'bg-violet-500 text-white shadow-sm' },
+            { value: 'Return Completed', label: 'Return Completed', count: null, activeClass: 'bg-emerald-500 text-white shadow-sm' },
+            { value: 'Return Cancelled', label: 'Return Cancelled', count: null, activeClass: 'bg-gray-500 text-white shadow-sm' },
+          ].map((tab) => {
+            const isActive = statusFilter === tab.value
+            return (
+              <button
+                key={tab.value}
+                onClick={() => setStatusFilter(tab.value)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0',
+                  isActive
+                    ? tab.activeClass
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                )}
+              >
+                {isActive && <span className="h-1.5 w-1.5 rounded-full bg-white/80" />}
+                {tab.label}
+                {tab.count !== null && tab.count > 0 && (
+                  <span className={cn('ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold', isActive ? 'bg-white/20' : 'bg-background')}>{tab.count}</span>
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {/* ── Search + Status Select — Compact Filter Bar ──────────────── */}
-      <div className="flex flex-col sm:flex-row gap-2.5">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by order ID or customer name..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-9 pr-9 bg-card border-border h-10 rounded-xl"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[180px] h-10 rounded-xl bg-card border-border">
-            <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Processing">Processing</SelectItem>
-            <SelectItem value="Shipped">Shipped</SelectItem>
-            <SelectItem value="Out for Delivery">Out for Delivery</SelectItem>
-            <SelectItem value="Delivered">Delivered</SelectItem>
-            <SelectItem value="Cancelled">Cancelled</SelectItem>
-            <SelectItem value="Not Delivered">Not Delivered</SelectItem>
-            <SelectItem value="Return Requested">Return Requested</SelectItem>
-            <SelectItem value="Return Approved">Return Approved</SelectItem>
-            <SelectItem value="Out for Pickup">Out for Pickup</SelectItem>
-            <SelectItem value="Return Completed">Return Completed</SelectItem>
-            <SelectItem value="Return Cancelled">Return Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* ── Search Bar ───────────────────────────────────────────────── */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by order ID or customer name..."
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="pl-9 pr-9 bg-card border-border h-10 rounded-xl"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
       {/* ── Loading Skeleton ─────────────────────────────────────────── */}
