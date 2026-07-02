@@ -3782,3 +3782,37 @@ Stage Summary:
 - **All changes restored**: All 11 recent features are verified present in the codebase. The sticky navbar is now committed (`1eeffee`) so it won't be lost again.
 - **No damage**: No UI or code was damaged. The reset brought back all the work that was on GitHub but missing locally.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified orders page + sticky navbar.
+
+---
+Task ID: redesign-seller-orders-page-2
+Agent: main-orchestrator
+Task: Redesign the seller panel orders page with a modern, attractive, compact, professional UI that is multi-device responsive. (Previous redesign was lost — not committed before sandbox restart.)
+
+Work Log:
+- **Diagnosis**: The previous redesign (done in an earlier task) was lost because it wasn't committed before the sandbox restarted. After the git reset to origin/main, the old UI (Stats Cards, desktop table grid, separate mobile cards) was back.
+- **Redesign Applied** (single file: `src/app/seller/orders/page.tsx`, committed immediately as `e087cd7`):
+
+  **1. Compact Header with Inline Stats**: Removed 4 large stats cards. Header now shows icon + "Orders" title + subtitle on left, inline mini-stat pills (Pending/Processing/Delivered counts) on right (hidden on mobile). Saved ~200px vertical space.
+
+  **2. Modern Filter Pills**: Rounded-full pills with icon + label + count badge. Active state: solid color (emerald/amber/blue) with white text + shadow. Horizontal scroll on mobile (`overflow-x-auto scrollbar-none`).
+
+  **3. Compact Filter Bar**: Search + status dropdown in one row, rounded-xl, h-10, no heavy bordered container.
+
+  **4. Unified Order Card Design**: Single design for ALL devices (no separate desktop/mobile). Each card: left status accent bar (colored w-1), product thumbnail (clickable), order ID (font-mono), customer name + phone, status badge, items count pill, date, amount (bold), action buttons. Hover: shadow-md + emerald border + ring on thumbnail.
+
+  **5. Modern Loading Skeleton**: Matches new card design with thumbnail + text + action skeletons.
+
+  **6. Lightweight Pagination**: No heavy container, just a flex row with text + rounded-lg buttons.
+
+- **Verification** (Agent Browser + VLM):
+  * **Desktop (1280px)**: VLM confirmed — "Header compact with title and inline stat pills. Modern rounded-full filter pills with count badges. Order cards modern with product thumbnails, left status accent bars, order IDs, customer names, status badges, amounts, action buttons. Professional, attractive, space-efficient. Everything rendering properly."
+  * **Mobile (375px)**: VLM confirmed — "Comfortable for mobile use. Filter pills fit within screen. Order cards readable and compact. Search bar full-width. All elements render properly. Mobile-optimized."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+  * **Committed immediately** (`e087cd7`) to prevent loss.
+
+Stage Summary:
+- **Complete redesign applied and committed**: Modern, attractive, compact, professional seller orders page with filter pills, unified card design, inline stats, and responsive layout.
+- **Key improvement this time**: Committed immediately after implementation to prevent the loss that happened previously.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No other code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on desktop and mobile.
