@@ -47,10 +47,13 @@ import {
   ArrowRight,
   Ruler,
   TableProperties,
+  SlidersHorizontal,
+  Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import AdminModal from '@/components/admin/admin-modal'
 import {
   Sheet,
   SheetContent,
@@ -386,6 +389,7 @@ export default function SellerProductsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [filterModalOpen, setFilterModalOpen] = useState(false)
   // Grid view is always used — no list/table view toggle
 
   /* ── Form State ── */
@@ -2272,20 +2276,32 @@ export default function SellerProductsPage() {
               </button>
             )}
           </div>
-          <div className="flex gap-2.5">
-            <Select value={categoryFilter} onValueChange={val => { setCategoryFilter(val); setPage(1) }}>
-              <SelectTrigger className="w-full sm:w-[160px] h-10 rounded-xl bg-card border-border">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {sellerCategories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Filter icon button — opens category filter modal */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 rounded-xl bg-card border-border flex-shrink-0 relative"
+            onClick={() => setFilterModalOpen(true)}
+            title="Filter by category"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {categoryFilter !== 'all' && (
+              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
+            )}
+          </Button>
         </div>
+
+        {/* ── Active filter indicator ── */}
+        {categoryFilter !== 'all' && (
+          <div className="flex items-center gap-2 -mt-2 mb-1">
+            <Badge variant="secondary" className="gap-1.5 text-[11px] py-1 px-2.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
+              {categoryFilter}
+              <button onClick={() => { setCategoryFilter('all'); setPage(1) }} className="hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-full p-0.5">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          </div>
+        )}
 
         {/* ── Loading Skeleton ── */}
         {loading && (
@@ -2364,6 +2380,124 @@ export default function SellerProductsPage() {
             </div>
           </div>
         )}
+
+      {/* ================================================================ */}
+      {/*  CATEGORY FILTER MODAL                                           */}
+      {/* ================================================================ */}
+
+      <AdminModal
+        open={filterModalOpen}
+        onOpenChange={setFilterModalOpen}
+        type="form"
+        size="md"
+        title="Filter by Category"
+        description="Select a category to filter your products"
+        footer={
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs rounded-lg"
+            onClick={() => { setCategoryFilter('all'); setPage(1); setFilterModalOpen(false) }}
+          >
+            Clear Filter
+          </Button>
+        }
+      >
+        <div className="space-y-1.5">
+          {/* All Categories option */}
+          <button
+            className={cn(
+              'w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left',
+              categoryFilter === 'all'
+                ? 'border-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 ring-1 ring-emerald-300 dark:ring-emerald-800'
+                : 'border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-muted/40'
+            )}
+            onClick={() => { setCategoryFilter('all'); setPage(1); setFilterModalOpen(false) }}
+          >
+            <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center flex-shrink-0">
+              <Package className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={cn('text-sm font-semibold', categoryFilter === 'all' ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground')}>All Categories</p>
+              <p className="text-[10px] text-muted-foreground">Show products from all categories</p>
+            </div>
+            {categoryFilter === 'all' && <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />}
+          </button>
+
+          {/* Category list with subcategories */}
+          {categories.map((cat) => {
+            const isActive = categoryFilter === cat.name
+            return (
+              <div key={cat._id}>
+                <button
+                  className={cn(
+                    'w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left',
+                    isActive
+                      ? 'border-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 ring-1 ring-emerald-300 dark:ring-emerald-800'
+                      : 'border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-muted/40'
+                  )}
+                  onClick={() => { setCategoryFilter(cat.name); setPage(1); setFilterModalOpen(false) }}
+                >
+                  <div className={cn(
+                    'h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                    isActive ? 'bg-emerald-200 dark:bg-emerald-900/40' : 'bg-muted/50'
+                  )}>
+                    <Package className={cn('h-4 w-4', isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground')} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn('text-sm font-semibold truncate', isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground')}>{cat.name}</p>
+                    {cat.subcategories && cat.subcategories.length > 0 && (
+                      <p className="text-[10px] text-muted-foreground">{cat.subcategories.length} subcategories</p>
+                    )}
+                  </div>
+                  {isActive && <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />}
+                </button>
+                {/* Show subcategories when category is active or if there are subcategories */}
+                {cat.subcategories && cat.subcategories.length > 0 && (
+                  <div className="ml-11 mt-1 mb-1.5 flex flex-wrap gap-1.5">
+                    {cat.subcategories.map((sub) => (
+                      <button
+                        key={sub._id}
+                        className={cn(
+                          'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium transition-all',
+                          categoryFilter === sub.name
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                        )}
+                        onClick={() => { setCategoryFilter(sub.name); setPage(1); setFilterModalOpen(false) }}
+                      >
+                        {sub.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Seller categories fallback (if categories API didn't load) */}
+          {categories.length === 0 && sellerCategories.length > 0 && sellerCategories.map((cat) => (
+            <button
+              key={cat}
+              className={cn(
+                'w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left',
+                categoryFilter === cat
+                  ? 'border-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 ring-1 ring-emerald-300 dark:ring-emerald-800'
+                  : 'border-border hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-muted/40'
+              )}
+              onClick={() => { setCategoryFilter(cat); setPage(1); setFilterModalOpen(false) }}
+            >
+              <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={cn('text-sm font-semibold truncate', categoryFilter === cat ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground')}>{cat}</p>
+              </div>
+              {categoryFilter === cat && <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />}
+            </button>
+          ))}
+        </div>
+      </AdminModal>
 
       {/* ================================================================ */}
       {/*  PRODUCT FORM SHEET                                              */}
