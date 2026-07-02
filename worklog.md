@@ -5045,3 +5045,45 @@ Stage Summary:
 - **Robustness**: By removing the X badge entirely (rather than adding another conditional), the fix is maximally robust — there is no conditional logic that could misfire. The out-of-stock indication relies solely on the pill's styling which was already correct and unchanged.
 - **Files modified**: 1 (`src/components/customer/product-detail-page.tsx`). 21 deletions, 0 insertions.
 - Lint: 0 errors. Dev server: stable, HTTP 200. Browser-verified end-to-end (DOM + VLM screenshot). Test data not needed (used existing products).
+
+---
+Task ID: github-upload-9
+Agent: main-orchestrator
+Task: Upload the latest code to GitHub (https://github.com/realdigital-developer/realcart.git) using classic PAT.
+
+Work Log:
+- **Pre-push verification** (all passed):
+  * Git status: working tree clean (no uncommitted changes).
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Sensitive files scan: ZERO tracked sensitive files (`.env` gitignored; only `.env.example` tracked which contains placeholder values only).
+  * Dev server: HTTP 200 on `/`, stable, no errors.
+  * Divergence check: local main was 6 commits ahead of origin/main, 0 behind — clean fast-forward (no merge needed, no conflicts).
+- **6 commits pushed** containing all recent fixes:
+  1. `b23550c` — fix(seller): size chart templates cleared on form close
+  2. `0efc33c` — (worklog entry for size chart fix)
+  3. `1cd8a78` — fix(customer): hide size selector X badge when product stock is 0
+  4. `9302543` — (worklog entry for X badge OOS fix)
+  5. `52cd47a` — fix(customer): remove X badge from attribute selectors when value OOS
+  6. `e96f6d0` — (worklog entry for attribute selector X badge removal)
+- **GitHub Push** (successful):
+  * Used `GIT_ASKPASS` helper script (one-time, at `/tmp/askpass_realcart.sh`).
+  * Push command: `GIT_ASKPASS=... GIT_TERMINAL_PROMPT=0 git push https://realdigital-developer@github.com/realdigital-developer/realcart.git main`
+  * Push succeeded: `aa0d96b..e96f6d0  main -> main` (exit code 0).
+  * Askpass helper deleted immediately after push (`rm -f /tmp/askpass_realcart.sh`).
+  * Token NOT persisted in git config (verified: `git config --list` shows no credential/askpass/token entries; remote URL has no embedded token).
+- **Sync verification**:
+  * Local HEAD: `e96f6d07410016f628adb6065dbae9000383edb9`
+  * Remote main HEAD: `e96f6d07410016f628adb6065dbae9000383edb9`
+  * Divergence: `0	0` (zero ahead, zero behind)
+  * STATUS: IN SYNC ✓
+
+Stage Summary:
+- **All code uploaded to GitHub**: https://github.com/realdigital-developer/realcart (main branch)
+- **Clean fast-forward push** — no merge needed, no divergence, no conflicts.
+- **6 commits pushed** containing 3 bug fixes + 3 worklog entries:
+  * Seller panel: size chart template selection fixed (templates no longer cleared on form close)
+  * Customer panel: size selector X badge hidden when product stock is 0
+  * Customer panel: X badge removed from all attribute selectors when value out of stock
+- **No damage**: No UI or code was modified or damaged during this upload task.
+- **Local and remote SHAs match exactly**: `e96f6d07410016f628adb6065dbae9000383edb9` (IN SYNC).
+- PAT used via GIT_ASKPASS (one-time, not persisted). Askpass helper deleted after push. Token not stored in git config or remote URL.
