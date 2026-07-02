@@ -1172,63 +1172,65 @@ export default function SellerProductsPage() {
     const primaryImg = getPrimaryImage(product)
 
     return (
-      <motion.tr
+      <motion.div
         key={product._id}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="border-b transition-colors hover:bg-muted/50"
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-200"
       >
-        <td className="p-3">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-              <img src={primaryImg} alt={product.name} className="h-full w-full object-cover" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-medium text-sm truncate max-w-[200px]">{product.name}</p>
-              <p className="text-xs text-muted-foreground">{product.brand || 'No Brand'}</p>
-              {product.status === 'Rejected' && product.approvalNotes && (
-                <p className="text-xs text-red-500 mt-0.5 truncate max-w-[200px]" title={product.approvalNotes}>
-                  Rejected: {product.approvalNotes}
-                </p>
-              )}
-            </div>
+        {/* Image */}
+        <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+          <img src={primaryImg} alt={product.name} className="h-full w-full object-cover" />
+        </div>
+
+        {/* Product info */}
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-xs sm:text-sm truncate">{product.name}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">{product.category}{product.subcategory ? ` › ${product.subcategory}` : ''}</p>
+            {product.status === 'Rejected' && product.approvalNotes && (
+              <p className="text-[10px] text-red-500 truncate" title={product.approvalNotes}>
+                ⚠ {product.approvalNotes}
+              </p>
+            )}
           </div>
-        </td>
-        <td className="p-3 text-sm">{product.category}</td>
-        <td className="p-3 text-sm">
-          <div>{fmtPrice(product.mrp)}</div>
-          {product.sellingPrice < product.mrp && (
-            <div className="text-emerald-600 text-xs">{fmtPrice(product.sellingPrice)}</div>
+        </div>
+
+        {/* Price + Stock */}
+        <div className="hidden sm:flex flex-col items-end flex-shrink-0">
+          <span className="text-sm font-semibold text-foreground">{fmtPrice(product.sellingPrice)}</span>
+          {product.mrp > product.sellingPrice && (
+            <span className="text-[10px] text-muted-foreground line-through">{fmtPrice(product.mrp)}</span>
           )}
-        </td>
-        <td className="p-3 text-sm">
-          <span className={cn(product.stock <= 5 && product.stock > 0 && 'text-amber-600', product.stock === 0 && 'text-red-600')}>
-            {product.stock}
+        </div>
+        <div className="hidden sm:flex items-center flex-shrink-0">
+          <span className={cn('text-xs font-medium', product.stock <= 5 && product.stock > 0 && 'text-amber-600', product.stock === 0 && 'text-red-600', product.stock > 5 && 'text-muted-foreground')}>
+            Stock: {product.stock}
           </span>
-        </td>
-        <td className="p-3">
-          <Badge variant="outline" className={cn(statusCfg.color, statusCfg.bg, statusCfg.border, 'gap-1 text-xs')}>
-            <StatusIcon className="h-3 w-3" />
-            {statusCfg.label}
-          </Badge>
-        </td>
-        <td className="p-3">
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditForm(product)} title="Edit">
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateProduct(product)} title="Duplicate">
-              <Copy className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleActive(product)} title={product.active ? 'Deactivate' : 'Activate'}>
-              {product.active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog({ open: true, product })} title="Delete">
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </td>
-      </motion.tr>
+        </div>
+
+        {/* Status badge */}
+        <Badge variant="outline" className={cn(statusCfg.color, statusCfg.bg, statusCfg.border, 'gap-1 text-[10px] flex-shrink-0')}>
+          <StatusIcon className="h-2.5 w-2.5" />
+          <span className="hidden sm:inline">{statusCfg.label}</span>
+        </Badge>
+
+        {/* Actions */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => openEditForm(product)} title="Edit">
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hidden sm:flex" onClick={() => duplicateProduct(product)} title="Duplicate">
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hidden sm:flex" onClick={() => toggleActive(product)} title={product.active ? 'Deactivate' : 'Activate'}>
+            {product.active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" onClick={() => setDeleteDialog({ open: true, product })} title="Delete">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </motion.div>
     )
   }
 
@@ -1248,56 +1250,51 @@ export default function SellerProductsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
       >
-        <Card className="overflow-hidden hover:shadow-md transition-shadow">
+        <Card className="overflow-hidden hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-200 group">
           <div className="relative aspect-square bg-muted">
-            <img src={primaryImg} alt={product.name} className="h-full w-full object-cover" />
-            <Badge variant="outline" className={cn(statusCfg.color, statusCfg.bg, statusCfg.border, 'gap-1 absolute top-2 left-2 text-[10px]')}>
-              <StatusIcon className="h-3 w-3" />
+            <img src={primaryImg} alt={product.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <Badge variant="outline" className={cn(statusCfg.color, statusCfg.bg, statusCfg.border, 'gap-1 absolute top-2 left-2 text-[9px] backdrop-blur-sm')}>
+              <StatusIcon className="h-2.5 w-2.5" />
               {statusCfg.label}
             </Badge>
             {!product.active && (
-              <Badge variant="outline" className="absolute top-2 right-2 text-[10px] bg-gray-100 text-gray-500 border-gray-200">
+              <Badge variant="outline" className="absolute top-2 right-2 text-[9px] bg-gray-100/90 text-gray-500 border-gray-200 backdrop-blur-sm">
                 Inactive
               </Badge>
             )}
+            {/* Quick actions overlay on hover */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
+              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/90 hover:bg-white text-foreground rounded-lg" onClick={() => openEditForm(product)} title="Edit">
+                <Pencil className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/90 hover:bg-white text-foreground rounded-lg" onClick={() => duplicateProduct(product)} title="Duplicate">
+                <Copy className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/90 hover:bg-white text-destructive rounded-lg" onClick={() => setDeleteDialog({ open: true, product })} title="Delete">
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
-          <CardContent className="p-3">
-            <h3 className="font-medium text-sm truncate" title={product.name}>{product.name}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">{product.category}{product.subcategory ? ` › ${product.subcategory}` : ''}</p>
-            <div className="flex items-baseline gap-2 mt-1.5">
-              <span className="font-semibold text-sm">{fmtPrice(product.sellingPrice)}</span>
+          <CardContent className="p-2.5">
+            <h3 className="font-medium text-xs sm:text-sm truncate" title={product.name}>{product.name}</h3>
+            <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 truncate">{product.category}{product.subcategory ? ` › ${product.subcategory}` : ''}</p>
+            <div className="flex items-baseline gap-1.5 mt-1">
+              <span className="font-semibold text-xs sm:text-sm text-foreground">{fmtPrice(product.sellingPrice)}</span>
               {product.mrp > product.sellingPrice && (
-                <span className="text-xs text-muted-foreground line-through">{fmtPrice(product.mrp)}</span>
+                <span className="text-[10px] text-muted-foreground line-through">{fmtPrice(product.mrp)}</span>
               )}
             </div>
-            <div className="flex items-center justify-between mt-2">
-              <span className={cn('text-xs', product.stock <= 5 && product.stock > 0 && 'text-amber-600', product.stock === 0 && 'text-red-600')}>
+            <div className="flex items-center justify-between mt-1.5">
+              <span className={cn('text-[10px] sm:text-[11px] font-medium', product.stock <= 5 && product.stock > 0 && 'text-amber-600', product.stock === 0 && 'text-red-600', product.stock > 5 && 'text-muted-foreground')}>
                 Stock: {product.stock}
               </span>
-              <span className="text-xs text-muted-foreground">{formatRelativeDate(product.createdAt)}</span>
+              <span className="text-[10px] sm:text-[11px] text-muted-foreground">{formatRelativeDate(product.createdAt)}</span>
             </div>
             {product.status === 'Rejected' && product.approvalNotes && (
-              <div className="mt-2 p-1.5 bg-red-50 rounded text-[10px] text-red-600 line-clamp-2">
-                <AlertTriangle className="h-3 w-3 inline mr-1" />{product.approvalNotes}
+              <div className="mt-1.5 p-1.5 bg-red-50 dark:bg-red-950/20 rounded text-[9px] text-red-600 dark:text-red-400 line-clamp-2">
+                <AlertTriangle className="h-2.5 w-2.5 inline mr-1" />{product.approvalNotes}
               </div>
             )}
-            <Separator className="my-2" />
-            <div className="flex items-center justify-between">
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => openEditForm(product)}>
-                <Pencil className="h-3 w-3" /> Edit
-              </Button>
-              <div className="flex items-center gap-0.5">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateProduct(product)} title="Duplicate">
-                  <Copy className="h-3 w-3" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleActive(product)} title={product.active ? 'Deactivate' : 'Activate'}>
-                  {product.active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteDialog({ open: true, product })} title="Delete">
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </motion.div>
@@ -2274,65 +2271,79 @@ export default function SellerProductsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Products</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage your product catalog
-            </p>
+        {/* ── Compact Header with Inline Stats ── */}
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center flex-shrink-0">
+              <Package className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">Products</h1>
+              <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">Manage your product catalog</p>
+            </div>
           </div>
-          <Button onClick={openAddForm} className="gap-2">
-            <Plus className="h-4 w-4" /> Add Product
+          {/* Inline mini-stats */}
+          <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+            {statCards.slice(1).map(stat => (
+              <div key={stat.label} className={cn('flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border', stat.bg, 'border-transparent')}>
+                <stat.icon className={cn('h-3.5 w-3.5', stat.color)} />
+                <span className={cn('text-xs font-bold', stat.color)}>{stat.count}</span>
+              </div>
+            ))}
+          </div>
+          <Button onClick={openAddForm} className="gap-1.5 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex-shrink-0">
+            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add Product</span>
           </Button>
         </div>
 
-        {/* ── Stats Cards ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
-          {statCards.map(stat => (
-            <motion.div key={stat.label} whileHover={{ scale: 1.02 }} transition={{ duration: 0.15 }}>
-              <Card className={cn('cursor-pointer transition-colors', statusFilter === stat.label.toLowerCase() && 'ring-2 ring-primary')}>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className={cn('p-2 rounded-lg', stat.bg)}>
-                    <stat.icon className={cn('h-5 w-5', stat.color)} />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stat.count}</p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+        {/* ── Status Filter Pills ── */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5 mb-4 -mx-1 px-1">
+          {[
+            { value: 'all', label: 'All', count: counts.total, activeClass: 'bg-emerald-500 text-white shadow-sm' },
+            { value: 'Draft', label: 'Draft', count: counts.draft, activeClass: 'bg-gray-500 text-white shadow-sm' },
+            { value: 'Pending', label: 'Pending', count: counts.pending, activeClass: 'bg-amber-500 text-white shadow-sm' },
+            { value: 'Published', label: 'Published', count: counts.published, activeClass: 'bg-emerald-500 text-white shadow-sm' },
+            { value: 'Rejected', label: 'Rejected', count: counts.rejected, activeClass: 'bg-red-500 text-white shadow-sm' },
+          ].map((tab) => {
+            const isActive = statusFilter === tab.value
+            return (
+              <button
+                key={tab.value}
+                onClick={() => { setStatusFilter(tab.value); setPage(1) }}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0',
+                  isActive ? tab.activeClass : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                )}
+              >
+                {isActive && <span className="h-1.5 w-1.5 rounded-full bg-white/80" />}
+                {tab.label}
+                {isActive && tab.count !== null && tab.count > 0 && (
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-white/20">{tab.count}</span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
-        {/* ── Filters Row ── */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        {/* ── Search + Category Filter ── */}
+        <div className="flex flex-col sm:flex-row gap-2.5 mb-5">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by name, brand, description..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 pr-9 bg-card border-border h-10 rounded-xl"
             />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
-          <div className="flex gap-3">
-            <Select value={statusFilter} onValueChange={val => { setStatusFilter(val); setPage(1) }}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Draft">Draft</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Approved">Approved</SelectItem>
-                <SelectItem value="Published">Published</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex gap-2.5">
             <Select value={categoryFilter} onValueChange={val => { setCategoryFilter(val); setPage(1) }}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-[160px] h-10 rounded-xl bg-card border-border">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -2342,11 +2353,11 @@ export default function SellerProductsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex border rounded-md">
+            <div className="flex border border-border rounded-xl overflow-hidden flex-shrink-0">
               <Button
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                 size="icon"
-                className="h-9 w-9 rounded-r-none"
+                className="h-10 w-10 rounded-r-none"
                 onClick={() => setViewMode('grid')}
               >
                 <LayoutGrid className="h-4 w-4" />
@@ -2354,7 +2365,7 @@ export default function SellerProductsPage() {
               <Button
                 variant={viewMode === 'table' ? 'secondary' : 'ghost'}
                 size="icon"
-                className="h-9 w-9 rounded-l-none"
+                className="h-10 w-10 rounded-l-none"
                 onClick={() => setViewMode('table')}
               >
                 <List className="h-4 w-4" />
@@ -2367,27 +2378,27 @@ export default function SellerProductsPage() {
         {loading && (
           <div className={cn(
             viewMode === 'grid'
-              ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'
-              : 'space-y-3'
+              ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3'
+              : 'space-y-2.5'
           )}>
             {Array.from({ length: 8 }).map((_, i) => (
               viewMode === 'grid' ? (
                 <Card key={i} className="overflow-hidden">
                   <Skeleton className="aspect-square" />
-                  <CardContent className="p-3 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
+                  <CardContent className="p-2.5 space-y-1.5">
+                    <Skeleton className="h-3.5 w-3/4" />
                     <Skeleton className="h-3 w-1/2" />
-                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-3.5 w-1/3" />
                   </CardContent>
                 </Card>
               ) : (
-                <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
+                <div key={i} className="flex items-center gap-3 p-3 border rounded-xl bg-card">
+                  <Skeleton className="h-10 w-10 rounded-lg" />
                   <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-3.5 w-1/3" />
                     <Skeleton className="h-3 w-1/4" />
                   </div>
-                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-6 w-16 rounded-full" />
                 </div>
               )
             ))}
@@ -2397,14 +2408,16 @@ export default function SellerProductsPage() {
         {/* ── Empty State ── */}
         {!loading && products.length === 0 && (
           <div className="text-center py-16">
-            <Package className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No products found</h3>
-            <p className="text-muted-foreground text-sm mb-4">
+            <div className="h-16 w-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mx-auto mb-4">
+              <Package className="h-8 w-8 text-emerald-400" />
+            </div>
+            <h3 className="text-base font-semibold text-foreground mb-1">No products found</h3>
+            <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
               {search || statusFilter !== 'all' || categoryFilter !== 'all'
                 ? 'Try adjusting your filters or search query.'
                 : 'Start by adding your first product.'}
             </p>
-            <Button onClick={openAddForm} className="gap-2">
+            <Button onClick={openAddForm} className="gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white">
               <Plus className="h-4 w-4" /> Add Product
             </Button>
           </div>
@@ -2412,7 +2425,7 @@ export default function SellerProductsPage() {
 
         {/* ── Product Grid View ── */}
         {!loading && products.length > 0 && viewMode === 'grid' && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             <AnimatePresence mode="popLayout">
               {products.map(renderProductCard)}
             </AnimatePresence>
@@ -2421,66 +2434,43 @@ export default function SellerProductsPage() {
 
         {/* ── Product Table View ── */}
         {!loading && products.length > 0 && viewMode === 'table' && (
-          <div className="border rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Product</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Category</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Price</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Stock</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                    <th className="p-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <AnimatePresence mode="popLayout">
-                    {products.map(renderProductRow)}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-            </div>
+          <div className="space-y-2.5">
+            <AnimatePresence mode="popLayout">
+              {products.map(p => renderProductRow(p))}
+            </AnimatePresence>
           </div>
         )}
 
         {/* ── Pagination ── */}
         {!loading && products.length > 0 && totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-muted-foreground">
-              Showing {((page - 1) * 12) + 1}–{Math.min(page * 12, total)} of {total} products
+          <div className="flex items-center justify-between gap-3 mt-6 px-1">
+            <p className="text-[11px] sm:text-xs text-muted-foreground">
+              <span className="hidden sm:inline">Showing </span>{((page - 1) * 12) + 1}–{Math.min(page * 12, total)} <span className="hidden sm:inline">of </span>{total} <span className="hidden sm:inline">products</span>
             </p>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-                <ChevronLeft className="h-4 w-4" /> Previous
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="h-8 w-8 p-0 rounded-lg">
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number
-                  if (totalPages <= 5) {
-                    pageNum = i + 1
-                  } else if (page <= 3) {
-                    pageNum = i + 1
-                  } else if (page >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i
-                  } else {
-                    pageNum = page - 2 + i
-                  }
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={pageNum === page ? 'default' : 'outline'}
-                      size="sm"
-                      className="w-8 h-8 p-0"
-                      onClick={() => setPage(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
-                  )
-                })}
-              </div>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
-                Next <ChevronRight className="h-4 w-4" />
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number
+                if (totalPages <= 5) { pageNum = i + 1 }
+                else if (page <= 3) { pageNum = i + 1 }
+                else if (page >= totalPages - 2) { pageNum = totalPages - 4 + i }
+                else { pageNum = page - 2 + i }
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={pageNum === page ? 'default' : 'outline'}
+                    size="sm"
+                    className={cn('h-8 w-8 p-0 text-xs rounded-lg', pageNum === page && 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600')}
+                    onClick={() => setPage(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                )
+              })}
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="h-8 w-8 p-0 rounded-lg">
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
