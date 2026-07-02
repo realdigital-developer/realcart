@@ -4349,3 +4349,25 @@ Stage Summary:
 - **Changed**: Products are now always shown in grid view. The list/table view toggle and all related code (renderProductRow function, toggle buttons, conditional skeleton) have been removed.
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). 11 insertions, 127 deletions — cleaner code. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
+
+---
+Task ID: revert-last-1-task-2
+Agent: main-orchestrator
+Task: Revert the last 1 task to bring back everything before it.
+
+Work Log:
+- **Identified the last 1 task to revert**: "redesign-product-card" (commits `551f5ce` + `7da8167`) — modern attractive card with discount badge, stock indicator on image, emerald edit button, rounded-2xl.
+- **Target state**: `43cb776` — the "remove-list-view" commit (grid-only view, always-visible action buttons in card content area).
+- **Verification that commits were local-only**: Local was ahead of `origin/main` (`258fd41`). The 2 commits from the last task were all local — safe to reset.
+- **Reverted**: `git reset --hard 43cb776` — brought HEAD back to `43cb7760045f11ee2b0683bf38d199f6c7d4a39a`.
+- **Verification**:
+  * `renderProductRow` not found (0 matches) — list view removed ✓
+  * `viewMode` not found (0 matches) — toggle removed ✓
+  * `discount` found (1 match) — this is from a different context (returnPolicy/discount field in the Product interface, not the card redesign).
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/products, no errors.
+
+Stage Summary:
+- **Reverted**: The last task ("redesign-product-card") has been undone. The code is now back to the "remove-list-view" state where products always show in grid view with always-visible action buttons in the card content area.
+- **No damage**: No UI or code was damaged — the reset cleanly restored the exact state from commit `43cb776`.
+- Lint: 0 errors. Dev server: stable, HTTP 200.
