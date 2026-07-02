@@ -185,6 +185,37 @@ function OrdersContent() {
   /*  Fetch Orders                                                      */
   /* ---------------------------------------------------------------- */
 
+  // ── Fetch accurate stats for ALL statuses (independent of current filter) ──
+  // Makes parallel API calls with limit=1 to get the TRUE total count for each
+  // status. This ensures the filter tab badges always show correct counts
+  // regardless of which tab is currently selected.
+  const fetchStats = useCallback(async () => {
+    try {
+      const [allRes, pendingRes, processingRes, deliveredRes] = await Promise.all([
+        fetch('/api/seller/orders?page=1&limit=1'),
+        fetch('/api/seller/orders?page=1&limit=1&status=Pending'),
+        fetch('/api/seller/orders?page=1&limit=1&status=Processing'),
+        fetch('/api/seller/orders?page=1&limit=1&status=Delivered'),
+      ])
+
+      const [allData, pendingData, processingData, deliveredData] = await Promise.all([
+        allRes.ok ? allRes.json() : { total: 0 },
+        pendingRes.ok ? pendingRes.json() : { total: 0 },
+        processingRes.ok ? processingRes.json() : { total: 0 },
+        deliveredRes.ok ? deliveredRes.json() : { total: 0 },
+      ])
+
+      setStats({
+        total: allData.total || 0,
+        pending: pendingData.total || 0,
+        processing: processingData.total || 0,
+        delivered: deliveredData.total || 0,
+      })
+    } catch {
+      // Non-critical — stats will remain at previous values
+    }
+  }, [])
+
   const fetchOrders = useCallback(async () => {
     setLoadingData(true)
     try {
@@ -213,19 +244,8 @@ function OrdersContent() {
       setOrders(orderList)
       setTotalOrders(data.total || 0)
 
-      // Compute stats from the full list (or from response if available)
-      const computedStats: OrderStats = { total: data.total || 0, pending: 0, processing: 0, delivered: 0 }
-      // The list API may not return all orders, so we compute from what we get
-      // But we can get the stats from the first-page data for a quick view
-      for (const order of orderList) {
-        for (const item of order.items) {
-          const s = normalizeStatus(item.status)
-          if (s === 'Pending') computedStats.pending++
-          if (s === 'Processing') computedStats.processing++
-          if (s === 'Delivered') computedStats.delivered++
-        }
-      }
-      setStats(prev => ({ ...computedStats, total: data.total || prev.total }))
+      // Refresh stats in the background (non-blocking) so tab counts stay accurate
+      fetchStats()
     } catch (err) {
       if (err instanceof Error && (err.message.includes('Unauthorized') || err.message.includes('blocked'))) {
         return
@@ -238,7 +258,7 @@ function OrdersContent() {
     } finally {
       setLoadingData(false)
     }
-  }, [searchQuery, statusFilter, currentPage, logout, router, toast])
+  }, [searchQuery, statusFilter, currentPage, logout, router, toast, fetchStats])
 
   useEffect(() => {
     fetchOrders()
