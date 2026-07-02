@@ -25,8 +25,6 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  LayoutGrid,
-  List,
   Image as ImageIcon,
   Eye,
   EyeOff,
@@ -388,7 +386,7 @@ export default function SellerProductsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid')
+  // Grid view is always used — no list/table view toggle
 
   /* ── Form State ── */
   const [showForm, setShowForm] = useState(false)
@@ -1161,78 +1159,6 @@ export default function SellerProductsPage() {
     { label: 'Published', count: counts.published, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Rejected', count: counts.rejected, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
   ]
-
-  /* ================================================================ */
-  /*  RENDER: PRODUCT TABLE ROW                                        */
-  /* ================================================================ */
-
-  const renderProductRow = (product: Product) => {
-    const statusCfg = STATUS_CONFIG[product.status] || STATUS_CONFIG.Draft
-    const StatusIcon = statusCfg.icon
-    const primaryImg = getPrimaryImage(product)
-
-    return (
-      <motion.div
-        key={product._id}
-        initial={{ opacity: 0, y: 5 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-200"
-      >
-        {/* Image */}
-        <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-          <img src={primaryImg} alt={product.name} className="h-full w-full object-cover" />
-        </div>
-
-        {/* Product info */}
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-xs sm:text-sm truncate">{product.name}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">{product.category}{product.subcategory ? ` › ${product.subcategory}` : ''}</p>
-            {product.status === 'Rejected' && product.approvalNotes && (
-              <p className="text-[10px] text-red-500 truncate" title={product.approvalNotes}>
-                ⚠ {product.approvalNotes}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Price + Stock */}
-        <div className="hidden sm:flex flex-col items-end flex-shrink-0">
-          <span className="text-sm font-semibold text-foreground">{fmtPrice(product.sellingPrice)}</span>
-          {product.mrp > product.sellingPrice && (
-            <span className="text-[10px] text-muted-foreground line-through">{fmtPrice(product.mrp)}</span>
-          )}
-        </div>
-        <div className="hidden sm:flex items-center flex-shrink-0">
-          <span className={cn('text-xs font-medium', product.stock <= 5 && product.stock > 0 && 'text-amber-600', product.stock === 0 && 'text-red-600', product.stock > 5 && 'text-muted-foreground')}>
-            Stock: {product.stock}
-          </span>
-        </div>
-
-        {/* Status badge */}
-        <Badge variant="outline" className={cn(statusCfg.color, statusCfg.bg, statusCfg.border, 'gap-1 text-[10px] flex-shrink-0')}>
-          <StatusIcon className="h-2.5 w-2.5" />
-          <span className="hidden sm:inline">{statusCfg.label}</span>
-        </Badge>
-
-        {/* Actions */}
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => openEditForm(product)} title="Edit">
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hidden sm:flex" onClick={() => duplicateProduct(product)} title="Duplicate">
-            <Copy className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hidden sm:flex" onClick={() => toggleActive(product)} title={product.active ? 'Deactivate' : 'Activate'}>
-            {product.active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" onClick={() => setDeleteDialog({ open: true, product })} title="Delete">
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </motion.div>
-    )
-  }
 
   /* ================================================================ */
   /*  RENDER: PRODUCT CARD (Grid View)                                 */
@@ -2357,54 +2283,21 @@ export default function SellerProductsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex border border-border rounded-xl overflow-hidden flex-shrink-0">
-              <Button
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="h-10 w-10 rounded-r-none"
-                onClick={() => setViewMode('grid')}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="h-10 w-10 rounded-l-none"
-                onClick={() => setViewMode('table')}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
           </div>
         </div>
 
         {/* ── Loading Skeleton ── */}
         {loading && (
-          <div className={cn(
-            viewMode === 'grid'
-              ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3'
-              : 'space-y-2.5'
-          )}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {Array.from({ length: 8 }).map((_, i) => (
-              viewMode === 'grid' ? (
-                <Card key={i} className="overflow-hidden">
-                  <Skeleton className="aspect-square" />
-                  <CardContent className="p-2.5 space-y-1.5">
-                    <Skeleton className="h-3.5 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                    <Skeleton className="h-3.5 w-1/3" />
-                  </CardContent>
-                </Card>
-              ) : (
-                <div key={i} className="flex items-center gap-3 p-3 border rounded-xl bg-card">
-                  <Skeleton className="h-10 w-10 rounded-lg" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                  <Skeleton className="h-6 w-16 rounded-full" />
-                </div>
-              )
+              <Card key={i} className="overflow-hidden">
+                <Skeleton className="aspect-square" />
+                <CardContent className="p-2.5 space-y-1.5">
+                  <Skeleton className="h-3.5 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-3.5 w-1/3" />
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
@@ -2428,19 +2321,10 @@ export default function SellerProductsPage() {
         )}
 
         {/* ── Product Grid View ── */}
-        {!loading && products.length > 0 && viewMode === 'grid' && (
+        {!loading && products.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             <AnimatePresence mode="popLayout">
               {products.map(renderProductCard)}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* ── Product Table View ── */}
-        {!loading && products.length > 0 && viewMode === 'table' && (
-          <div className="space-y-2.5">
-            <AnimatePresence mode="popLayout">
-              {products.map(p => renderProductRow(p))}
             </AnimatePresence>
           </div>
         )}
