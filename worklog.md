@@ -4183,3 +4183,44 @@ Stage Summary:
 - **Fixed**: The count badge now shows ONLY on the selected/active status tab. When the seller clicks "Pending", only the Pending tab shows its count badge (19) — all other tabs show no badges. When they click "All", only the All tab shows its count (45).
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). Only 2 lines changed. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on All and Pending tabs.
+
+---
+Task ID: github-upload-6
+Agent: main-orchestrator
+Task: Upload the latest code to GitHub (https://github.com/realdigital-developer/realcart.git) using classic PAT.
+
+Work Log:
+- **Pre-push verification** (all passed):
+  * Git status: working tree clean.
+  * 18 commits ahead of origin/main — clean fast-forward (0 remote-only commits, no divergence).
+  * Lint: 0 errors, 24 warnings (all pre-existing).
+  * Sensitive files: ZERO tracked.
+  * Dev server: HTTP 200.
+- **18 commits pushed** containing:
+  1. status-filter-tabs (replace dropdown with ALL statuses as filter tabs)
+  2. hide-view-button-out-for-delivery (no View button for Out for Delivery)
+  3. hide-view-button-terminal-statuses (no View button for Delivered, Cancelled, Not Delivered, Return Completed, Return Cancelled)
+  4. move-action-buttons-below-amount (action buttons below amount section)
+  5. revert-last-2-tasks (reverted action-buttons-right-side and right-column-amount-actions)
+  6. revert-last-1-task (reverted right-column-amount-actions-v2)
+  7. action-buttons-right-aligned (action buttons right-aligned below amount row, date fix)
+  8. fix-status-tab-counts (separate fetchStats for accurate per-status counts)
+  9. fix-all-status-tab-counts (fetch counts for ALL 13 statuses)
+  10. count-badge-active-tab-only (show count badge only on selected tab)
+- **GitHub Push** (successful):
+  * Used `GIT_ASKPASS` helper script (one-time, not persisted to git config).
+  * Push succeeded: `d4dc208..a4ff885 main -> main` (exit code 0).
+  * Askpass helper deleted immediately after push.
+  * Token NOT persisted in git config.
+- **Sync verification**:
+  * Local HEAD: `a4ff8850de926cb1777327df0008723720e1c7fb`
+  * Remote main: `a4ff8850de926cb1777327df0008723720e1c7fb`
+  * STATUS: IN SYNC ✓
+
+Stage Summary:
+- **All code uploaded to GitHub**: https://github.com/realdigital-developer/realcart (main branch)
+- **Clean fast-forward push** — no merge needed, no divergence, no conflicts.
+- **18 commits pushed** containing all recent seller orders page improvements.
+- **No damage**: No UI or code was modified or damaged during this upload task.
+- **Local and remote SHAs match exactly**: `a4ff8850de926cb1777327df0008723720e1c7fb` (IN SYNC).
+- PAT used via GIT_ASKPASS (one-time, not persisted). Askpass helper deleted after push.
