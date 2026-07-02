@@ -4622,3 +4622,51 @@ Stage Summary:
 - **Redesigned**: The seller filter modal now uses a two-panel layout matching the reference image — left sidebar with Category/Sub tabs, right panel with checkbox list, Close/Apply footer buttons.
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). 147 insertions, 97 deletions. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on both Category and Sub tabs.
+
+---
+Task ID: filter-seller-only-categories
+Agent: main-orchestrator
+Task: Show only categories and subcategories that the seller has products in, in the filter modal.
+
+Work Log:
+- **Root Cause**: The filter modal was showing ALL categories from the `/api/categories` API (system-wide), not just the ones the seller has products in. The seller products API already returns `sellerCategories` and `sellerSubcategories` (via MongoDB `distinct` queries on the seller's products), but these weren't being used to filter the category list in the modal.
+- **Fix** (committed as `732c691`):
+
+  **Category tab** — filter the `categories` list:
+  ```tsx
+  {categories
+    .filter(cat => sellerCategories.includes(cat.name))  // Only seller's categories
+    .map((cat) => {
+      // Count only subcategories the seller has products in
+      const sellerSubsCount = (cat.subcategories || [])
+        .filter(s => sellerSubcategories.includes(s.name)).length
+      // ...
+    })
+  }
+  ```
+  - Fallback condition updated: `categories.filter(cat => sellerCategories.includes(cat.name)).length === 0` — only shows sellerCategories directly if the filtered categories list is empty.
+
+  **Subcategory tab** — filter subcategories:
+  ```tsx
+  // Build list from categories API (filtered by sellerSubcategories), fallback to sellerSubcategories directly
+  (categories.length > 0
+    ? categories.flatMap(cat =>
+        (cat.subcategories || [])
+          .filter(s => sellerSubcategories.includes(s.name))  // Only seller's subcategories
+          .map(sub => ({ sub, catName: cat.name }))
+      )
+    : sellerSubcategories.map(sub => ({ sub: { _id: sub, name: sub }, catName: '' }))
+  )
+  ```
+  - Empty state check: `sellerSubcategories.length === 0` instead of checking all subcategories.
+
+- **Verification** (Agent Browser + VLM):
+  * **Category tab**: VLM confirmed only 2 categories visible: "Men's Fashion" and "Women's Fashion" (the categories the seller has products in). Previously showed 5+ categories including "Kid's Fashion", "Home & Kitchen", etc.
+  * **Sub tab**: VLM confirmed only 2 subcategories visible: "Shirts" and "Sarees" (the subcategories the seller has products in). Previously showed 10+ subcategories.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200, no errors.
+
+Stage Summary:
+- **Fixed**: The filter modal now shows ONLY categories and subcategories that the seller has products in. Category list is filtered by `sellerCategories`, subcategory list is filtered by `sellerSubcategories`, and subcategory counts per category only count the seller's subcategories.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). 22 insertions, 10 deletions. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on both Category and Sub tabs.
