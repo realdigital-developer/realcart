@@ -4045,3 +4045,33 @@ Stage Summary:
 - **Reverted**: The last task ("right-column-amount-actions-v2") has been undone. The code is now back to the "revert-last-2-tasks" state where action buttons are below the amount on a separate row.
 - **No damage**: No UI or code was damaged — the reset cleanly restored the exact state from commit `f685209`.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
+
+---
+Task ID: action-buttons-right-aligned
+Agent: main-orchestrator
+Task: Move action buttons to the right side (right-aligned) below the amount+items row, and fix the date not showing on mobile.
+
+Work Log:
+- **Two issues fixed** (committed as `1d99182`):
+
+  **Issue 1: Action buttons position**:
+  - Previous: Action buttons row used `pl-[46px] sm:pl-[50px]` — left-aligned, indented to match the thumbnail.
+  - New: Changed to `justify-end` — action buttons are now RIGHT-ALIGNED below the amount+items row. Removed the left padding so the buttons align to the right edge of the card.
+  - The action buttons row still has `pt-2 mt-1 border-t border-border/50` — divider line above, spacing.
+  - Cards with no action buttons (Delivered, Cancelled, etc.) don't show the row at all (conditional rendering).
+
+  **Issue 2: Date not showing on mobile**:
+  - Previous: `<span className="text-[10px] sm:text-[11px] text-muted-foreground hidden sm:inline">` — date had `hidden sm:inline`, making it invisible on mobile (< 640px).
+  - New: Removed `hidden sm:inline`, added `whitespace-nowrap` — date now always shows on all devices without wrapping/truncation.
+
+- **Verification** (Agent Browser + VLM):
+  * **Desktop (1280px)**: VLM confirmed — "Action buttons on the RIGHT SIDE of the card (right-aligned) below the amount row. Date visible on each card. Amount on the right side of the items/date row. Divider line above the action buttons."
+  * **Mobile (375px)**: VLM confirmed — "Action buttons on the RIGHT SIDE (right-aligned) below the amount. Date visible (not hidden). Layout clean on mobile."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+
+Stage Summary:
+- **Fixed**: Action buttons are now RIGHT-ALIGNED below the amount+items row (instead of left-aligned). Date is now always visible on all devices with `whitespace-nowrap` to prevent wrapping.
+- **Smart conditional rendering**: Cards with no action buttons don't show the action row — no empty divider.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). Only 4 lines changed — minimal, surgical fix. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on desktop and mobile.
