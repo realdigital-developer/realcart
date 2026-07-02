@@ -2269,8 +2269,7 @@ export default function SellerProductsPage() {
   /* ================================================================ */
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="space-y-4 sm:space-y-5">
         {/* ── Compact Header with Inline Stats ── */}
         <div className="flex items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -2475,7 +2474,6 @@ export default function SellerProductsPage() {
             </div>
           </div>
         )}
-      </div>
 
       {/* ================================================================ */}
       {/*  PRODUCT FORM SHEET                                              */}
