@@ -3949,3 +3949,52 @@ Stage Summary:
 - **Active statuses preserved**: Pending (Accept), Processing (Assign/Ship), Shipped (delivery boy info), Return Requested (Approve/Reject), Return Approved (Assign for Pickup) — all still show their respective action buttons.
 - **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only 13 lines changed (5 new case labels + updated comment).
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on Delivered, Cancelled, and All tabs.
+
+---
+Task ID: move-action-buttons-below-amount
+Agent: main-orchestrator
+Task: Move action buttons from beside the amount to below the amount section in the seller panel orders page order cards.
+
+Work Log:
+- **Previous Layout**: Each order card had a single bottom row with: items count + date on the left, and amount + action buttons on the right (all in the same row). The action buttons were cramped next to the amount.
+- **Fix** (single file: `src/app/seller/orders/page.tsx`, committed as `b5d1ced`):
+
+  **Split the bottom section into two rows**:
+  
+  **Row 1 (amount row)**: Items count + date on the left, amount (bold) on the right. No action buttons.
+  ```tsx
+  <div className="flex items-center justify-between gap-2 pl-[46px] sm:pl-[50px]">
+    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+      {/* items count + date */}
+    </div>
+    <span className="text-sm sm:text-base font-bold text-foreground flex-shrink-0">{fmtPrice(totalAmount)}</span>
+  </div>
+  ```
+
+  **Row 2 (action buttons row)**: Below the amount row, with a subtle divider line (`border-t border-border/50`), full width, wrapping.
+  ```tsx
+  {sellerItems.length === 1 && renderActions(order, sellerItems[0]) && (
+    <div className="flex items-center gap-1.5 flex-wrap pl-[46px] sm:pl-[50px] pt-2 mt-1 border-t border-border/50">
+      {renderActions(order, sellerItems[0])}
+    </div>
+  )}
+  ```
+  
+  **Key design decisions**:
+  - The action row only renders when `renderActions()` returns a non-null value — cards with no action buttons (Delivered, Cancelled, Out for Delivery, etc.) don't show an empty row or divider.
+  - For multi-item orders, a "View" button is shown in the action row.
+  - The action row has `pt-2 mt-1 border-t border-border/50` — subtle top border to visually separate from the amount row.
+  - `flex-wrap` allows buttons to wrap gracefully on narrow screens.
+
+- **Verification** (Agent Browser + VLM):
+  * **Desktop (1280px)**: VLM confirmed — "Amount is on the right side of the row with items count and date. Action buttons are BELOW the amount section on a separate row. Action buttons are NOT beside the amount."
+  * **Mobile (375px)**: VLM confirmed — "Amount on the right side of the items/date row. Action buttons below the amount on a separate row. Clean and not cramped on mobile."
+  * **Delivered tab (no action buttons)**: VLM confirmed — "No action button row below the amount. Cards end after the amount row. No empty divider lines." The conditional rendering (`renderActions() &&`) correctly hides the row when there are no buttons.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/orders, no errors.
+
+Stage Summary:
+- **Changed**: Action buttons moved from beside the amount to below the amount section on a separate row with a subtle divider line.
+- **Smart conditional rendering**: Cards with no action buttons (terminal statuses) don't show an empty row or divider — the card simply ends after the amount.
+- **Files modified**: 1 (`src/app/seller/orders/page.tsx`). No UI or code damaged — only the order card bottom section was restructured.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on desktop, mobile, and Delivered tab.
