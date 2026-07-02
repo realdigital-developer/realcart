@@ -390,6 +390,7 @@ export default function SellerProductsPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [filterModalOpen, setFilterModalOpen] = useState(false)
+  const [activeFilterTab, setActiveFilterTab] = useState<'category' | 'subcategory'>('category')
   // Grid view is always used — no list/table view toggle
 
   /* ── Form State ── */
@@ -2382,7 +2383,7 @@ export default function SellerProductsPage() {
         )}
 
       {/* ================================================================ */}
-      {/*  CATEGORY FILTER MODAL                                           */}
+      {/*  CATEGORY FILTER MODAL — Two-panel layout like customer panel    */}
       {/* ================================================================ */}
 
       <AdminModal
@@ -2390,121 +2391,170 @@ export default function SellerProductsPage() {
         onOpenChange={setFilterModalOpen}
         type="form"
         size="md"
-        title="Filter by Category"
+        title="Filters"
         description="Select a category or subcategory to filter your products"
         footer={
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs rounded-lg"
-            onClick={() => { setCategoryFilter('all'); setPage(1); setFilterModalOpen(false) }}
-          >
-            Clear Filter
-          </Button>
+          <div className="flex items-center gap-2 w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs rounded-lg"
+              onClick={() => setFilterModalOpen(false)}
+            >
+              Close
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 text-xs rounded-lg bg-violet-600 hover:bg-violet-700 text-white"
+              onClick={() => setFilterModalOpen(false)}
+            >
+              {categoryFilter !== 'all' ? `Apply (${1})` : 'Apply'}
+            </Button>
+          </div>
         }
       >
-        <div className="space-y-1">
-          {/* All Categories option — checkbox style like customer panel */}
-          <button
-            className={cn(
-              'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3',
-              categoryFilter === 'all'
-                ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-            )}
-            onClick={() => { setCategoryFilter('all'); setPage(1); setFilterModalOpen(false) }}
-          >
-            <div className={cn(
-              'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
-              categoryFilter === 'all' ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
-            )}>
-              {categoryFilter === 'all' && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
-            </div>
-            <span>All Categories</span>
-          </button>
+        <div className="flex min-h-[300px] -mx-1">
+          {/* Left Sidebar — Filter type tabs */}
+          <div className="w-[100px] flex-shrink-0 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto rounded-l-lg">
+            {[
+              { id: 'category' as const, label: 'Category', count: categoryFilter !== 'all' && categories.some(c => c.name === categoryFilter) ? 1 : 0 },
+              { id: 'subcategory' as const, label: 'Sub', count: categoryFilter !== 'all' && categories.some(c => c.subcategories?.some(s => s.name === categoryFilter)) ? 1 : 0 },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveFilterTab(tab.id)}
+                className={cn(
+                  'w-full flex items-center justify-between px-3 py-3.5 text-[13px] font-medium transition-colors text-left',
+                  activeFilterTab === tab.id
+                    ? 'bg-white dark:bg-gray-950 text-blue-600 dark:text-blue-400 border-l-[3px] border-blue-500 font-semibold'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                )}
+              >
+                <span>{tab.label}</span>
+                {tab.count > 0 && (
+                  <span className="text-[10px] bg-blue-500 text-white rounded-full w-[18px] h-[18px] flex items-center justify-center font-bold flex-shrink-0">
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
 
-          {/* Category list — checkbox style with collapsible subcategories */}
-          {categories.map((cat) => {
-            const isSelected = categoryFilter === cat.name
-            const hasSubs = cat.subcategories && cat.subcategories.length > 0
-            return (
-              <div key={cat._id}>
+          {/* Right Content — Filter options */}
+          <div className="flex-1 overflow-y-auto p-3">
+            {/* Category tab */}
+            {activeFilterTab === 'category' && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Select Categories</h3>
+                {/* All Categories */}
                 <button
                   className={cn(
-                    'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3',
-                    isSelected
+                    'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3 mb-0.5',
+                    categoryFilter === 'all'
                       ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                   )}
-                  onClick={() => { setCategoryFilter(cat.name); setPage(1); setFilterModalOpen(false) }}
+                  onClick={() => { setCategoryFilter('all'); setPage(1) }}
                 >
                   <div className={cn(
                     'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
-                    isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
+                    categoryFilter === 'all' ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
                   )}>
-                    {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
+                    {categoryFilter === 'all' && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
                   </div>
-                  <span>{cat.name}</span>
-                  {hasSubs && (
-                    <span className="ml-auto text-[10px] text-muted-foreground">{cat.subcategories!.length}</span>
-                  )}
+                  <span>All Categories</span>
                 </button>
-                {/* Subcategories — checkbox list under each category */}
-                {hasSubs && (
-                  <div className="ml-6 pl-3 border-l border-gray-100 dark:border-gray-800 space-y-0.5 mt-0.5 mb-0.5">
-                    {cat.subcategories!.map((sub) => {
-                      const subSelected = categoryFilter === sub.name
-                      return (
-                        <button
-                          key={sub._id}
-                          className={cn(
-                            'w-full text-left px-3 py-2 text-[13px] font-medium transition-colors rounded-lg flex items-center gap-3',
-                            subSelected
-                              ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
-                              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                          )}
-                          onClick={() => { setCategoryFilter(sub.name); setPage(1); setFilterModalOpen(false) }}
-                        >
-                          <div className={cn(
-                            'w-[16px] h-[16px] rounded-[4px] border-2 flex items-center justify-center flex-shrink-0',
-                            subSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
-                          )}>
-                            {subSelected && <Check className="h-2.5 w-2.5 text-white dark:text-gray-900" strokeWidth={3} />}
-                          </div>
-                          <span>{sub.name}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
+                {/* Category list */}
+                {categories.map((cat) => {
+                  const isSelected = categoryFilter === cat.name
+                  return (
+                    <button
+                      key={cat._id}
+                      className={cn(
+                        'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3 mb-0.5',
+                        isSelected
+                          ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      )}
+                      onClick={() => { setCategoryFilter(cat.name); setPage(1) }}
+                    >
+                      <div className={cn(
+                        'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
+                        isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
+                      )}>
+                        {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
+                      </div>
+                      <span>{cat.name}</span>
+                      {cat.subcategories && cat.subcategories.length > 0 && (
+                        <span className="ml-auto text-[10px] text-muted-foreground">{cat.subcategories.length}</span>
+                      )}
+                    </button>
+                  )
+                })}
+                {/* Fallback */}
+                {categories.length === 0 && sellerCategories.map((cat) => {
+                  const isSelected = categoryFilter === cat
+                  return (
+                    <button
+                      key={cat}
+                      className={cn(
+                        'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3 mb-0.5',
+                        isSelected
+                          ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      )}
+                      onClick={() => { setCategoryFilter(cat); setPage(1) }}
+                    >
+                      <div className={cn(
+                        'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
+                        isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
+                      )}>
+                        {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
+                      </div>
+                      <span>{cat}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Subcategory tab */}
+            {activeFilterTab === 'subcategory' && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Select Subcategories</h3>
+                {categories.flatMap(cat => cat.subcategories || []).length === 0 ? (
+                  <p className="text-sm text-gray-400 py-4 text-center">No subcategories available</p>
+                ) : (
+                  categories.flatMap(cat => (cat.subcategories || []).map(sub => ({ sub, catName: cat.name }))).map(({ sub, catName }) => {
+                    const isSelected = categoryFilter === sub.name
+                    return (
+                      <button
+                        key={sub._id}
+                        className={cn(
+                          'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3 mb-0.5',
+                          isSelected
+                            ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        )}
+                        onClick={() => { setCategoryFilter(sub.name); setPage(1) }}
+                      >
+                        <div className={cn(
+                          'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
+                          isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
+                        )}>
+                          {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="block truncate">{sub.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{catName}</span>
+                        </div>
+                      </button>
+                    )
+                  })
                 )}
               </div>
-            )
-          })}
-
-          {/* Seller categories fallback */}
-          {categories.length === 0 && sellerCategories.length > 0 && sellerCategories.map((cat) => {
-            const isSelected = categoryFilter === cat
-            return (
-              <button
-                key={cat}
-                className={cn(
-                  'w-full text-left px-3 py-3 text-sm font-medium transition-colors rounded-xl flex items-center gap-3',
-                  isSelected
-                    ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                )}
-                onClick={() => { setCategoryFilter(cat); setPage(1); setFilterModalOpen(false) }}
-              >
-                <div className={cn(
-                  'w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center flex-shrink-0',
-                  isSelected ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
-                )}>
-                  {isSelected && <Check className="h-3 w-3 text-white dark:text-gray-900" strokeWidth={3} />}
-                </div>
-                <span>{cat}</span>
-              </button>
-            )
-          })}
+            )}
+          </div>
         </div>
       </AdminModal>
 
