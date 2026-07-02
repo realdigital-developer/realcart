@@ -2311,13 +2311,22 @@ export default function SellerProductsPage() {
 
         {/* ── Active filter indicator ── */}
         {categoryFilter !== 'all' && (
-          <div className="flex items-center gap-2 -mt-2 mb-1">
-            <Badge variant="secondary" className="gap-1.5 text-[11px] py-1 px-2.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
-              {categoryFilter}
-              <button onClick={() => { setCategoryFilter('all'); setPage(1) }} className="hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-full p-0.5">
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
+          <div className="flex items-center gap-1.5 flex-wrap -mt-2 mb-1">
+            {categoryFilter.split(',').map((filter, i) => (
+              <Badge key={i} variant="secondary" className="gap-1.5 text-[11px] py-1 px-2.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30">
+                {filter.trim()}
+                <button onClick={() => {
+                  const filters = categoryFilter.split(',').filter((_, idx) => idx !== i).join(',')
+                  setCategoryFilter(filters || 'all')
+                  setPage(1)
+                }} className="hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-full p-0.5">
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+            <button onClick={() => { setCategoryFilter('all'); setPage(1) }} className="text-[10px] text-muted-foreground hover:text-foreground ml-1">
+              Clear all
+            </button>
           </div>
         )}
 
@@ -2438,8 +2447,11 @@ export default function SellerProductsPage() {
               size="sm"
               className="flex-1 text-xs rounded-lg bg-violet-600 hover:bg-violet-700 text-white"
               onClick={() => {
-                // Apply: prefer subcategory if selected, else category, else 'all'
-                const applied = selectedSubcategories[0] || selectedCategories[0] || 'all'
+                // Apply: combine selected subcategories and categories
+                // Subcategories take priority (more specific), but if none selected,
+                // use categories. If both empty, reset to 'all'.
+                const allSelected = [...selectedSubcategories, ...selectedCategories]
+                const applied = allSelected.length > 0 ? allSelected.join(',') : 'all'
                 setCategoryFilter(applied)
                 setPage(1)
                 setFilterModalOpen(false)

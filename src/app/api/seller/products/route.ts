@@ -113,9 +113,21 @@ export async function GET(request: NextRequest) {
       query.status = status
     }
 
-    // Filter by category
+    // Filter by category — supports comma-separated values for multi-select.
+    // Each value can be a category name or a subcategory name.
     if (category && category !== 'all') {
-      query.category = category
+      const values = category.split(',').map(v => v.trim()).filter(Boolean)
+      if (values.length === 1) {
+        query.$or = [
+          { category: values[0] },
+          { subcategory: values[0] },
+        ]
+      } else if (values.length > 1) {
+        query.$or = [
+          { category: { $in: values } },
+          { subcategory: { $in: values } },
+        ]
+      }
     }
 
     // Run main query + status counts + categories + subcategories in parallel
