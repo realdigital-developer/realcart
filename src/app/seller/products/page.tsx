@@ -561,9 +561,11 @@ export default function SellerProductsPage() {
     setAiHighlights([])
     setAiHighlightsError('')
     setSizeChartUnit('imperial')
+    setSelectedSizeChartTemplateId('')
     setShowForm(true)
     fetchAttributes()
     fetchTags()
+    fetchSizeChartTemplates()
   }
 
   const openEditForm = (product: Product) => {
@@ -614,6 +616,7 @@ export default function SellerProductsPage() {
     setShowForm(true)
     fetchAttributes()
     fetchTags()
+    fetchSizeChartTemplates()
   }
 
   const closeForm = () => {
@@ -625,7 +628,6 @@ export default function SellerProductsPage() {
     setAiHighlights([])
     setAiHighlightsError('')
     setSelectedSizeChartTemplateId('')
-    setSizeChartTemplates([])
   }
 
   /* ── Form Field Updater ── */
