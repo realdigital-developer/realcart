@@ -4371,3 +4371,30 @@ Stage Summary:
 - **Reverted**: The last task ("redesign-product-card") has been undone. The code is now back to the "remove-list-view" state where products always show in grid view with always-visible action buttons in the card content area.
 - **No damage**: No UI or code was damaged — the reset cleanly restored the exact state from commit `43cb776`.
 - Lint: 0 errors. Dev server: stable, HTTP 200.
+
+---
+Task ID: fix-product-card-spacing
+Agent: main-orchestrator
+Task: Remove extra margin and padding from top and bottom of product cards in the seller panel products page.
+
+Work Log:
+- **Root Cause**: The shadcn `Card` component has default `py-6` (24px vertical padding) and `gap-6` (24px gap between children). The product card didn't override these, resulting in:
+  - 24px padding on TOP of the card (above the image)
+  - 24px padding on BOTTOM of the card (below the action buttons)
+  - 24px gap BETWEEN the image and the CardContent
+  - Total extra spacing: ~72px of unnecessary padding/margin
+- **Fix** (committed as `01d02ec`): Added `py-0 gap-0` to the Card className to override the defaults:
+  - `<Card className="overflow-hidden ... group py-0 gap-0">` — removes vertical padding and gap
+  - Also applied to skeleton cards: `<Card key={i} className="overflow-hidden py-0 gap-0">`
+  - The `CardContent` still has `p-2.5` (10px) which is the proper content padding for readability — this is intentional and correct.
+- **Verification** (Agent Browser):
+  * Computed styles confirmed: Card `paddingTop: 0px`, `paddingBottom: 0px`, `gap: 0px` — all extra spacing removed.
+  * CardContent `padding: 10px` (from `p-2.5`) — proper content padding, not extra.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/products, no errors.
+  * Only 2 lines changed — minimal, surgical fix.
+
+Stage Summary:
+- **Fixed**: Removed the extra `py-6` (24px) vertical padding and `gap-6` (24px) gap from the Card component by adding `py-0 gap-0`. Product cards are now compact with no extra spacing on top/bottom.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). Only 2 lines changed. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. Computed-styles verified.
