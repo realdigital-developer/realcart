@@ -2281,7 +2281,7 @@ export default function SellerProductsPage() {
           {/* Filter icon button — inside the search bar, right side */}
           <button
             onClick={() => setFilterModalOpen(true)}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors relative"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
             title="Filter by category"
           >
             <SlidersHorizontal className="h-4 w-4" />
