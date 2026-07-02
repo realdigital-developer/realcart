@@ -2,8 +2,8 @@
 
 /* ------------------------------------------------------------------ */
 /*  Seller Inventory Management Page                                    */
-/*  Production-level inventory dashboard following                       */
-/*  Flipkart/Meesho/Amazon seller panel patterns.                       */
+/*  Redesigned with modern, compact UI following the established        */
+/*  seller-panel design language (consistent with Products page).       */
 /* ------------------------------------------------------------------ */
 
 import React, { useEffect, useState, useCallback } from 'react'
@@ -42,8 +42,9 @@ import {
   FileDown,
   Check,
   Sparkles,
+  X,
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -225,6 +226,20 @@ interface ImportResult {
 /*  Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
+const STATUS_DOT: Record<string, string> = {
+  in_stock: 'bg-emerald-500',
+  low_stock: 'bg-amber-500',
+  out_of_stock: 'bg-red-500',
+  unlimited: 'bg-blue-500',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  in_stock: 'In Stock',
+  low_stock: 'Low',
+  out_of_stock: 'Out',
+  unlimited: '∞',
+}
+
 function statusBadge(status: string) {
   switch (status) {
     case 'in_stock':
@@ -261,17 +276,17 @@ function movementTypeBadge(type: string) {
     order: { label: 'Order', className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300', icon: <ShoppingCart className="h-3 w-3" /> },
     cancel: { label: 'Cancel', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300', icon: <XCircle className="h-3 w-3" /> },
     return: { label: 'Return', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300', icon: <RotateCcw className="h-3 w-3" /> },
-    adjustment: { label: 'Adjustment', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', icon: <Settings2 className="h-3 w-3" /> },
+    adjustment: { label: 'Adjust', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', icon: <Settings2 className="h-3 w-3" /> },
     restock: { label: 'Restock', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', icon: <Package className="h-3 w-3" /> },
-    reservation: { label: 'Reserved', className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300', icon: <Info className="h-3 w-3" /> },
-    release: { label: 'Released', className: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', icon: <RefreshCw className="h-3 w-3" /> },
-    reservation_confirm: { label: 'Confirmed', className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300', icon: <CheckCircle2 className="h-3 w-3" /> },
+    reservation: { label: 'Reserve', className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300', icon: <Info className="h-3 w-3" /> },
+    release: { label: 'Release', className: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', icon: <RefreshCw className="h-3 w-3" /> },
+    reservation_confirm: { label: 'Confirm', className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300', icon: <CheckCircle2 className="h-3 w-3" /> },
     initial: { label: 'Initial', className: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', icon: <Package className="h-3 w-3" /> },
-    correction: { label: 'Correction', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', icon: <AlertTriangle className="h-3 w-3" /> },
+    correction: { label: 'Correct', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', icon: <AlertTriangle className="h-3 w-3" /> },
   }
   const cfg = map[type] || { label: type, className: 'bg-slate-100 text-slate-700', icon: null }
   return (
-    <Badge className={cn('gap-1', cfg.className)}>
+    <Badge className={cn('gap-1 text-[10px] px-1.5 py-0', cfg.className)}>
       {cfg.icon}
       {cfg.label}
     </Badge>
@@ -290,6 +305,78 @@ function formatDate(iso: string): string {
   } catch {
     return iso
   }
+}
+
+function formatRelative(iso: string): string {
+  try {
+    const diff = Date.now() - new Date(iso).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    const days = Math.floor(hrs / 24)
+    if (days < 30) return `${days}d ago`
+    return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+  } catch {
+    return iso
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Compact Stat Card                                                   */
+/* ------------------------------------------------------------------ */
+
+function MiniStat({
+  icon: Icon,
+  label,
+  value,
+  sublabel,
+  color,
+  bg,
+}: {
+  icon: React.ElementType
+  label: string
+  value: React.ReactNode
+  sublabel?: string
+  color: string
+  bg: string
+}) {
+  return (
+    <Card className="p-3 py-2.5 gap-0 hover:shadow-sm transition-shadow">
+      <div className="flex items-center gap-2.5">
+        <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0', bg)}>
+          <Icon className={cn('h-4 w-4', color)} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">{label}</p>
+          <div className="flex items-baseline gap-1.5">
+            <span className={cn('text-base sm:text-lg font-bold leading-tight', color)}>{value}</span>
+            {sublabel && <span className="text-[10px] text-muted-foreground truncate">{sublabel}</span>}
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Product Thumbnail (shared)                                          */
+/* ------------------------------------------------------------------ */
+
+function ProductThumb({ url, name, size = 'md' }: { url?: string; name: string; size?: 'sm' | 'md' }) {
+  const dim = size === 'sm' ? 'h-8 w-8' : 'h-10 w-10'
+  return (
+    <div className={cn('rounded-md overflow-hidden bg-muted flex-shrink-0', dim)}>
+      {url ? (
+        <img src={url} alt={name} className="h-full w-full object-cover" />
+      ) : (
+        <div className="h-full w-full flex items-center justify-center">
+          <Package className="h-3.5 w-3.5 text-muted-foreground/50" />
+        </div>
+      )}
+    </div>
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -864,223 +951,256 @@ export default function SellerInventoryPage() {
     )
   }
 
+  /* ── Tab config ── */
+  const tabs = [
+    { value: 'overview', label: 'Overview', icon: Boxes },
+    { value: 'list', label: 'Inventory', icon: Package },
+    { value: 'alerts', label: 'Alerts', icon: Bell, badge: alerts.length },
+    { value: 'movements', label: 'Movements', icon: History },
+    { value: 'reorder', label: 'Reorder', icon: TrendingUp },
+    { value: 'dead-stock', label: 'Dead Stock', icon: PackageX },
+    { value: 'valuation', label: 'Valuation', icon: BadgeDollarSign },
+    { value: 'io', label: 'Import/Export', icon: Upload },
+  ]
+
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-[1600px] mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Boxes className="h-7 w-7 text-primary" />
-            Inventory Management
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Track stock levels, manage alerts, and audit every movement.
-          </p>
+    <div className="space-y-4 sm:space-y-5">
+      {/* ── Compact Header ── */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center flex-shrink-0">
+            <Boxes className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">Inventory</h1>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">Track stock, alerts & movements</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => { fetchDashboard(); fetchList() }}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+        {/* Inline mini-stats */}
+        {summary && (
+          <div className="hidden md:flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              <span className="text-xs font-bold text-emerald-600">{summary.inStockSkus}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+              <span className="text-xs font-bold text-amber-600">{summary.lowStockSkus}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/30">
+              <PackageX className="h-3.5 w-3.5 text-red-600" />
+              <span className="text-xs font-bold text-red-600">{summary.outOfStockSkus}</span>
+            </div>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <Button variant="outline" size="sm" onClick={() => { fetchDashboard(); fetchList() }} className="h-9 rounded-xl gap-1.5">
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span className="hidden lg:inline">Refresh</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={items.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={items.length === 0} className="h-9 rounded-xl gap-1.5">
+            <Download className="h-3.5 w-3.5" />
+            <span className="hidden lg:inline">Export</span>
           </Button>
-          <Button size="sm" onClick={() => setBulkOpen(true)}>
-            <Upload className="h-4 w-4 mr-2" />
-            Bulk Update
+          <Button size="sm" onClick={() => setBulkOpen(true)} className="h-9 rounded-xl gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white">
+            <Upload className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Bulk Update</span>
           </Button>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 max-w-5xl">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="list">Inventory</TabsTrigger>
-          <TabsTrigger value="alerts">
-            Alerts
-            {alerts.length > 0 && (
-              <Badge className="ml-2 bg-red-500 text-white">{alerts.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="movements">Movements</TabsTrigger>
-          <TabsTrigger value="reorder" className="gap-1">
-            <Bell className="h-3.5 w-3.5" />
-            Reorder
-          </TabsTrigger>
-          <TabsTrigger value="dead-stock" className="gap-1">
-            <PackageX className="h-3.5 w-3.5" />
-            Dead Stock
-          </TabsTrigger>
-          <TabsTrigger value="valuation" className="gap-1">
-            <TrendingUp className="h-3.5 w-3.5" />
-            Valuation
-          </TabsTrigger>
-          <TabsTrigger value="io" className="gap-1">
-            <Upload className="h-3.5 w-3.5" />
-            Import / Export
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        {/* ── Compact Tab Pills ── */}
+        <TabsList className="inline-flex h-auto p-1 bg-muted/50 rounded-xl gap-0.5 mb-1 overflow-x-auto max-w-full scrollbar-none">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.value
+            return (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+                  isActive
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <tab.icon className="h-3.5 w-3.5" />
+                {tab.label}
+                {tab.badge ? (
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white">{tab.badge}</span>
+                ) : null}
+              </TabsTrigger>
+            )
+          })}
         </TabsList>
 
         {/* ===================== OVERVIEW TAB ===================== */}
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" className="space-y-4 mt-4">
           {loadingDashboard ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : (
             <>
-              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Total SKUs</CardTitle>
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{summary?.totalSkus ?? 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {summary?.trackedSkus ?? 0} tracked
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">In Stock</CardTitle>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{summary?.inStockSkus ?? 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">{summary?.totalUnits ?? 0} units</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Low Stock</CardTitle>
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{summary?.lowStockSkus ?? 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Need restocking soon</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Out of Stock</CardTitle>
-                    <PackageX className="h-4 w-4 text-red-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">{summary?.outOfStockSkus ?? 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Action required</p>
-                  </CardContent>
-                </Card>
+              {/* Stat cards row */}
+              <div className="grid gap-2.5 grid-cols-2 lg:grid-cols-4">
+                <MiniStat
+                  icon={Package}
+                  label="Total SKUs"
+                  value={summary?.totalSkus ?? 0}
+                  sublabel={`· ${summary?.trackedSkus ?? 0} tracked`}
+                  color="text-gray-700 dark:text-gray-300"
+                  bg="bg-gray-100 dark:bg-gray-800"
+                />
+                <MiniStat
+                  icon={CheckCircle2}
+                  label="In Stock"
+                  value={summary?.inStockSkus ?? 0}
+                  sublabel={`· ${summary?.totalUnits ?? 0} units`}
+                  color="text-emerald-600 dark:text-emerald-400"
+                  bg="bg-emerald-50 dark:bg-emerald-950/30"
+                />
+                <MiniStat
+                  icon={AlertTriangle}
+                  label="Low Stock"
+                  value={summary?.lowStockSkus ?? 0}
+                  sublabel="· restock soon"
+                  color="text-amber-600 dark:text-amber-400"
+                  bg="bg-amber-50 dark:bg-amber-950/30"
+                />
+                <MiniStat
+                  icon={PackageX}
+                  label="Out of Stock"
+                  value={summary?.outOfStockSkus ?? 0}
+                  sublabel="· action req'd"
+                  color="text-red-600 dark:text-red-400"
+                  bg="bg-red-50 dark:bg-red-950/30"
+                />
               </div>
 
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Stock Value (Selling)</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-primary">{fmtPrice(summary?.stockValue ?? 0, 0)}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Reserved: {summary?.totalReservedUnits ?? 0} units
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Stock Value (MRP)</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{fmtPrice(summary?.stockValueMrp ?? 0, 0)}</div>
-                    <p className="text-xs text-muted-foreground mt-1">At maximum retail price</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Available Units</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{summary?.totalAvailableUnits ?? 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Sellable right now</p>
-                  </CardContent>
-                </Card>
+              {/* Value cards row */}
+              <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-3">
+                <MiniStat
+                  icon={TrendingUp}
+                  label="Stock Value (Selling)"
+                  value={fmtPrice(summary?.stockValue ?? 0, 0)}
+                  sublabel={`· ${summary?.totalReservedUnits ?? 0} reserved`}
+                  color="text-emerald-600 dark:text-emerald-400"
+                  bg="bg-emerald-50 dark:bg-emerald-950/30"
+                />
+                <MiniStat
+                  icon={BadgeDollarSign}
+                  label="Stock Value (MRP)"
+                  value={fmtPrice(summary?.stockValueMrp ?? 0, 0)}
+                  sublabel="· at MRP"
+                  color="text-primary"
+                  bg="bg-primary/10"
+                />
+                <MiniStat
+                  icon={Package}
+                  label="Available Units"
+                  value={summary?.totalAvailableUnits ?? 0}
+                  sublabel="· sellable now"
+                  color="text-blue-600 dark:text-blue-400"
+                  bg="bg-blue-50 dark:bg-blue-950/30"
+                />
               </div>
 
-              <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
+              {/* Two-column: Low stock + Recent movements */}
+              <div className="grid gap-2.5 grid-cols-1 lg:grid-cols-2">
+                {/* Lowest Stock Products */}
+                <Card className="overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+                    <div className="flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-amber-500" />
-                      Lowest Stock Products
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                      <h3 className="text-sm font-semibold">Lowest Stock Products</h3>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px]">{lowStockProducts.length}</Badge>
+                  </div>
+                  <div className="p-2">
                     {lowStockProducts.length === 0 ? (
-                      <div className="text-center py-6 text-sm text-muted-foreground">
-                        <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
+                      <div className="text-center py-8 text-xs text-muted-foreground">
+                        <CheckCircle2 className="h-7 w-7 mx-auto mb-2 text-emerald-500" />
                         All products are well stocked!
                       </div>
                     ) : (
-                      <div className="space-y-3 max-h-80 overflow-y-auto">
+                      <div className="space-y-1 max-h-72 overflow-y-auto scrollbar-thin">
                         {lowStockProducts.map((p) => (
-                          <div key={p._id} className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                              {p.imageUrl && (
-                                <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
-                              )}
-                            </div>
+                          <div key={p._id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                            <ProductThumb url={p.imageUrl} name={p.name} size="sm" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{p.name}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs font-medium truncate">{p.name}</p>
+                              <p className="text-[10px] text-muted-foreground">
                                 {p.stock} / {p.lowStockThreshold} units
                               </p>
                             </div>
-                            <div className="text-right">
-                              {statusBadge(p.status)}
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[p.status] || 'bg-gray-400')} />
+                              <span className="text-[10px] text-muted-foreground">{STATUS_LABEL[p.status] || p.status}</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-[10px] text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                                onClick={() => openQuickRestock(p, p.lowStockThreshold * 2 - p.stock)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
-                  </CardContent>
+                  </div>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
+                {/* Recent Movements */}
+                <Card className="overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+                    <div className="flex items-center gap-2">
                       <History className="h-4 w-4 text-primary" />
-                      Recent Stock Movements
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                      <h3 className="text-sm font-semibold">Recent Stock Movements</h3>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-[10px]"
+                      onClick={() => setActiveTab('movements')}
+                    >
+                      View All
+                    </Button>
+                  </div>
+                  <div className="p-2">
                     {recentMovements.length === 0 ? (
-                      <div className="text-center py-6 text-sm text-muted-foreground">
-                        <Inbox className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                      <div className="text-center py-8 text-xs text-muted-foreground">
+                        <Inbox className="h-7 w-7 mx-auto mb-2 opacity-40" />
                         No movements yet
                       </div>
                     ) : (
-                      <div className="space-y-3 max-h-80 overflow-y-auto">
+                      <div className="space-y-1 max-h-72 overflow-y-auto scrollbar-thin">
                         {recentMovements.map((m) => (
-                          <div key={m._id} className="flex items-start gap-3">
+                          <div key={m._id} className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                             <div className="flex-shrink-0 mt-0.5">
                               {movementTypeBadge(m.type)}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{m.productName}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {m.quantityChange > 0 ? '+' : ''}{m.quantityChange} units
-                                {m.reason ? ` · ${m.reason}` : ''}
+                              <p className="text-xs font-medium truncate">{m.productName}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                <span className={m.quantityChange > 0 ? 'text-emerald-600' : 'text-red-600'}>
+                                  {m.quantityChange > 0 ? '+' : ''}{m.quantityChange}
+                                </span>
+                                {' '}{m.reason ? `· ${m.reason}` : ''}
                               </p>
-                              <p className="text-[10px] text-muted-foreground/70">{formatDate(m.createdAt)}</p>
+                              <p className="text-[9px] text-muted-foreground/70">{formatRelative(m.createdAt)}</p>
                             </div>
-                            <div className="text-xs text-muted-foreground text-right">
-                              {m.stockBefore} → {m.stockAfter}
+                            <div className="text-[10px] text-muted-foreground text-right flex-shrink-0 font-mono">
+                              {m.stockBefore}→{m.stockAfter}
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
-                  </CardContent>
+                  </div>
                 </Card>
               </div>
             </>
@@ -1088,146 +1208,145 @@ export default function SellerInventoryPage() {
         </TabsContent>
 
         {/* ===================== LIST TAB ===================== */}
-        <TabsContent value="list" className="space-y-4">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex flex-col md:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name, SKU, or brand..."
-                    value={search}
-                    onChange={(e) => { setSearch(e.target.value); setListPage(1) }}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setListPage(1) }}>
-                  <SelectTrigger className="w-full md:w-44">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="in_stock">In Stock</SelectItem>
-                    <SelectItem value="low_stock">Low Stock</SelectItem>
-                    <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                    <SelectItem value="unlimited">Unlimited</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={sort} onValueChange={setSort}>
-                  <SelectTrigger className="w-full md:w-44">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="updated">Recently Updated</SelectItem>
-                    <SelectItem value="stock_asc">Stock (Low → High)</SelectItem>
-                    <SelectItem value="stock_desc">Stock (High → Low)</SelectItem>
-                    <SelectItem value="name">Name (A-Z)</SelectItem>
-                    <SelectItem value="value">Stock Value</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-0">
-              {loadingList ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : items.length === 0 ? (
-                <div className="text-center py-12 text-sm text-muted-foreground">
-                  <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                  No products found
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[200px]">Product</TableHead>
-                        <TableHead>SKU</TableHead>
-                        <TableHead className="text-right">In Stock</TableHead>
-                        <TableHead className="text-right">Reserved</TableHead>
-                        <TableHead className="text-right">Available</TableHead>
-                        <TableHead className="text-right">Threshold</TableHead>
-                        <TableHead className="text-right">Reorder Pt</TableHead>
-                        <TableHead>Warehouse</TableHead>
-                        <TableHead className="text-right">Cost Price</TableHead>
-                        <TableHead className="text-right">Value</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((item) => (
-                        <TableRow key={item._id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                                {item.imageUrl && (
-                                  <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium truncate max-w-[200px]">{item.name}</p>
-                                <p className="text-xs text-muted-foreground">{item.category}</p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">{item.sku || '—'}</TableCell>
-                          <TableCell className="text-right font-semibold">{item.trackInventory ? item.stock : '∞'}</TableCell>
-                          <TableCell className="text-right text-amber-600 dark:text-amber-400">{item.reservedStock || 0}</TableCell>
-                          <TableCell className="text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                            {item.trackInventory ? item.availableStock : '∞'}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">{item.lowStockThreshold}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {item.reorderPoint > 0 ? item.reorderPoint : '—'}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {item.warehouseLocation || (
-                              <span className="opacity-50">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {item.costPrice ? fmtPrice(item.costPrice, 0) : '—'}
-                          </TableCell>
-                          <TableCell className="text-right">{fmtPrice(item.stockValue, 0)}</TableCell>
-                          <TableCell>{statusBadge(item.status)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openAdjustDialog(item)}
-                              >
-                                <Pencil className="h-3.5 w-3.5 mr-1" />
-                                Adjust
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => openQuickRestock(item)}
-                                disabled={!item.trackInventory}
-                              >
-                                <Plus className="h-3.5 w-3.5 mr-1" />
-                                Restock
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+        <TabsContent value="list" className="space-y-3 mt-4">
+          {/* Compact toolbar: search + filters in one row */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, SKU, or brand..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setListPage(1) }}
+                className="pl-9 h-9 rounded-xl"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
-            </CardContent>
+            </div>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setListPage(1) }}>
+              <SelectTrigger className="w-full sm:w-40 h-9 rounded-xl">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="in_stock">In Stock</SelectItem>
+                <SelectItem value="low_stock">Low Stock</SelectItem>
+                <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                <SelectItem value="unlimited">Unlimited</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="w-full sm:w-44 h-9 rounded-xl">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="updated">Recently Updated</SelectItem>
+                <SelectItem value="stock_asc">Stock (Low → High)</SelectItem>
+                <SelectItem value="stock_desc">Stock (High → Low)</SelectItem>
+                <SelectItem value="name">Name (A-Z)</SelectItem>
+                <SelectItem value="value">Stock Value</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Card className="overflow-hidden">
+            {loadingList ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : items.length === 0 ? (
+              <div className="text-center py-12 text-sm text-muted-foreground">
+                <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                No products found
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="min-w-[200px] h-9 text-[11px]">Product</TableHead>
+                      <TableHead className="h-9 text-[11px]">SKU</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Stock</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Avail.</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Value</TableHead>
+                      <TableHead className="h-9 text-[11px]">Status</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item) => (
+                      <TableRow key={item._id} className="h-12">
+                        <TableCell>
+                          <div className="flex items-center gap-2.5">
+                            <ProductThumb url={item.imageUrl} name={item.name} size="sm" />
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium truncate max-w-[180px]">{item.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{item.category}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-[10px] text-muted-foreground">{item.sku || '—'}</TableCell>
+                        <TableCell className="text-right">
+                          <span className={cn(
+                            'text-xs font-semibold',
+                            item.status === 'out_of_stock' && 'text-red-600',
+                            item.status === 'low_stock' && 'text-amber-600',
+                          )}>
+                            {item.trackInventory ? item.stock : '∞'}
+                          </span>
+                          {item.reservedStock > 0 && (
+                            <span className="block text-[9px] text-amber-600/70">−{item.reservedStock} res</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                          {item.trackInventory ? item.availableStock : '∞'}
+                        </TableCell>
+                        <TableCell className="text-right text-xs">{fmtPrice(item.stockValue, 0)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn('h-1.5 w-1.5 rounded-full flex-shrink-0', STATUS_DOT[item.status] || 'bg-gray-400')} />
+                            <span className="text-[10px] text-muted-foreground">{STATUS_LABEL[item.status] || item.status}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openAdjustDialog(item)}
+                              className="h-7 px-2 text-[10px] gap-1"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Adjust
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => openQuickRestock(item)}
+                              disabled={!item.trackInventory}
+                              className="h-7 px-2 text-[10px] gap-1 bg-emerald-500 hover:bg-emerald-600"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Restock
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </Card>
 
           {listTotal > listLimit && (
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+              <p className="text-[11px] text-muted-foreground">
                 Showing {(listPage - 1) * listLimit + 1}–{Math.min(listPage * listLimit, listTotal)} of {listTotal}
               </p>
               <div className="flex items-center gap-2">
@@ -1236,21 +1355,23 @@ export default function SellerInventoryPage() {
                   variant="outline"
                   disabled={listPage <= 1}
                   onClick={() => setListPage((p) => p - 1)}
+                  className="h-8 gap-1"
                 >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  <ArrowLeft className="h-3.5 w-3.5" />
                   Prev
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {listPage} / {listTotalPages}
+                <span className="text-[11px] text-muted-foreground">
+                  {listPage} / {listTotalPages}
                 </span>
                 <Button
                   size="sm"
                   variant="outline"
                   disabled={listPage >= listTotalPages}
                   onClick={() => setListPage((p) => p + 1)}
+                  className="h-8 gap-1"
                 >
                   Next
-                  <ArrowRight className="h-4 w-4 ml-1" />
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -1258,190 +1379,183 @@ export default function SellerInventoryPage() {
         </TabsContent>
 
         {/* ===================== ALERTS TAB ===================== */}
-        <TabsContent value="alerts" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Bell className="h-4 w-4 text-primary" />
-                  Active Inventory Alerts
-                  {alerts.length > 0 && (
-                    <Badge className="ml-1 bg-red-500 text-white">{alerts.length}</Badge>
-                  )}
-                </CardTitle>
-                {alerts.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleBulkResolve}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <Check className="h-3.5 w-3.5 mr-1.5" />
-                    )}
-                    Resolve All
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loadingDashboard ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : alerts.length === 0 ? (
-                <div className="text-center py-12 text-sm text-muted-foreground">
-                  <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
-                  No active alerts. All stock levels are healthy.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {alerts.map((alert) => (
-                    <div
-                      key={alert._id}
-                      className={cn(
-                        'flex items-center gap-3 p-3 rounded-lg border',
-                        alert.type === 'out_of_stock'
-                          ? 'border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20'
-                          : 'border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20',
-                      )}
-                    >
-                      <div className="flex-shrink-0">
-                        {alert.type === 'out_of_stock' ? (
-                          <PackageX className="h-5 w-5 text-red-500" />
-                        ) : (
-                          <AlertTriangle className="h-5 w-5 text-amber-500" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{alert.productName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {alert.message} · {formatDate(alert.createdAt)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAcknowledge(alert.alertId)}
-                        >
-                          Acknowledge
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleResolve(alert.alertId)}
-                        >
-                          <Check className="h-3.5 w-3.5 mr-1" />
-                          Resolve
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+        <TabsContent value="alerts" className="space-y-3 mt-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">Active Alerts</h3>
+              {alerts.length > 0 && (
+                <Badge className="bg-red-500 text-white text-[10px]">{alerts.length}</Badge>
               )}
-            </CardContent>
-          </Card>
+            </div>
+            {alerts.length > 0 && (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={handleBulkResolve}
+                disabled={actionLoading}
+                className="h-8 gap-1.5"
+              >
+                {actionLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Check className="h-3.5 w-3.5" />
+                )}
+                Resolve All
+              </Button>
+            )}
+          </div>
+
+          {loadingDashboard ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : alerts.length === 0 ? (
+            <Card className="p-8">
+              <div className="text-center text-sm text-muted-foreground">
+                <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
+                No active alerts. All stock levels are healthy.
+              </div>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {alerts.map((alert) => (
+                <Card
+                  key={alert._id}
+                  className={cn(
+                    'p-3 py-2.5 gap-0 border-l-4',
+                    alert.type === 'out_of_stock'
+                      ? 'border-l-red-500 bg-red-50/30 dark:bg-red-950/10'
+                      : 'border-l-amber-500 bg-amber-50/30 dark:bg-amber-950/10'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      {alert.type === 'out_of_stock' ? (
+                        <PackageX className="h-4 w-4 text-red-500" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{alert.productName}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {alert.message} · {formatRelative(alert.createdAt)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleAcknowledge(alert.alertId)}
+                        className="h-7 px-2 text-[10px]"
+                      >
+                        Ack
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleResolve(alert.alertId)}
+                        className="h-7 px-2 text-[10px] gap-1"
+                      >
+                        <Check className="h-3 w-3" />
+                        Resolve
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* ===================== MOVEMENTS TAB ===================== */}
-        <TabsContent value="movements" className="space-y-4">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="text-base font-semibold">Stock Movement History</h3>
-                  <p className="text-xs text-muted-foreground">Complete audit trail of all stock changes</p>
-                </div>
-                <Select value={movementTypeFilter} onValueChange={(v) => { setMovementTypeFilter(v); setMovementsPage(1) }}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="Filter by type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="order">Orders</SelectItem>
-                    <SelectItem value="cancel">Cancellations</SelectItem>
-                    <SelectItem value="return">Returns</SelectItem>
-                    <SelectItem value="adjustment">Adjustments</SelectItem>
-                    <SelectItem value="restock">Restocks</SelectItem>
-                    <SelectItem value="reservation">Reservations</SelectItem>
-                    <SelectItem value="release">Releases</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="movements" className="space-y-3 mt-4">
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">Stock Movement History</h3>
+              <p className="text-[11px] text-muted-foreground">Complete audit trail of all stock changes</p>
+            </div>
+            <Select value={movementTypeFilter} onValueChange={(v) => { setMovementTypeFilter(v); setMovementsPage(1) }}>
+              <SelectTrigger className="w-full sm:w-44 h-9 rounded-xl">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="order">Orders</SelectItem>
+                <SelectItem value="cancel">Cancellations</SelectItem>
+                <SelectItem value="return">Returns</SelectItem>
+                <SelectItem value="adjustment">Adjustments</SelectItem>
+                <SelectItem value="restock">Restocks</SelectItem>
+                <SelectItem value="reservation">Reservations</SelectItem>
+                <SelectItem value="release">Releases</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Card>
-            <CardContent className="p-0">
-              {loadingMovements ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : movements.length === 0 ? (
-                <div className="text-center py-12 text-sm text-muted-foreground">
-                  <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                  No movements found
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="min-w-[200px]">Product</TableHead>
-                        <TableHead className="text-right">Change</TableHead>
-                        <TableHead className="text-right">Before</TableHead>
-                        <TableHead className="text-right">After</TableHead>
-                        <TableHead>Reason</TableHead>
-                        <TableHead>By</TableHead>
-                        <TableHead>Date</TableHead>
+          <Card className="overflow-hidden">
+            {loadingMovements ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : movements.length === 0 ? (
+              <div className="text-center py-12 text-sm text-muted-foreground">
+                <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                No movements found
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="h-9 text-[11px]">Type</TableHead>
+                      <TableHead className="min-w-[180px] h-9 text-[11px]">Product</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Change</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Before → After</TableHead>
+                      <TableHead className="h-9 text-[11px]">Reason</TableHead>
+                      <TableHead className="h-9 text-[11px]">By</TableHead>
+                      <TableHead className="h-9 text-[11px]">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movements.map((m) => (
+                      <TableRow key={m._id} className="h-11">
+                        <TableCell>{movementTypeBadge(m.type)}</TableCell>
+                        <TableCell>
+                          <p className="text-xs font-medium truncate max-w-[180px]">{m.productName}</p>
+                          {m.variantSku && (
+                            <p className="text-[10px] text-muted-foreground font-mono">{m.variantSku}</p>
+                          )}
+                        </TableCell>
+                        <TableCell className={cn(
+                          'text-right text-xs font-semibold font-mono',
+                          m.quantityChange > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
+                        )}>
+                          {m.quantityChange > 0 ? '+' : ''}{m.quantityChange}
+                        </TableCell>
+                        <TableCell className="text-right text-[11px] text-muted-foreground font-mono">
+                          {m.stockBefore} → {m.stockAfter}
+                        </TableCell>
+                        <TableCell className="text-[10px] text-muted-foreground max-w-[160px] truncate">
+                          {m.reason || '—'}
+                        </TableCell>
+                        <TableCell className="text-[10px] capitalize">
+                          {m.performedBy}{m.userName ? ` · ${m.userName}` : ''}
+                        </TableCell>
+                        <TableCell className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {formatRelative(m.createdAt)}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {movements.map((m) => (
-                        <TableRow key={m._id}>
-                          <TableCell>{movementTypeBadge(m.type)}</TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="text-sm font-medium truncate max-w-[200px]">{m.productName}</p>
-                              {m.variantSku && (
-                                <p className="text-xs text-muted-foreground font-mono">{m.variantSku}</p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className={cn(
-                            'text-right font-semibold font-mono',
-                            m.quantityChange > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
-                          )}>
-                            {m.quantityChange > 0 ? '+' : ''}{m.quantityChange}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">{m.stockBefore}</TableCell>
-                          <TableCell className="text-right font-medium">{m.stockAfter}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
-                            {m.reason || '—'}
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            <span className="capitalize">{m.performedBy}</span>
-                            {m.userName ? ` · ${m.userName}` : ''}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                            {formatDate(m.createdAt)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </Card>
 
           {movementsTotal > 50 && (
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+              <p className="text-[11px] text-muted-foreground">
                 Showing {(movementsPage - 1) * 50 + 1}–{Math.min(movementsPage * 50, movementsTotal)} of {movementsTotal}
               </p>
               <div className="flex items-center gap-2">
@@ -1450,21 +1564,23 @@ export default function SellerInventoryPage() {
                   variant="outline"
                   disabled={movementsPage <= 1}
                   onClick={() => setMovementsPage((p) => p - 1)}
+                  className="h-8 gap-1"
                 >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  <ArrowLeft className="h-3.5 w-3.5" />
                   Prev
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {movementsPage} / {movementsTotalPages}
+                <span className="text-[11px] text-muted-foreground">
+                  {movementsPage} / {movementsTotalPages}
                 </span>
                 <Button
                   size="sm"
                   variant="outline"
                   disabled={movementsPage >= movementsTotalPages}
                   onClick={() => setMovementsPage((p) => p + 1)}
+                  className="h-8 gap-1"
                 >
                   Next
-                  <ArrowRight className="h-4 w-4 ml-1" />
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -1472,147 +1588,115 @@ export default function SellerInventoryPage() {
         </TabsContent>
 
         {/* ===================== REORDER TAB ===================== */}
-        <TabsContent value="reorder" className="space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <Card className="flex-1 min-w-[200px]">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Products Need Reordering</CardTitle>
-                <Bell className="h-4 w-4 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{reorderTotal}</div>
-                <p className="text-xs text-muted-foreground mt-1">Stock at or below reorder point</p>
-              </CardContent>
-            </Card>
-            <Button variant="outline" size="sm" onClick={fetchReorder} disabled={loadingReorder}>
-              <RefreshCw className={cn('h-4 w-4 mr-2', loadingReorder && 'animate-spin')} />
+        <TabsContent value="reorder" className="space-y-3 mt-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <MiniStat
+              icon={Bell}
+              label="Products Need Reordering"
+              value={reorderTotal}
+              sublabel="· at/below reorder point"
+              color="text-amber-600 dark:text-amber-400"
+              bg="bg-amber-50 dark:bg-amber-950/30"
+            />
+            <Button variant="outline" size="sm" onClick={fetchReorder} disabled={loadingReorder} className="h-9 rounded-xl gap-1.5">
+              <RefreshCw className={cn('h-3.5 w-3.5', loadingReorder && 'animate-spin')} />
               Refresh
             </Button>
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              {loadingReorder ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : reorderProducts.length === 0 ? (
-                <div className="text-center py-12 text-sm text-muted-foreground">
-                  <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
-                  No products need reordering. Set reorder points on your products to get restock alerts.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[200px]">Product</TableHead>
-                        <TableHead>SKU</TableHead>
-                        <TableHead className="text-right">Current</TableHead>
-                        <TableHead className="text-right">Reorder Pt</TableHead>
-                        <TableHead className="text-right">Reorder Qty</TableHead>
-                        <TableHead className="text-right">Safety</TableHead>
-                        <TableHead className="text-right">Shortfall</TableHead>
-                        <TableHead className="text-right">Suggested</TableHead>
-                        <TableHead className="text-right">Lead (days)</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
+          <Card className="overflow-hidden">
+            {loadingReorder ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : reorderProducts.length === 0 ? (
+              <div className="text-center py-12 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
+                No products need reordering. Set reorder points on your products to get restock alerts.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="min-w-[180px] h-9 text-[11px]">Product</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Current</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Reorder Pt</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Shortfall</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Suggested</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Lead</TableHead>
+                      <TableHead className="h-9 text-[11px]">Status</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reorderProducts.map((p) => (
+                      <TableRow key={p._id} className="h-12">
+                        <TableCell>
+                          <div className="flex items-center gap-2.5">
+                            <ProductThumb url={p.imageUrl} name={p.name} size="sm" />
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium truncate max-w-[160px]">{p.name}</p>
+                              {p.category && <p className="text-[10px] text-muted-foreground">{p.category}</p>}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-semibold">{p.stock}</TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">{p.reorderPoint}</TableCell>
+                        <TableCell className="text-right text-xs text-red-600 dark:text-red-400 font-medium">{p.shortfall}</TableCell>
+                        <TableCell className="text-right text-xs font-semibold text-primary">{p.suggestedReorderQty}</TableCell>
+                        <TableCell className="text-right text-[11px] text-muted-foreground">
+                          {p.leadTimeDays > 0 ? `${p.leadTimeDays}d` : '—'}
+                        </TableCell>
+                        <TableCell>
+                          {p.status === 'out_of_stock' ? (
+                            <Badge className="bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/40 dark:text-red-300 text-[10px]">Out</Badge>
+                          ) : (
+                            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 text-[10px]">Reorder</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => openQuickRestock(p, p.suggestedReorderQty)}
+                              className="h-7 px-2 text-[10px] gap-1 bg-emerald-500 hover:bg-emerald-600"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Restock
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => toast.info('Purchase order feature coming soon')}
+                              className="h-7 px-2 text-[10px] gap-1"
+                            >
+                              <ShoppingCart className="h-3 w-3" />
+                              PO
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {reorderProducts.map((p) => (
-                        <TableRow key={p._id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                                {p.imageUrl && (
-                                  <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium truncate max-w-[200px]">{p.name}</p>
-                                {p.category && (
-                                  <p className="text-xs text-muted-foreground">{p.category}</p>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">{p.sku || '—'}</TableCell>
-                          <TableCell className="text-right font-semibold">{p.stock}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{p.reorderPoint}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{p.reorderQuantity}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{p.safetyStock}</TableCell>
-                          <TableCell className="text-right text-red-600 dark:text-red-400 font-medium">{p.shortfall}</TableCell>
-                          <TableCell className="text-right font-semibold text-primary">{p.suggestedReorderQty}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {p.leadTimeDays > 0 ? p.leadTimeDays : '—'}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate">
-                            {p.supplier || '—'}
-                          </TableCell>
-                          <TableCell>
-                            {p.status === 'out_of_stock' ? (
-                              <Badge className="bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/40 dark:text-red-300">Out</Badge>
-                            ) : (
-                              <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300">Reorder</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => openQuickRestock(p, p.suggestedReorderQty)}
-                              >
-                                <Plus className="h-3.5 w-3.5 mr-1" />
-                                Restock Now
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => toast.info('Purchase order feature coming soon')}
-                              >
-                                <ShoppingCart className="h-3.5 w-3.5 mr-1" />
-                                Create PO
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </Card>
 
           {reorderTotal > 10 && (
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+              <p className="text-[11px] text-muted-foreground">
                 Showing {(reorderPage - 1) * 10 + 1}–{Math.min(reorderPage * 10, reorderTotal)} of {reorderTotal}
               </p>
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={reorderPage <= 1}
-                  onClick={() => setReorderPage((p) => p - 1)}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Prev
+                <Button size="sm" variant="outline" disabled={reorderPage <= 1} onClick={() => setReorderPage((p) => p - 1)} className="h-8 gap-1">
+                  <ArrowLeft className="h-3.5 w-3.5" /> Prev
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {reorderPage} / {reorderTotalPages}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={reorderPage >= reorderTotalPages}
-                  onClick={() => setReorderPage((p) => p + 1)}
-                >
-                  Next
-                  <ArrowRight className="h-4 w-4 ml-1" />
+                <span className="text-[11px] text-muted-foreground">{reorderPage} / {reorderTotalPages}</span>
+                <Button size="sm" variant="outline" disabled={reorderPage >= reorderTotalPages} onClick={() => setReorderPage((p) => p + 1)} className="h-8 gap-1">
+                  Next <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -1620,151 +1704,123 @@ export default function SellerInventoryPage() {
         </TabsContent>
 
         {/* ===================== DEAD STOCK TAB ===================== */}
-        <TabsContent value="dead-stock" className="space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">Threshold:</span>
+        <TabsContent value="dead-stock" className="space-y-3 mt-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">Threshold:</span>
               {[30, 60, 90, 180].map((d) => (
                 <Button
                   key={d}
                   size="sm"
                   variant={deadStockDays === d ? 'default' : 'outline'}
                   onClick={() => { setDeadStockDays(d); setDeadStockPage(1) }}
+                  className="h-7 px-2.5 text-[11px] rounded-lg"
                 >
                   {d}d
                 </Button>
               ))}
             </div>
-            <Button variant="outline" size="sm" onClick={fetchDeadStock} disabled={loadingDeadStock}>
-              <RefreshCw className={cn('h-4 w-4 mr-2', loadingDeadStock && 'animate-spin')} />
+            <Button variant="outline" size="sm" onClick={fetchDeadStock} disabled={loadingDeadStock} className="h-9 rounded-xl gap-1.5">
+              <RefreshCw className={cn('h-3.5 w-3.5', loadingDeadStock && 'animate-spin')} />
               Refresh
             </Button>
           </div>
 
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Dead-Stock Products</CardTitle>
-                <PackageX className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{deadStockTotal}</div>
-                <p className="text-xs text-muted-foreground mt-1">No sales in last {deadStockDays} days</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Tied-up Value (Cost)</CardTitle>
-                <Wallet className="h-4 w-4 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                  {fmtPrice(deadStockProducts.reduce((sum, p) => sum + (p.stockValueCost || 0), 0), 0)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Capital locked in unsold stock</p>
-              </CardContent>
-            </Card>
+          <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2">
+            <MiniStat
+              icon={PackageX}
+              label="Dead-Stock Products"
+              value={deadStockTotal}
+              sublabel={`· no sales in ${deadStockDays}d`}
+              color="text-red-600 dark:text-red-400"
+              bg="bg-red-50 dark:bg-red-950/30"
+            />
+            <MiniStat
+              icon={Wallet}
+              label="Tied-up Value (Cost)"
+              value={fmtPrice(deadStockProducts.reduce((sum, p) => sum + (p.stockValueCost || 0), 0), 0)}
+              sublabel="· capital locked"
+              color="text-amber-600 dark:text-amber-400"
+              bg="bg-amber-50 dark:bg-amber-950/30"
+            />
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              {loadingDeadStock ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : deadStockProducts.length === 0 ? (
-                <div className="text-center py-12 text-sm text-muted-foreground">
-                  <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
-                  No dead stock found. All your products have sold recently.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[200px]">Product</TableHead>
-                        <TableHead>SKU</TableHead>
-                        <TableHead className="text-right">Stock</TableHead>
-                        <TableHead className="text-right">Value (Selling)</TableHead>
-                        <TableHead className="text-right">Value (Cost)</TableHead>
-                        <TableHead>Last Sale Date</TableHead>
-                        <TableHead className="text-right">Days Since</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {deadStockProducts.map((p) => (
-                        <TableRow key={p._id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                                {p.imageUrl && (
-                                  <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium truncate max-w-[200px]">{p.name}</p>
-                                {p.category && (
-                                  <p className="text-xs text-muted-foreground">{p.category}</p>
-                                )}
-                              </div>
+          <Card className="overflow-hidden">
+            {loadingDeadStock ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : deadStockProducts.length === 0 ? (
+              <div className="text-center py-12 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
+                No dead stock found. All your products have sold recently.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="min-w-[180px] h-9 text-[11px]">Product</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Stock</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Value (Selling)</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Value (Cost)</TableHead>
+                      <TableHead className="h-9 text-[11px]">Last Sale</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Days</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {deadStockProducts.map((p) => (
+                      <TableRow key={p._id} className="h-12">
+                        <TableCell>
+                          <div className="flex items-center gap-2.5">
+                            <ProductThumb url={p.imageUrl} name={p.name} size="sm" />
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium truncate max-w-[160px]">{p.name}</p>
+                              {p.category && <p className="text-[10px] text-muted-foreground">{p.category}</p>}
                             </div>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">{p.sku || '—'}</TableCell>
-                          <TableCell className="text-right font-semibold">{p.stock}</TableCell>
-                          <TableCell className="text-right">{fmtPrice(p.stockValue, 0)}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{fmtPrice(p.stockValueCost, 0)}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                            {p.lastSaleDate ? formatDate(p.lastSaleDate) : 'Never sold'}
-                          </TableCell>
-                          <TableCell className="text-right text-amber-600 dark:text-amber-400 font-medium">
-                            {p.daysSinceLastSale !== null ? `${p.daysSinceLastSale}d` : '∞'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => toast.info('Clearance feature coming soon')}
-                            >
-                              <PackageX className="h-3.5 w-3.5 mr-1" />
-                              Mark for Clearance
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-semibold">{p.stock}</TableCell>
+                        <TableCell className="text-right text-xs">{fmtPrice(p.stockValue, 0)}</TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">{fmtPrice(p.stockValueCost, 0)}</TableCell>
+                        <TableCell className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {p.lastSaleDate ? formatRelative(p.lastSaleDate) : 'Never sold'}
+                        </TableCell>
+                        <TableCell className="text-right text-xs text-amber-600 dark:text-amber-400 font-medium">
+                          {p.daysSinceLastSale !== null ? `${p.daysSinceLastSale}d` : '∞'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toast.info('Clearance feature coming soon')}
+                            className="h-7 px-2 text-[10px] gap-1"
+                          >
+                            <PackageX className="h-3 w-3" />
+                            Clearance
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </Card>
 
           {deadStockTotal > 10 && (
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+              <p className="text-[11px] text-muted-foreground">
                 Showing {(deadStockPage - 1) * 10 + 1}–{Math.min(deadStockPage * 10, deadStockTotal)} of {deadStockTotal}
               </p>
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={deadStockPage <= 1}
-                  onClick={() => setDeadStockPage((p) => p - 1)}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Prev
+                <Button size="sm" variant="outline" disabled={deadStockPage <= 1} onClick={() => setDeadStockPage((p) => p - 1)} className="h-8 gap-1">
+                  <ArrowLeft className="h-3.5 w-3.5" /> Prev
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {deadStockPage} / {deadStockTotalPages}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={deadStockPage >= deadStockTotalPages}
-                  onClick={() => setDeadStockPage((p) => p + 1)}
-                >
-                  Next
-                  <ArrowRight className="h-4 w-4 ml-1" />
+                <span className="text-[11px] text-muted-foreground">{deadStockPage} / {deadStockTotalPages}</span>
+                <Button size="sm" variant="outline" disabled={deadStockPage >= deadStockTotalPages} onClick={() => setDeadStockPage((p) => p + 1)} className="h-8 gap-1">
+                  Next <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -1772,143 +1828,106 @@ export default function SellerInventoryPage() {
         </TabsContent>
 
         {/* ===================== VALUATION TAB ===================== */}
-        <TabsContent value="valuation" className="space-y-4">
+        <TabsContent value="valuation" className="space-y-3 mt-4">
           <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={fetchValuation} disabled={loadingValuation}>
-              <RefreshCw className={cn('h-4 w-4 mr-2', loadingValuation && 'animate-spin')} />
+            <Button variant="outline" size="sm" onClick={fetchValuation} disabled={loadingValuation} className="h-9 rounded-xl gap-1.5">
+              <RefreshCw className={cn('h-3.5 w-3.5', loadingValuation && 'animate-spin')} />
               Refresh
             </Button>
           </div>
 
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Stock Value (Cost)</CardTitle>
-                <Wallet className="h-4 w-4 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                  {fmtPrice(valuationTotals?.stockValueCost ?? 0, 0)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">At cost price</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Stock Value (Selling)</CardTitle>
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {fmtPrice(valuationTotals?.stockValueSelling ?? 0, 0)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">At selling price</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Stock Value (MRP)</CardTitle>
-                <BadgeDollarSign className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-primary">
-                  {fmtPrice(valuationTotals?.stockValueMrp ?? 0, 0)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">At maximum retail price</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Potential Profit</CardTitle>
-                <Sparkles className="h-4 w-4 text-purple-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {fmtPrice(valuationTotals?.potentialProfit ?? 0, 0)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Selling − Cost</p>
-              </CardContent>
-            </Card>
+          <div className="grid gap-2.5 grid-cols-2 lg:grid-cols-4">
+            <MiniStat
+              icon={Wallet}
+              label="Value (Cost)"
+              value={fmtPrice(valuationTotals?.stockValueCost ?? 0, 0)}
+              sublabel="· at cost"
+              color="text-amber-600 dark:text-amber-400"
+              bg="bg-amber-50 dark:bg-amber-950/30"
+            />
+            <MiniStat
+              icon={TrendingUp}
+              label="Value (Selling)"
+              value={fmtPrice(valuationTotals?.stockValueSelling ?? 0, 0)}
+              sublabel="· at selling"
+              color="text-emerald-600 dark:text-emerald-400"
+              bg="bg-emerald-50 dark:bg-emerald-950/30"
+            />
+            <MiniStat
+              icon={BadgeDollarSign}
+              label="Value (MRP)"
+              value={fmtPrice(valuationTotals?.stockValueMrp ?? 0, 0)}
+              sublabel="· at MRP"
+              color="text-primary"
+              bg="bg-primary/10"
+            />
+            <MiniStat
+              icon={Sparkles}
+              label="Potential Profit"
+              value={fmtPrice(valuationTotals?.potentialProfit ?? 0, 0)}
+              sublabel="· sell − cost"
+              color="text-purple-600 dark:text-purple-400"
+              bg="bg-purple-50 dark:bg-purple-950/30"
+            />
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              {loadingValuation ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : valuationProducts.length === 0 ? (
-                <div className="text-center py-12 text-sm text-muted-foreground">
-                  <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                  No inventory to value.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[200px]">Product</TableHead>
-                        <TableHead>SKU</TableHead>
-                        <TableHead className="text-right">Stock</TableHead>
-                        <TableHead className="text-right">Cost</TableHead>
-                        <TableHead className="text-right">Selling</TableHead>
-                        <TableHead className="text-right">MRP</TableHead>
-                        <TableHead className="text-right">Value (Cost)</TableHead>
-                        <TableHead className="text-right">Value (Selling)</TableHead>
-                        <TableHead className="text-right">Profit</TableHead>
-                        <TableHead>Warehouse</TableHead>
+          <Card className="overflow-hidden">
+            {loadingValuation ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : valuationProducts.length === 0 ? (
+              <div className="text-center py-12 text-sm text-muted-foreground">
+                <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                No inventory to value.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="min-w-[180px] h-9 text-[11px]">Product</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Stock</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Cost</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Selling</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Value (Cost)</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Value (Sell)</TableHead>
+                      <TableHead className="text-right h-9 text-[11px]">Profit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {valuationProducts.map((p) => (
+                      <TableRow key={p._id} className="h-11">
+                        <TableCell>
+                          <p className="text-xs font-medium truncate max-w-[180px]">{p.name}</p>
+                          <p className="text-[10px] text-muted-foreground font-mono">{p.sku || '—'}</p>
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-semibold">{p.stock}</TableCell>
+                        <TableCell className="text-right text-[11px] text-muted-foreground">{fmtPrice(p.costPrice, 0)}</TableCell>
+                        <TableCell className="text-right text-[11px]">{fmtPrice(p.sellingPrice, 0)}</TableCell>
+                        <TableCell className="text-right text-xs text-amber-600 dark:text-amber-400 font-medium">{fmtPrice(p.stockValueCost, 0)}</TableCell>
+                        <TableCell className="text-right text-xs text-emerald-600 dark:text-emerald-400 font-medium">{fmtPrice(p.stockValueSelling, 0)}</TableCell>
+                        <TableCell className="text-right text-xs text-purple-600 dark:text-purple-400 font-medium">{fmtPrice(p.potentialProfit, 0)}</TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {valuationProducts.map((p) => (
-                        <TableRow key={p._id}>
-                          <TableCell className="text-sm font-medium truncate max-w-[200px]">{p.name}</TableCell>
-                          <TableCell className="font-mono text-xs">{p.sku || '—'}</TableCell>
-                          <TableCell className="text-right font-semibold">{p.stock}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{fmtPrice(p.costPrice, 0)}</TableCell>
-                          <TableCell className="text-right">{fmtPrice(p.sellingPrice, 0)}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{fmtPrice(p.mrp, 0)}</TableCell>
-                          <TableCell className="text-right text-amber-600 dark:text-amber-400 font-medium">{fmtPrice(p.stockValueCost, 0)}</TableCell>
-                          <TableCell className="text-right text-emerald-600 dark:text-emerald-400 font-medium">{fmtPrice(p.stockValueSelling, 0)}</TableCell>
-                          <TableCell className="text-right text-purple-600 dark:text-purple-400 font-medium">{fmtPrice(p.potentialProfit, 0)}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {p.warehouseLocation || <span className="opacity-50">—</span>}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </Card>
 
           {valuationTotal > 10 && (
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+              <p className="text-[11px] text-muted-foreground">
                 Showing {(valuationPage - 1) * 10 + 1}–{Math.min(valuationPage * 10, valuationTotal)} of {valuationTotal}
               </p>
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={valuationPage <= 1}
-                  onClick={() => setValuationPage((p) => p - 1)}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Prev
+                <Button size="sm" variant="outline" disabled={valuationPage <= 1} onClick={() => setValuationPage((p) => p - 1)} className="h-8 gap-1">
+                  <ArrowLeft className="h-3.5 w-3.5" /> Prev
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {valuationPage} / {valuationTotalPages}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={valuationPage >= valuationTotalPages}
-                  onClick={() => setValuationPage((p) => p + 1)}
-                >
-                  Next
-                  <ArrowRight className="h-4 w-4 ml-1" />
+                <span className="text-[11px] text-muted-foreground">{valuationPage} / {valuationTotalPages}</span>
+                <Button size="sm" variant="outline" disabled={valuationPage >= valuationTotalPages} onClick={() => setValuationPage((p) => p + 1)} className="h-8 gap-1">
+                  Next <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -1916,71 +1935,76 @@ export default function SellerInventoryPage() {
         </TabsContent>
 
         {/* ===================== IMPORT / EXPORT TAB ===================== */}
-        <TabsContent value="io" className="space-y-4">
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+        <TabsContent value="io" className="space-y-3 mt-4">
+          <div className="grid gap-2.5 grid-cols-1 lg:grid-cols-2">
             {/* EXPORT */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
+            <Card className="p-4 gap-0">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <FileDown className="h-4 w-4 text-primary" />
-                  Export Inventory
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Exports ALL your products with full inventory details (stock, SKU, reorder points,
-                  cost price, warehouse location, etc.).
-                </p>
-                <Button onClick={handleServerExport} className="w-full sm:w-auto">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Inventory to CSV
-                </Button>
-              </CardContent>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold">Export Inventory</h3>
+                  <p className="text-[11px] text-muted-foreground">Full inventory details to CSV</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Exports ALL your products with stock, SKU, reorder points, cost price, warehouse location, etc.
+              </p>
+              <Button onClick={handleServerExport} className="w-full sm:w-auto h-9 rounded-xl gap-1.5">
+                <Download className="h-4 w-4" />
+                Export to CSV
+              </Button>
             </Card>
 
             {/* IMPORT */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
+            <Card className="p-4 gap-0">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <FileUp className="h-4 w-4 text-primary" />
-                  Import Inventory
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="import-file">CSV File (optional)</Label>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold">Import Inventory</h3>
+                  <p className="text-[11px] text-muted-foreground">Bulk update stock from CSV</p>
+                </div>
+              </div>
+              <div className="space-y-2.5">
+                <div className="space-y-1">
+                  <Label htmlFor="import-file" className="text-[11px]">CSV File (optional)</Label>
                   <Input
                     id="import-file"
                     type="file"
                     accept=".csv"
                     onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    className="h-9 text-xs"
                   />
                   {importFile && (
-                    <p className="text-xs text-muted-foreground">
-                      Selected: {importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)
+                    <p className="text-[10px] text-muted-foreground">
+                      {importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)
                     </p>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="import-text">Or paste CSV rows</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="import-text" className="text-[11px]">Or paste CSV rows</Label>
                   <Textarea
                     id="import-text"
                     placeholder={'productId,newQuantity,variantId\n665a1b2c3d4e5f6a7b8c9d0e,100,'}
                     value={importText}
                     onChange={(e) => setImportText(e.target.value)}
-                    rows={5}
-                    className="font-mono text-xs"
+                    rows={4}
+                    className="font-mono text-[11px]"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="import-reason">Reason</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="import-reason" className="text-[11px]">Reason</Label>
                   <Input
                     id="import-reason"
                     value={importReason}
                     onChange={(e) => setImportReason(e.target.value)}
                     placeholder="e.g. CSV bulk update"
+                    className="h-9 text-xs"
                   />
                 </div>
 
@@ -1990,7 +2014,7 @@ export default function SellerInventoryPage() {
                     checked={importDryRun}
                     onCheckedChange={(v) => setImportDryRun(v === true)}
                   />
-                  <Label htmlFor="import-dryrun" className="text-sm font-normal cursor-pointer">
+                  <Label htmlFor="import-dryrun" className="text-xs font-normal cursor-pointer">
                     Dry Run (validate without applying)
                   </Label>
                 </div>
@@ -1999,28 +2023,28 @@ export default function SellerInventoryPage() {
                   <Button
                     onClick={handleImport}
                     disabled={importLoading || (!importFile && !importText.trim())}
+                    className="h-9 rounded-xl gap-1.5"
                   >
                     {importLoading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Upload className="h-4 w-4 mr-2" />
+                      <Upload className="h-4 w-4" />
                     )}
                     {importDryRun ? 'Dry Run' : 'Import'}
                   </Button>
-                  <Button variant="outline" onClick={handleDownloadTemplate}>
-                    <FileDown className="h-4 w-4 mr-2" />
-                    Download Template
+                  <Button variant="outline" onClick={handleDownloadTemplate} className="h-9 rounded-xl gap-1.5">
+                    <FileDown className="h-4 w-4" />
+                    Template
                   </Button>
                 </div>
 
-                <p className="text-xs text-muted-foreground">
-                  CSV format: <code className="bg-muted px-1 rounded">productId,newQuantity,variantId</code> (variantId
-                  optional). Max 500 rows. Use Dry Run to validate first.
+                <p className="text-[10px] text-muted-foreground">
+                  Format: <code className="bg-muted px-1 rounded">productId,newQuantity,variantId</code> (variantId optional). Max 500 rows.
                 </p>
 
                 {importResult && (
                   <div className={cn(
-                    'rounded-lg border p-3 text-sm',
+                    'rounded-lg border p-2.5 text-xs',
                     importResult.success
                       ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/20'
                       : 'border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20',
@@ -2033,13 +2057,13 @@ export default function SellerInventoryPage() {
                       )}
                       {importResult.dryRun ? 'Dry Run Result' : importResult.applied ? 'Import Complete' : 'Import Failed'}
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       {importResult.dryRun
                         ? `${importResult.validRowCount || 0} valid row(s)${importResult.failed ? `, ${importResult.failed} error(s)` : ''}`
                         : `${importResult.updated} updated, ${importResult.failed} failed`}
                     </p>
                     {importResult.errors.length > 0 && (
-                      <div className="mt-2 max-h-32 overflow-y-auto rounded bg-background/60 p-2 text-xs">
+                      <div className="mt-2 max-h-28 overflow-y-auto rounded bg-background/60 p-2 text-[10px] scrollbar-thin">
                         <ul className="space-y-0.5">
                           {importResult.errors.slice(0, 20).map((e, i) => (
                             <li key={i} className="text-red-600 dark:text-red-400 font-mono">{e}</li>
@@ -2054,7 +2078,7 @@ export default function SellerInventoryPage() {
                     )}
                   </div>
                 )}
-              </CardContent>
+              </div>
             </Card>
           </div>
         </TabsContent>
