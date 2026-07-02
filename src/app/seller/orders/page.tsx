@@ -581,8 +581,19 @@ function OrdersContent() {
           </div>
         )
       case 'Out for Delivery':
-        // No action button — the order is already with the delivery boy
-        // and in transit. The seller has no action to take at this stage.
+      case 'Delivered':
+      case 'Cancelled':
+      case 'Not Delivered':
+      case 'Return Completed':
+      case 'Return Cancelled':
+        // No action button for terminal / in-transit statuses.
+        // These statuses have no seller action:
+        //   - Out for Delivery: in transit with delivery boy
+        //   - Delivered: order is complete
+        //   - Cancelled: order was cancelled
+        //   - Not Delivered: delivery attempt failed
+        //   - Return Completed: return process is finished
+        //   - Return Cancelled: return was cancelled
         // The order detail can still be opened by clicking the order ID
         // or product thumbnail.
         return null
