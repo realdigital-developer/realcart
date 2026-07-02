@@ -865,7 +865,7 @@ function OrdersContent() {
                     </div>
                   </div>
 
-                  {/* Bottom row: Items + Date + Amount + Actions */}
+                  {/* Bottom row: Items + Date (left) + Amount (right) */}
                   <div className="flex items-center justify-between gap-2 pl-[46px] sm:pl-[50px]">
                     <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                       <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded-md">
@@ -874,25 +874,28 @@ function OrdersContent() {
                       </span>
                       <span className="text-[10px] sm:text-[11px] text-muted-foreground hidden sm:inline">{formatDate(order.createdAt)}</span>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                      <span className="text-sm sm:text-base font-bold text-foreground">{fmtPrice(totalAmount)}</span>
-                      <div className="flex items-center gap-1">
-                        {sellerItems.length === 1 ? (
-                          renderActions(order, sellerItems[0])
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                            onClick={() => openDetail(order)}
-                          >
-                            <Eye className="h-3 w-3" />
-                            <span className="hidden sm:inline">View</span>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                    <span className="text-sm sm:text-base font-bold text-foreground flex-shrink-0">{fmtPrice(totalAmount)}</span>
                   </div>
+
+                  {/* Action buttons row — below the amount, full width */}
+                  {sellerItems.length === 1 && renderActions(order, sellerItems[0]) && (
+                    <div className="flex items-center gap-1.5 flex-wrap pl-[46px] sm:pl-[50px] pt-2 mt-1 border-t border-border/50">
+                      {renderActions(order, sellerItems[0])}
+                    </div>
+                  )}
+                  {sellerItems.length > 1 && (
+                    <div className="flex items-center gap-1.5 flex-wrap pl-[46px] sm:pl-[50px] pt-2 mt-1 border-t border-border/50">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        onClick={() => openDetail(order)}
+                      >
+                        <Eye className="h-3 w-3" />
+                        <span className="hidden sm:inline">View</span>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )
