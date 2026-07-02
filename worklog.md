@@ -4716,3 +4716,47 @@ Stage Summary:
 - **Fixed**: Seller can now select multiple categories first (multi-select checkboxes), then switch to the Sub tab to see ONLY subcategories of the selected categories. The subcategory list is dependent on category selection — no categories selected = "Select categories first" message. Both categories and subcategories support multi-select. Apply button shows total selection count.
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). 180 insertions, 81 deletions. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified on Category tab, Sub tab (empty), and Sub tab (after selecting category).
+
+---
+Task ID: fix-subcategory-filter
+Agent: main-orchestrator
+Task: Fix why products are not showing as per selected subcategories in the seller panel products page.
+
+Work Log:
+- **Root Cause** (2 issues):
+
+  **Issue 1 — Backend API**: The API only checked the `category` field: `query.category = category`. When a subcategory name like "Shirts" was passed as the `category` param, MongoDB tried to find products where `category === "Shirts"` — but subcategories are stored in the `subcategory` field, not `category`. Result: 0 products returned.
+
+  **Issue 2 — Frontend Apply logic**: `const applied = selectedSubcategories[0] || selectedCategories[0] || 'all'` — only picked the FIRST subcategory, ignoring all others. No support for multiple selections.
+
+- **Fix** (committed as `293c371`, 2 files):
+
+  **Backend** (`src/app/api/seller/products/route.ts`):
+  - Changed the category filter to check BOTH `category` and `subcategory` fields using `$or`:
+    ```js
+    // Single value
+    query.$or = [{ category: values[0] }, { subcategory: values[0] }]
+    
+    // Multiple values (comma-separated)
+    query.$or = [{ category: { $in: values } }, { subcategory: { $in: values } }]
+    ```
+  - Supports comma-separated values for multi-select filtering.
+
+  **Frontend** (`src/app/seller/products/page.tsx`):
+  - Apply button now combines all selected subcategories and categories into a comma-separated string:
+    ```tsx
+    const allSelected = [...selectedSubcategories, ...selectedCategories]
+    const applied = allSelected.length > 0 ? allSelected.join(',') : 'all'
+    ```
+  - Active filter indicator now shows individual badges for each selected filter (comma-separated), each with its own X button to remove individually, plus a "Clear all" link.
+
+- **Verification** (Agent Browser + VLM):
+  * Opened filter modal → selected "Men's Fashion" category → switched to Sub tab → selected "Shirts" subcategory → clicked Apply.
+  * VLM confirmed: "All visible products are shirts (Sky Blue Oxford Cotton Shirt, Red Black Checkered Shirt, White Casual Linen Shirt, etc.) — no sarees or other non-shirt products visible. Active filter badge showing 'Shirts' and 'Men's Fashion'. 9 products visible."
+  * Dev server: API received `category=Shirts,Men's Fashion` (comma-separated) and returned 200 with correct filtered products.
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+
+Stage Summary:
+- **Fixed**: Products now properly filter by selected subcategories. The API checks both `category` and `subcategory` fields using `$or`, and the frontend sends comma-separated values for multi-select. Individual filter badges can be removed one at a time.
+- **Files modified**: 2 (`src/app/api/seller/products/route.ts`, `src/app/seller/products/page.tsx`). 35 insertions, 11 deletions. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified with actual product filtering.
