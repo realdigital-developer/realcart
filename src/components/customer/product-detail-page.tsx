@@ -2045,6 +2045,18 @@ export function ProductDetailPage() {
   // Show size chart button only when attribute is "size" AND size chart exists
   const showSizeChartButton = hasSizeAttribute && hasSizeChart
 
+  // Whether the entire product is out of stock (product stock quantity is 0).
+  // For variant products this means no active variant has any stock (> 0),
+  // which is equivalent to the product's total stock quantity being 0
+  // (the API computes product.stock as the sum of active variant stocks).
+  // When true, the per-size "out of stock" X badges are suppressed to avoid
+  // redundancy with the product-level out-of-stock indicator. Both conditions
+  // are checked (AND) for robustness against any stock-field sync mismatch —
+  // the X badges are only hidden when the product is genuinely out of stock.
+  const isProductOutOfStock =
+    (product?.stock ?? 0) === 0 &&
+    !(product?.variants?.some(v => v.isActive && v.stock > 0))
+
   // Check if a variant value is in stock for the current selections
   const isVariantValueAvailable = (attribute: string, value: string) => {
     const testAttrs = { ...selectedVariantAttrs, [attribute]: value }
@@ -2550,7 +2562,7 @@ export function ProductDetailPage() {
                             )}
                           >
                             {val}
-                            {!hasStock && !isSelected && (
+                            {!hasStock && !isSelected && !isProductOutOfStock && (
                               <span className="absolute -top-1 -right-1 h-3 w-3 bg-gray-300 dark:bg-gray-700 rounded-full flex items-center justify-center">
                                 <X className="h-2 w-2 text-gray-500" />
                               </span>
