@@ -60,7 +60,16 @@ interface OrderStats {
   total: number
   pending: number
   processing: number
+  shipped: number
+  outForDelivery: number
   delivered: number
+  cancelled: number
+  notDelivered: number
+  returnRequested: number
+  returnApproved: number
+  outForPickup: number
+  returnCompleted: number
+  returnCancelled: number
 }
 
 /* ------------------------------------------------------------------ */
@@ -143,7 +152,7 @@ function OrdersContent() {
 
   const [orders, setOrders] = useState<Order[]>([])
   const [totalOrders, setTotalOrders] = useState(0)
-  const [stats, setStats] = useState<OrderStats>({ total: 0, pending: 0, processing: 0, delivered: 0 })
+  const [stats, setStats] = useState<OrderStats>({ total: 0, pending: 0, processing: 0, shipped: 0, outForDelivery: 0, delivered: 0, cancelled: 0, notDelivered: 0, returnRequested: 0, returnApproved: 0, outForPickup: 0, returnCompleted: 0, returnCancelled: 0 })
   const [loadingData, setLoadingData] = useState(true)
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -191,25 +200,44 @@ function OrdersContent() {
   // regardless of which tab is currently selected.
   const fetchStats = useCallback(async () => {
     try {
-      const [allRes, pendingRes, processingRes, deliveredRes] = await Promise.all([
-        fetch('/api/seller/orders?page=1&limit=1'),
-        fetch('/api/seller/orders?page=1&limit=1&status=Pending'),
-        fetch('/api/seller/orders?page=1&limit=1&status=Processing'),
-        fetch('/api/seller/orders?page=1&limit=1&status=Delivered'),
-      ])
+      const statuses = [
+        '',                  // all
+        'Pending',
+        'Processing',
+        'Shipped',
+        'Out for Delivery',
+        'Delivered',
+        'Cancelled',
+        'Not Delivered',
+        'Return Requested',
+        'Return Approved',
+        'Out for Pickup',
+        'Return Completed',
+        'Return Cancelled',
+      ]
 
-      const [allData, pendingData, processingData, deliveredData] = await Promise.all([
-        allRes.ok ? allRes.json() : { total: 0 },
-        pendingRes.ok ? pendingRes.json() : { total: 0 },
-        processingRes.ok ? processingRes.json() : { total: 0 },
-        deliveredRes.ok ? deliveredRes.json() : { total: 0 },
-      ])
+      const responses = await Promise.all(
+        statuses.map(s => fetch(`/api/seller/orders?page=1&limit=1${s ? `&status=${encodeURIComponent(s)}` : ''}`))
+      )
+
+      const data = await Promise.all(
+        responses.map(r => r.ok ? r.json() : { total: 0 })
+      )
 
       setStats({
-        total: allData.total || 0,
-        pending: pendingData.total || 0,
-        processing: processingData.total || 0,
-        delivered: deliveredData.total || 0,
+        total: data[0].total || 0,
+        pending: data[1].total || 0,
+        processing: data[2].total || 0,
+        shipped: data[3].total || 0,
+        outForDelivery: data[4].total || 0,
+        delivered: data[5].total || 0,
+        cancelled: data[6].total || 0,
+        notDelivered: data[7].total || 0,
+        returnRequested: data[8].total || 0,
+        returnApproved: data[9].total || 0,
+        outForPickup: data[10].total || 0,
+        returnCompleted: data[11].total || 0,
+        returnCancelled: data[12].total || 0,
       })
     } catch {
       // Non-critical — stats will remain at previous values
@@ -724,16 +752,16 @@ function OrdersContent() {
             { value: 'all', label: 'All', count: stats.total, activeClass: 'bg-emerald-500 text-white shadow-sm' },
             { value: 'Pending', label: 'Pending', count: stats.pending, activeClass: 'bg-amber-500 text-white shadow-sm' },
             { value: 'Processing', label: 'Processing', count: stats.processing, activeClass: 'bg-blue-500 text-white shadow-sm' },
-            { value: 'Shipped', label: 'Shipped', count: null, activeClass: 'bg-indigo-500 text-white shadow-sm' },
-            { value: 'Out for Delivery', label: 'Out for Delivery', count: null, activeClass: 'bg-purple-500 text-white shadow-sm' },
+            { value: 'Shipped', label: 'Shipped', count: stats.shipped, activeClass: 'bg-indigo-500 text-white shadow-sm' },
+            { value: 'Out for Delivery', label: 'Out for Delivery', count: stats.outForDelivery, activeClass: 'bg-purple-500 text-white shadow-sm' },
             { value: 'Delivered', label: 'Delivered', count: stats.delivered, activeClass: 'bg-emerald-500 text-white shadow-sm' },
-            { value: 'Cancelled', label: 'Cancelled', count: null, activeClass: 'bg-red-500 text-white shadow-sm' },
-            { value: 'Not Delivered', label: 'Not Delivered', count: null, activeClass: 'bg-orange-500 text-white shadow-sm' },
-            { value: 'Return Requested', label: 'Return Requested', count: null, activeClass: 'bg-cyan-500 text-white shadow-sm' },
-            { value: 'Return Approved', label: 'Return Approved', count: null, activeClass: 'bg-teal-500 text-white shadow-sm' },
-            { value: 'Out for Pickup', label: 'Out for Pickup', count: null, activeClass: 'bg-violet-500 text-white shadow-sm' },
-            { value: 'Return Completed', label: 'Return Completed', count: null, activeClass: 'bg-emerald-500 text-white shadow-sm' },
-            { value: 'Return Cancelled', label: 'Return Cancelled', count: null, activeClass: 'bg-gray-500 text-white shadow-sm' },
+            { value: 'Cancelled', label: 'Cancelled', count: stats.cancelled, activeClass: 'bg-red-500 text-white shadow-sm' },
+            { value: 'Not Delivered', label: 'Not Delivered', count: stats.notDelivered, activeClass: 'bg-orange-500 text-white shadow-sm' },
+            { value: 'Return Requested', label: 'Return Requested', count: stats.returnRequested, activeClass: 'bg-cyan-500 text-white shadow-sm' },
+            { value: 'Return Approved', label: 'Return Approved', count: stats.returnApproved, activeClass: 'bg-teal-500 text-white shadow-sm' },
+            { value: 'Out for Pickup', label: 'Out for Pickup', count: stats.outForPickup, activeClass: 'bg-violet-500 text-white shadow-sm' },
+            { value: 'Return Completed', label: 'Return Completed', count: stats.returnCompleted, activeClass: 'bg-emerald-500 text-white shadow-sm' },
+            { value: 'Return Cancelled', label: 'Return Cancelled', count: stats.returnCancelled, activeClass: 'bg-gray-500 text-white shadow-sm' },
           ].map((tab) => {
             const isActive = statusFilter === tab.value
             return (
