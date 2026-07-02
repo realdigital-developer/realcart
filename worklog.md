@@ -4454,3 +4454,47 @@ Stage Summary:
 - **Fixed**: All product card images now have the same height (184px) across all rows. The padding-bottom 100% trick creates a fixed square that can't be stretched by the flex column layout.
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). Only 2 lines changed. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. Computed-styles verified — all images exactly 184px.
+
+---
+Task ID: category-filter-modal
+Agent: main-orchestrator
+Task: Replace the category dropdown with a modern filter icon beside the search bar that opens a reusable AdminModal with all categories and subcategories.
+
+Work Log:
+- **Changes** (committed as `668d625`):
+
+  **1. Replaced category dropdown with filter icon button**:
+  - Removed the `<Select>` dropdown for category filtering.
+  - Added a `SlidersHorizontal` icon button (`h-10 w-10 rounded-xl`) beside the search bar.
+  - The icon button shows a small emerald dot indicator when a category filter is active.
+  - Added an active filter indicator badge below the search bar showing the selected category with an X button to clear.
+
+  **2. Created category filter AdminModal**:
+  - Uses the reusable `AdminModal` component (`type="form"`, `size="md"`).
+  - Title: "Filter by Category", description: "Select a category to filter your products".
+  - Footer: "Clear Filter" button to reset to "All Categories".
+
+  **3. Modal content**:
+  - **"All Categories"** option at the top — clickable card with Package icon, emerald highlight when active, and a Check icon.
+  - **Category cards** — each category is a clickable card with:
+    - Icon box (Package icon)
+    - Category name (bold)
+    - Subcategory count ("42 subcategories")
+    - Active state: emerald border, emerald background, Check icon
+  - **Subcategory pills** — below each category, subcategories are shown as small rounded-full pills. Clicking a pill filters by that subcategory.
+  - **Fallback** — if the categories API didn't load, shows sellerCategories from the products API as simple cards.
+
+  **4. Added imports**: `SlidersHorizontal`, `Check` from lucide-react; `AdminModal` from `@/components/admin/admin-modal`.
+
+  **5. Added state**: `filterModalOpen` for controlling the modal.
+
+- **Verification** (Agent Browser + VLM):
+  * **Filter icon**: VLM confirmed — "Filter icon (sliders) beside the search bar. No category dropdown. Clean and compact layout."
+  * **Filter modal**: VLM confirmed — "Modal showing 'Filter by Category' title. Categories as clickable cards with icons. Subcategories as small pills (T-Shirts, Shirts, Jackets, etc.). 'Clear Filter' button. Modern and clean design."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200 on /seller/products, no errors.
+
+Stage Summary:
+- **Changed**: Replaced the category dropdown with a modern filter icon button beside the search bar. Clicking the icon opens a reusable AdminModal showing all categories (as cards with icons) and subcategories (as pills). Active filter is shown as a badge below the search bar with a clear button.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). 147 insertions, 13 deletions. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
