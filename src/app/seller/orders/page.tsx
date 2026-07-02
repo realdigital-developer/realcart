@@ -580,6 +580,12 @@ function OrdersContent() {
             </Button>
           </div>
         )
+      case 'Out for Delivery':
+        // No action button — the order is already with the delivery boy
+        // and in transit. The seller has no action to take at this stage.
+        // The order detail can still be opened by clicking the order ID
+        // or product thumbnail.
+        return null
       default:
         return (
           <Button
