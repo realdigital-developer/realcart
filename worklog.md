@@ -4498,3 +4498,33 @@ Stage Summary:
 - **Changed**: Replaced the category dropdown with a modern filter icon button beside the search bar. Clicking the icon opens a reusable AdminModal showing all categories (as cards with icons) and subcategories (as pills). Active filter is shown as a badge below the search bar with a clear button.
 - **Files modified**: 1 (`src/app/seller/products/page.tsx`). 147 insertions, 13 deletions. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified.
+
+---
+Task ID: fix-filter-icon-position
+Agent: main-orchestrator
+Task: Fix why the filter icon is not showing beside the right side of the search bar in the seller products page.
+
+Work Log:
+- **Two fixes applied** (2 commits: `cb94179` + `7612229`):
+
+  **Fix 1: Restructured the search + filter layout** (`cb94179`):
+  - Previous: Used `flex flex-col sm:flex-row gap-2.5` — search bar and filter icon were in a flex row, with the filter icon as a separate `Button` element outside the search input's relative container.
+  - New: Single `relative` container with the search Input, clear button, and filter icon ALL inside it — positioned absolutely within the search bar.
+  - Input now has `pr-20` (right padding) to make room for both the clear button and filter icon.
+  - Clear search button: `absolute right-12` (between the input text and filter icon).
+  - Filter icon button: `absolute right-1.5` (at the far right edge of the search bar).
+
+  **Fix 2: Removed conflicting `relative` class** (`7612229`):
+  - Root cause: The filter button had BOTH `absolute` AND `relative` in its className: `"absolute right-1.5 ... transition-colors relative"`. In CSS, the last `position` declaration wins — since `relative` appeared after `absolute` in the class string, the browser applied `position: relative` instead of `position: absolute`. This caused the button to flow in normal document flow instead of being positioned at the right edge.
+  - Fix: Removed the `relative` class from the button. The indicator dot span (which uses `absolute`) will still position relative to the button because `absolute` positioning makes the button a positioned ancestor.
+
+- **Verification** (Agent Browser):
+  * DOM positions confirmed: filter button at `left: 1222, right: 1250` — container right edge is `1256`. Button is 6px from the right edge. `isAtRight: true`.
+  * VLM confirmed: "Filter icon (sliders) at the RIGHT SIDE of the search bar (inside the input). Search icon (magnifying glass) at the LEFT side. Layout is clean."
+  * Lint: 0 errors, 24 warnings (all pre-existing, none new).
+  * Dev server: HTTP 200, no errors.
+
+Stage Summary:
+- **Fixed**: The filter icon is now correctly positioned at the RIGHT SIDE of the search bar, inside the input field. The root cause was a conflicting `relative` class that overrode the `absolute` positioning.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). Only 2 lines changed in the final fix. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified and DOM-position-verified.
