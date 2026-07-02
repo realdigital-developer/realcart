@@ -4838,3 +4838,21 @@ Stage Summary:
 - **Fixed**: When subcategories are selected, ONLY subcategory products are shown — not all category products. The Apply button now uses priority logic: subcategories take precedence over categories. If both are selected, only subcategories are sent to the API.
 - **Files modified**: 2 (`src/app/seller/products/page.tsx`, `src/app/api/seller/products/route.ts`). 27 insertions, 12 deletions. No UI or code damaged.
 - Lint: 0 errors. Dev server: stable, HTTP 200. VLM-verified with actual product filtering.
+
+---
+Task ID: remove-active-filter-indicator
+Agent: main-orchestrator
+Task: Remove the selected categories badges and "Clear all" section row from the seller panel products page.
+
+Work Log:
+- Removed the entire "Active filter indicator" section (lines 2314-2333) — the row that showed emerald badge pills for each selected category/subcategory with individual X buttons and a "Clear all" link.
+- The filter icon button still shows a green dot indicator when a filter is active, so the user knows a filter is applied.
+- The filter modal still has "Clear All" in its footer for clearing filters.
+- Lint: 0 errors, 24 warnings (all pre-existing, none new).
+- Dev server: HTTP 200, no errors.
+- Only 21 lines deleted — no UI or code damaged.
+
+Stage Summary:
+- **Removed**: The selected categories/clear all section row that appeared below the search bar when a filter was active. The filter icon's green dot indicator and the filter modal's Clear All button remain for filter management.
+- **Files modified**: 1 (`src/app/seller/products/page.tsx`). 21 deletions, 0 insertions. No UI or code damaged.
+- Lint: 0 errors. Dev server: stable, HTTP 200.
