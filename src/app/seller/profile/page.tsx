@@ -1426,23 +1426,6 @@ export default function SellerProfilePage() {
           </TabsContent>
         </Tabs>
       </motion.div>
-
-      {/* ═══════════════════ Quick Actions ═══════════════════ */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2.5"><div className="h-8 w-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center"><ArrowUpRight className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" /></div><CardTitle className="text-base font-semibold">Quick Actions</CardTitle></div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Link href="/seller/products"><div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"><div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center group-hover:scale-110 transition-transform"><Package className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /></div><p className="text-xs font-medium text-foreground text-center">Manage Products</p></div></Link>
-              <Link href="/seller/orders"><div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"><div className="h-10 w-10 rounded-lg bg-teal-50 dark:bg-teal-950/30 flex items-center justify-center group-hover:scale-110 transition-transform"><ShoppingCart className="h-5 w-5 text-teal-600 dark:text-teal-400" /></div><p className="text-xs font-medium text-foreground text-center">View Orders</p></div></Link>
-              <Link href="/seller/earnings"><div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"><div className="h-10 w-10 rounded-lg bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center group-hover:scale-110 transition-transform"><IndianRupee className="h-5 w-5 text-amber-600 dark:text-amber-400" /></div><p className="text-xs font-medium text-foreground text-center">Earnings</p></div></Link>
-              <Link href="/seller/settings"><div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"><div className="h-10 w-10 rounded-lg bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center group-hover:scale-110 transition-transform"><Settings className="h-5 w-5 text-orange-600 dark:text-orange-400" /></div><p className="text-xs font-medium text-foreground text-center">Settings</p></div></Link>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
     </motion.div>
   )
 }

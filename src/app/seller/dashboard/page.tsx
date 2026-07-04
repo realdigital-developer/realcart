@@ -8,11 +8,8 @@ import { cn } from '@/lib/utils'
 import { fmtPrice } from '@/lib/currency'
 import {
   Package,
-  IndianRupee,
   Star,
   ArrowUpRight,
-  Plus,
-  Settings,
   Store,
   ShieldCheck,
   TrendingUp,
@@ -73,8 +70,6 @@ function DashboardSkeleton() {
         ))}
       </div>
 
-      {/* Quick actions skeleton */}
-      <div className="h-40 bg-muted animate-pulse rounded-xl" />
     </div>
   )
 }
@@ -372,86 +367,6 @@ export default function SellerDashboard() {
           </CardContent>
         </Card>
       </motion.div>
-
-      {/* ──────────────────────── Quick Actions ──────────────────────── */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <QuickActionButton
-                icon={Plus}
-                label="Add Product"
-                desc="List a new item"
-                href="/seller/products"
-                bgClass="bg-blue-50 dark:bg-blue-950/30"
-                textClass="text-blue-600 dark:text-blue-400"
-                hoverBorder="hover:border-blue-200 dark:hover:border-blue-800"
-              />
-              <QuickActionButton
-                icon={IndianRupee}
-                label="Check Earnings"
-                desc="Revenue details"
-                href="/seller/analytics"
-                bgClass="bg-amber-50 dark:bg-amber-950/30"
-                textClass="text-amber-600 dark:text-amber-400"
-                hoverBorder="hover:border-amber-200 dark:hover:border-amber-800"
-              />
-              <QuickActionButton
-                icon={Settings}
-                label="Edit Store"
-                desc="Store settings"
-                href="/seller/settings"
-                bgClass="bg-violet-50 dark:bg-violet-950/30"
-                textClass="text-violet-600 dark:text-violet-400"
-                hoverBorder="hover:border-violet-200 dark:hover:border-violet-800"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
     </motion.div>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/*  Quick Action Button                                                 */
-/* ------------------------------------------------------------------ */
-
-function QuickActionButton({
-  icon: Icon,
-  label,
-  desc,
-  href,
-  bgClass,
-  textClass,
-  hoverBorder,
-}: {
-  icon: typeof Plus
-  label: string
-  desc: string
-  href: string
-  bgClass: string
-  textClass: string
-  hoverBorder: string
-}) {
-  return (
-    <Link href={href} className="block">
-      <div className={cn(
-        'flex flex-col items-center gap-2.5 p-4 rounded-xl border border-border transition-all duration-200 cursor-pointer',
-        hoverBorder,
-        'hover:shadow-sm hover:bg-muted/20'
-      )}>
-        <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center', bgClass)}>
-          <Icon className={cn('h-5 w-5', textClass)} />
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-medium text-foreground">{label}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">{desc}</p>
-        </div>
-      </div>
-    </Link>
   )
 }
