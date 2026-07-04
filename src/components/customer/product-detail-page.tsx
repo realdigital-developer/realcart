@@ -2360,27 +2360,12 @@ export function ProductDetailPage() {
         {/* ── Product Info Section (Flipkart/Amazon-style) ── */}
         <div className="bg-white dark:bg-gray-900 rounded-t-3xl -mt-2 relative z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
           <div className="p-4">
-            {/* 1. Brand + Title Row */}
-            {product.brand && (
-              <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">{product.brand}</p>
-            )}
+            {/* 1. Product Title */}
             <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-snug line-clamp-3 mb-2">
               {product.name}
             </h1>
 
-            {/* 2. Highlights */}
-            {product.highlights && product.highlights.length > 0 && (
-              <div className="mb-3 space-y-1">
-                {product.highlights.map((h, i) => (
-                  <p key={i} className="text-[12px] text-gray-600 dark:text-gray-400 flex items-start gap-1.5">
-                    <Check className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    {h}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            {/* 3. Rating Row */}
+            {/* 2. Rating Row */}
             {(product.avgRating ?? 0) > 0 || reviewStats.totalReviews > 0 ? (
               <div
                 className="flex items-center gap-2 cursor-pointer mb-3"
@@ -2584,9 +2569,15 @@ export function ProductDetailPage() {
               </div>
             )}
 
-            {/* 7. Quantity selector */}
+            {/* 7. Quantity + Brand selector (same row) */}
             {currentInStock && (
-              <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-3">
+              <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-3 flex-wrap">
+                {product.brand && (
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Brand : </span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{product.brand}</span>
+                  </span>
+                )}
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('productDetail.qty')}</span>
                 <div className="flex items-center gap-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                   <button
@@ -2610,6 +2601,16 @@ export function ProductDetailPage() {
                 {currentStock <= 5 && currentStock > 0 && (
                   <span className="text-xs text-red-500 font-medium">{t('productDetail.onlyLeft', { count: currentStock })}</span>
                 )}
+              </div>
+            )}
+
+            {/* Brand display when out of stock (quantity selector not shown) */}
+            {!currentInStock && product.brand && (
+              <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">Brand : </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">{product.brand}</span>
+                </span>
               </div>
             )}
 
