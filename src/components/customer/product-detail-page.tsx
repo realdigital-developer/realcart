@@ -901,13 +901,37 @@ function ImageGallery({ images, productName, isWishlisted: _isWishlisted, onTogg
 
   // Reset to first image when images array changes (e.g. variant switch)
   const imagesKey = images.map(img => img.url).join('|')
+
+  const validImages = images.filter(img => img.url)
+
+  // ── Cloudinary URL optimization ──
+  // Cloudinary supports on-the-fly transformations via URL params.
+  // We insert f_auto (auto format — WebP/AVIF for modern browsers),
+  // q_auto (auto quality), and width constraints to dramatically reduce
+  // image file size and load time without visible quality loss.
+  // Non-Cloudinary URLs are returned unchanged.
+  const optimizeCloudinaryUrl = useCallback((url: string, width?: number): string => {
+    if (!url || !url.includes('/upload/')) return url
+    const params = width ? `f_auto,q_auto,w_${width}` : 'f_auto,q_auto'
+    return url.replace('/upload/', `/upload/${params}/`)
+  }, [])
+
+  // Pre-optimized image URLs for different display sizes:
+  // - Thumbnails: w_150 (small, fast-loading)
+  // - Main image: w_800 (large enough for detail view + zoom, much smaller than full-size)
+  const optimizedImages = useMemo(() => {
+    return validImages.map(img => ({
+      ...img,
+      url: optimizeCloudinaryUrl(img.url, 800), // Main display size
+      thumbUrl: optimizeCloudinaryUrl(img.url, 150), // Thumbnail size
+    }))
+  }, [validImages, optimizeCloudinaryUrl])
+
   useEffect(() => {
     setSelected(0) // eslint-disable-line react-hooks/set-state-in-effect
     setLoadedImages(new Set())
     setErroredImages(new Set())
   }, [imagesKey])
-
-  const validImages = images.filter(img => img.url)
 
   // === Keyboard navigation (when lightbox is open) ===
   useEffect(() => {
@@ -935,7 +959,7 @@ function ImageGallery({ images, productName, isWishlisted: _isWishlisted, onTogg
     )
   }
 
-  const currentImage = validImages[selected]
+  const currentImage = optimizedImages[selected]
 
   const handleImageLoad = (idx: number) => {
     setLoadedImages(prev => new Set(prev).add(idx))
@@ -974,7 +998,7 @@ function ImageGallery({ images, productName, isWishlisted: _isWishlisted, onTogg
         {/* === Vertical Thumbnail Strip (Desktop, left side — Flipkart style) === */}
         {validImages.length > 1 && (
           <div className="hidden sm:flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-1 flex-shrink-0" style={{ scrollbarWidth: 'thin' }}>
-            {validImages.map((img, i) => (
+            {optimizedImages.map((img, i) => (
               <button
                 key={i}
                 onClick={() => setSelected(i)}
@@ -992,7 +1016,7 @@ function ImageGallery({ images, productName, isWishlisted: _isWishlisted, onTogg
                   </div>
                 ) : (
                   <img
-                    src={img.url}
+                    src={img.thumbUrl}
                     alt={img.alt || t('productDetail.thumbAlt', { name: productName, index: i + 1 })}
                     className="w-full h-full object-cover"
                     loading="lazy"
@@ -1031,7 +1055,7 @@ function ImageGallery({ images, productName, isWishlisted: _isWishlisted, onTogg
       {/* === Horizontal Thumbnail Strip (Mobile, below main image) === */}
       {validImages.length > 1 && (
         <div className="flex sm:hidden gap-2 overflow-x-auto pb-2 mt-3" style={{ scrollbarWidth: 'none' }}>
-          {validImages.map((img, i) => (
+          {optimizedImages.map((img, i) => (
             <button
               key={i}
               onClick={() => setSelected(i)}
@@ -1048,7 +1072,7 @@ function ImageGallery({ images, productName, isWishlisted: _isWishlisted, onTogg
                 </div>
               ) : (
                 <img
-                  src={img.url}
+                  src={img.thumbUrl}
                   alt={img.alt || `${productName} thumb ${i + 1}`}
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -1064,7 +1088,7 @@ function ImageGallery({ images, productName, isWishlisted: _isWishlisted, onTogg
       <AnimatePresence>
         {isLightboxOpen && (
           <Lightbox
-            images={validImages}
+            images={optimizedImages}
             productName={productName}
             initialIndex={selected}
             onClose={() => setIsLightboxOpen(false)}
