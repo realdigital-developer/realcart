@@ -86,7 +86,7 @@ export function PaymentRefundPage({ onBack, onNavigate }: PaymentRefundPageProps
         setLoading(true)
         const res = await fetch('/api/customer/payments')
         if (!res.ok) throw new Error('Failed to fetch')
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!cancelled) {
           setPayments(data.payments || [])
           setRefunds(data.refunds || [])

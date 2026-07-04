@@ -139,7 +139,7 @@ export function SellerProfilePage({ storeName: propStoreName, sellerId: propSell
 
       const res = await fetch(`/api/customer/seller-profile?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setSeller(data.seller)
       if (append) {
@@ -223,7 +223,7 @@ export function SellerProfilePage({ storeName: propStoreName, sellerId: propSell
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeName, rating: selectedRating, review: reviewText.trim() || undefined }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         setRateError(data.error || 'Failed to submit rating')
         return

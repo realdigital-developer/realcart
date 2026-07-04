@@ -70,7 +70,7 @@ export function WalletPage({ onBack, onNavigate }: WalletPageProps) {
       setLoading(true)
       const res = await fetch('/api/customer/wallet')
       if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setBalance(data.balance || 0)
       setTransactions(data.transactions || [])
       setError(null)

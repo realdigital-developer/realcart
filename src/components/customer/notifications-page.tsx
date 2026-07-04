@@ -217,7 +217,7 @@ export function NotificationsPage({ onBack, onNavigate }: { onBack?: () => void;
     try {
       const res = await fetch(`/api/customer/notifications?page=${pageNum}&limit=20`)
       if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setNotifications(prev => append ? [...prev, ...data.notifications] : data.notifications)
       setUnreadCount(data.unreadCount || 0)

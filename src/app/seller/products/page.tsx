@@ -449,11 +449,11 @@ export default function SellerProductsPage() {
         return
       }
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to fetch products')
       }
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setProducts(data.products || [])
       setTotal(data.total || 0)
       setTotalPages(data.totalPages || 1)
@@ -472,7 +472,7 @@ export default function SellerProductsPage() {
     try {
       const res = await fetch('/api/categories')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setCategories(data.categories || [])
       }
     } catch {
@@ -484,7 +484,7 @@ export default function SellerProductsPage() {
     try {
       const res = await fetch('/api/admin/attributes?limit=100')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setAttributes(data.attributes || [])
       }
     } catch {
@@ -496,7 +496,7 @@ export default function SellerProductsPage() {
     try {
       const res = await fetch('/api/admin/tags?limit=100')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setTags(data.tags || [])
       }
     } catch {
@@ -508,7 +508,7 @@ export default function SellerProductsPage() {
     try {
       const res = await fetch('/api/size-chart-templates?status=Active')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setSizeChartTemplates(data.templates || [])
       }
     } catch {
@@ -661,10 +661,10 @@ export default function SellerProductsPage() {
           body: formDataObj,
         })
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
+          const data = await res.json().catch(() => ({})).catch(() => ({}))
           throw new Error(data.error || 'Upload failed')
         }
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         const newImage: ProductImage = {
           url: data.url,
           alt: formData.name || file.name,
@@ -759,7 +759,7 @@ export default function SellerProductsPage() {
           subcategory: formData.subcategory,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Failed to get suggestions')
       }
@@ -1034,7 +1034,7 @@ export default function SellerProductsPage() {
       }
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || data.details?.join(', ') || data.detail || 'Failed to save product')
       }
 
@@ -1059,7 +1059,7 @@ export default function SellerProductsPage() {
     try {
       const res = await fetch(`/api/seller/products?id=${deleteDialog.product._id}`, { method: 'DELETE' })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to delete product')
       }
       toast({ title: 'Deleted', description: 'Product has been deleted.' })
@@ -1096,7 +1096,7 @@ export default function SellerProductsPage() {
         body: JSON.stringify(payload),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to duplicate product')
       }
       toast({ title: 'Duplicated', description: 'Product has been duplicated as a Draft.' })
@@ -1115,7 +1115,7 @@ export default function SellerProductsPage() {
         body: JSON.stringify({ _id: product._id, active: !product.active }),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to update product')
       }
       toast({ title: 'Updated', description: `Product ${!product.active ? 'activated' : 'deactivated'}.` })

@@ -235,7 +235,7 @@ function CustomersContent() {
 
       const res = await fetch(`/api/admin/customers?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch customers')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setCustomers(data.customers || [])
       setTotalCustomers(data.total || 0)
@@ -305,7 +305,7 @@ function CustomersContent() {
       const res = await fetch(`/api/admin/customers?id=${deletingCustomer._id}`, {
         method: 'DELETE',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete customer')
 
       setSelectedIds((prev) => {

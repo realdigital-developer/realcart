@@ -235,7 +235,7 @@ function DeliveryContent() {
       if (!res.ok) {
         throw new Error('Failed to load delivery settings')
       }
-      const data = (await res.json()) as { settings: SellerDeliverySettings }
+      const data = (await res.json().catch(() => ({}))) as { settings: SellerDeliverySettings }
       const s: SellerDeliverySettings = {
         ...DEFAULT_SELLER_DELIVERY_SETTINGS,
         ...(data.settings || {}),
@@ -356,7 +356,7 @@ function DeliveryContent() {
           customSla: customSlaToStore,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Failed to save settings')
       }

@@ -2212,7 +2212,7 @@ export default function SellerAnalytics() {
         if (!res.ok) {
           throw new Error(`Request failed with status ${res.status}`)
         }
-        return (await res.json()) as T
+        return (await res.json().catch(() => ({}))) as T
       } catch (e) {
         // Re-throw so the per-tab handler can show an error UI
         throw e

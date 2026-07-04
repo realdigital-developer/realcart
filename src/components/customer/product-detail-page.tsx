@@ -1769,7 +1769,7 @@ export function ProductDetailPage() {
     try {
       const res = await fetch(`/api/customer/reviews?productId=${productId}`)
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         // Map backend response format to frontend Review type
         const mapped: Review[] = (data.reviews || []).map((r: Record<string, unknown>) => ({
           _id: r._id as string,
@@ -1842,7 +1842,7 @@ export function ProductDetailPage() {
     try {
       const res = await fetch(`/api/customer/reviews/can-review?productId=${productId}`)
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setCanReview(data.canReview ?? false)
         setHasExistingReview(!!data.existingReview)
         setEligibleItems(data.eligibleItems || [])

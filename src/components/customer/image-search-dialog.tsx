@@ -172,7 +172,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
       if (!res.ok) {
         let message = `Search failed (HTTP ${res.status})`
         try {
-          const data = await res.json()
+          const data = await res.json().catch(() => ({}))
           if (data?.error) message = data.error
         } catch {
           // ignore parse error
@@ -183,7 +183,7 @@ export function ImageSearchDialog({ open, onClose, onSuccess }: ImageSearchDialo
         return
       }
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       const products: Product[] = (data.products || []).map((p: Record<string, unknown>) => ({
         _id: String(p._id || ''),
         name: String(p.name || ''),

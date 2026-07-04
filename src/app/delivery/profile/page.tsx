@@ -207,7 +207,7 @@ export default function DeliveryProfilePage() {
       clearTimeout(timeoutId)
 
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setProfile(data.profile)
         setIsAvailable(data.profile.isAvailable)
         setError(null)
@@ -246,7 +246,7 @@ export default function DeliveryProfilePage() {
         }
       } else {
         if (!hasDataRef.current) {
-          const data = await res.json().catch(() => ({}))
+          const data = await res.json().catch(() => ({})).catch(() => ({}))
           setError(data.error || 'Failed to load profile.')
         }
       }
@@ -372,7 +372,7 @@ export default function DeliveryProfilePage() {
         credentials: 'include',
         body: JSON.stringify(formData),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to update profile')
 
       setEditOpen(false)
@@ -434,7 +434,7 @@ export default function DeliveryProfilePage() {
         credentials: 'include',
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
         setMessage({ type: 'error', text: data.error || 'Failed to upload image' })

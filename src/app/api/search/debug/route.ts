@@ -77,7 +77,7 @@ export async function GET() {
           payloadSizeKB: Math.round(payloadSize / 1024),
         }
       } else {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         const emb = data?.data?.[0]?.embedding
         results.jinaTest = {
           status: Array.isArray(emb) && emb.length > 0 ? 'success' : 'failed',
@@ -199,7 +199,7 @@ export async function GET() {
         const text = await res.text().catch(() => '')
         results.groqTest = { status: 'failed', httpStatus: res.status, error: text.slice(0, 300) }
       } else {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         const content = data?.choices?.[0]?.message?.content
         results.groqTest = { status: 'success', model: config.groq.model, response: content?.slice(0, 100) }
       }

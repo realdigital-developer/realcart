@@ -212,7 +212,7 @@ export default function DeliveryEarningsPage() {
       clearTimeout(timeoutId)
 
       if (res.ok) {
-        const result = await res.json()
+        const result = await res.json().catch(() => ({}))
         const newData: EarningsData = {
           todayEarnings: result.todayEarnings,
           todayDeliveries: result.todayDeliveries,

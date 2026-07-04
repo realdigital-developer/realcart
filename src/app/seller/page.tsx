@@ -450,7 +450,7 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
         body: formData,
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Upload failed')
       }

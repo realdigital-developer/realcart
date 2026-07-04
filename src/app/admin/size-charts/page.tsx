@@ -120,7 +120,7 @@ export default function AdminSizeChartsPage() {
       // Admin page: send 'all' when no status filter so we see all templates
       params.set('status', filterStatus || 'all')
       const res = await fetch(`/api/size-chart-templates?${params}`)
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (data.templates) {
         setTemplates(data.templates)
       }
@@ -196,7 +196,7 @@ export default function AdminSizeChartsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (data.success) {
         toast({ title: 'Template Created', description: `"${formData.name}" has been created` })
         setCreateOpen(false)
@@ -222,7 +222,7 @@ export default function AdminSizeChartsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editTemplate._id, ...formData }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (data.success) {
         toast({ title: 'Template Updated', description: `"${formData.name}" has been updated` })
         setEditTemplate(null)
@@ -246,7 +246,7 @@ export default function AdminSizeChartsPage() {
       const res = await fetch(`/api/size-chart-templates?id=${deleteTemplate._id}`, {
         method: 'DELETE',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (data.success) {
         toast({ title: 'Template Deleted', description: `"${deleteTemplate.name}" has been deleted` })
         setDeleteTemplate(null)
@@ -269,7 +269,7 @@ export default function AdminSizeChartsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: template._id, isSystem: false }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (data.success) {
         toast({ title: 'System Marking Removed', description: `"${template.name}" is now a custom template and can be deleted` })
         fetchTemplates()

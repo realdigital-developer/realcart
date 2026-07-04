@@ -158,7 +158,7 @@ function HeroSlidesContent() {
     try {
       const res = await fetch('/api/admin/hero-slides')
       if (!res.ok) throw new Error('Failed to fetch slides')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setSlides(data.slides || [])
       setCloudinaryReady(data.cloudinaryConfigured ?? false)
     } catch (err) {
@@ -224,7 +224,7 @@ function HeroSlidesContent() {
       if (formImageFile) formData.append('image', formImageFile)
 
       const res = await fetch('/api/admin/hero-slides', { method: 'POST', body: formData })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to create slide')
 
       setMessage({ type: 'success', text: `Slide "${formTitle}" created successfully` })
@@ -253,7 +253,7 @@ function HeroSlidesContent() {
       if (formImageRemoved) formData.append('removeImage', 'true')
 
       const res = await fetch('/api/admin/hero-slides', { method: 'PUT', body: formData })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to update slide')
 
       setMessage({ type: 'success', text: `Slide "${formTitle}" updated successfully` })
@@ -277,7 +277,7 @@ function HeroSlidesContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: deletingSlide._id }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete slide')
 
       setMessage({ type: 'success', text: `Slide "${deletingSlide.title}" deleted` })
@@ -798,7 +798,7 @@ function ReorderSlidesModal({
         body: JSON.stringify({ items }),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to save order')
       }
       setHasChanges(false)

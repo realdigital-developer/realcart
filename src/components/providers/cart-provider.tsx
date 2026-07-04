@@ -105,7 +105,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         signal: createTimeoutSignal(8000), // 8s timeout
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         if (Array.isArray(data.items)) {
           setItems(data.items)
         }
@@ -211,7 +211,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           return true
         }
         // Log error for debugging but don't crash
-        const errData = await res.json().catch(() => ({}))
+        const errData = await res.json().catch(() => ({})).catch(() => ({}))
         console.warn('[addToCart] Server returned:', res.status, errData)
         return false
       } catch (err) {

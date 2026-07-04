@@ -154,7 +154,7 @@ function ReferralContent() {
       setLoading(true)
       const res = await fetch('/api/admin/referral')
       if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setProgram(data.program)
       setAnalytics(data.analytics)
       setRecent(data.recent || [])
@@ -440,7 +440,7 @@ function ReferralContent() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(formData),
             })
-            const data = await res.json()
+            const data = await res.json().catch(() => ({}))
             if (!res.ok) {
               alert(data.error || 'Failed to save program')
               return

@@ -70,7 +70,7 @@ export function FollowedSellersPage({ onBack, onNavigate }: FollowedSellersPageP
       setLoading(true)
       const res = await fetch('/api/customer/followed-sellers')
       if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setSellers(data.followedSellers || [])
       setError(null)
     } catch {

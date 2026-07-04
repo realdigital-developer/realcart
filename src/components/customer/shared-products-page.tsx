@@ -49,7 +49,7 @@ export function SharedProductsPage({ onBack, onNavigate }: SharedProductsPagePro
         setLoading(true)
         const res = await fetch('/api/customer/shared-products')
         if (!res.ok) throw new Error('Failed to fetch')
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!cancelled) {
           setProducts(data.sharedProducts || [])
           setError(null)

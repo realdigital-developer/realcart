@@ -274,10 +274,10 @@ function TrafficContent() {
 
       const res = await fetch(`/api/admin/analytics/traffic?${params.toString()}`)
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to fetch traffic report')
       }
-      const data = (await res.json()) as TrafficReport
+      const data = (await res.json().catch(() => ({}))) as TrafficReport
       setReport(data)
     } catch (err) {
       console.error('Traffic report fetch error:', err)

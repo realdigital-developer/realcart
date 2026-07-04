@@ -236,7 +236,7 @@ export function AuthGate() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mobile: cleanMobile }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Something went wrong')
       if (data.exists) {
         setIsNewCustomer(false)
@@ -267,7 +267,7 @@ export function AuthGate() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mobile: mobile.replace(/\D/g, '').slice(-10), otp: cleanOtp }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Invalid OTP')
       goToStep('create-passcode')
     } catch (err) {
@@ -288,7 +288,7 @@ export function AuthGate() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mobile: cleanMobile }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to resend OTP')
       setResendTimer(60)
       setOtp('')

@@ -61,7 +61,7 @@ export async function sendOTP(mobile: string): Promise<{ sessionId: string }> {
     headers: { 'Content-Type': 'application/json' },
   })
 
-  const data: OTPResponse = await response.json()
+  const data: OTPResponse = await response.json().catch(() => ({}))
 
   if (data.Status !== 'Success') {
     console.error('[2Factor] OTP send failed:', data.Details)
@@ -100,7 +100,7 @@ export async function verifyOTP(sessionId: string, otp: string): Promise<boolean
     headers: { 'Content-Type': 'application/json' },
   })
 
-  const data: VerifyResponse = await response.json()
+  const data: VerifyResponse = await response.json().catch(() => ({}))
 
   if (data.Status === 'Success') {
     return true

@@ -30,7 +30,7 @@ export function useUnreadNotifications() {
     try {
       const res = await fetch('/api/customer/notifications?limit=1')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         notifyListeners(data.unreadCount || 0)
       }
     } catch {

@@ -44,7 +44,7 @@ export function useDeliveryBoyNotifications() {
         credentials: 'include',
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         notifyListeners(data.unreadCount || 0)
       }
     } catch {

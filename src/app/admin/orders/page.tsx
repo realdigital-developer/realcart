@@ -206,7 +206,7 @@ function OrdersContent() {
 
       const res = await fetch(`/api/admin/orders?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch orders')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setOrders(data.orders || [])
       setTotalOrders(data.total || 0)
@@ -241,7 +241,7 @@ function OrdersContent() {
     try {
       const res = await fetch(`/api/admin/orders?orderId=${order.orderId}`)
       if (!res.ok) throw new Error('Failed to fetch order details')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setOrderDetail(data)
     } catch (err) {
       console.error('Detail fetch error:', err)

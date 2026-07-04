@@ -176,7 +176,7 @@ export default function SellerSettings() {
       }
 
       if (!res.ok) throw new Error('Failed to fetch profile')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       const p = data.profile as SellerProfile
       setProfile(p)
     } catch {
@@ -223,7 +223,7 @@ export default function SellerSettings() {
           newPassword: newPassword.trim(),
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to change password')
 
       setCurrentPassword('')

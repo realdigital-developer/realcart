@@ -260,7 +260,7 @@ function AttributesContent() {
 
       const res = await fetch(`/api/admin/attributes?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch attributes')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setAttributes(data.attributes || [])
       setTotalAttributes(data.total || 0)
@@ -321,7 +321,7 @@ function AttributesContent() {
       const res = await fetch(`/api/admin/attributes?id=${deletingAttr._id}`, {
         method: 'DELETE',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete attribute')
 
       setSelectedIds((prev) => {
@@ -404,7 +404,7 @@ function AttributesContent() {
           values: valuesList,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to create attribute')
 
       setCreateOpen(false)
@@ -456,7 +456,7 @@ function AttributesContent() {
           values: valuesList,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to update attribute')
 
       setEditOpen(false)

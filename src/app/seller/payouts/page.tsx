@@ -491,7 +491,7 @@ function PayoutsTab() {
         return
       }
       if (!res.ok) throw new Error('Failed to fetch payouts')
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
       setData(json)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to load payouts'
@@ -813,7 +813,7 @@ function TransactionsTab() {
         return
       }
       if (!res.ok) throw new Error('Failed to fetch transactions')
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
       setData(json)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to load transactions'
@@ -1077,7 +1077,7 @@ function TaxStatementTab() {
         return
       }
       if (!res.ok) throw new Error('Failed to fetch tax statement')
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
       setData(json)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to load tax statement'

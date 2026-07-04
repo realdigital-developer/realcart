@@ -255,7 +255,7 @@ function TagsContent() {
 
       const res = await fetch(`/api/admin/tags?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch tags')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setTags(data.tags || [])
       setTotalTags(data.total || 0)
@@ -381,7 +381,7 @@ function TagsContent() {
           createdBy: formCreatedBy,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to create tag')
 
       setCreateOpen(false)
@@ -423,7 +423,7 @@ function TagsContent() {
           createdBy: formCreatedBy,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to update tag')
 
       setEditOpen(false)
@@ -449,7 +449,7 @@ function TagsContent() {
       const res = await fetch(`/api/admin/tags?id=${deletingTag._id}`, {
         method: 'DELETE',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete tag')
 
       setSelectedIds((prev) => {

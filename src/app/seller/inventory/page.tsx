@@ -498,7 +498,7 @@ export default function SellerInventoryPage() {
     try {
       const res = await fetch('/api/seller/inventory/dashboard', { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load dashboard')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setSummary(data.summary)
       setAlerts(data.alerts || [])
       setRecentMovements(data.recentMovements || [])
@@ -523,7 +523,7 @@ export default function SellerInventoryPage() {
       if (search) params.set('search', search)
       const res = await fetch(`/api/seller/inventory/list?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load inventory list')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setItems(data.items || [])
       setListTotal(data.total || 0)
     } catch (err) {
@@ -544,7 +544,7 @@ export default function SellerInventoryPage() {
       if (movementTypeFilter !== 'all') params.set('type', movementTypeFilter)
       const res = await fetch(`/api/seller/inventory/movements?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load movements')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setMovements(data.movements || [])
       setMovementsTotal(data.total || 0)
     } catch (err) {
@@ -564,7 +564,7 @@ export default function SellerInventoryPage() {
       })
       const res = await fetch(`/api/seller/inventory/reorder?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load reorder suggestions')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setReorderProducts(data.products || [])
       setReorderTotal(data.total || 0)
     } catch (err) {
@@ -585,7 +585,7 @@ export default function SellerInventoryPage() {
       })
       const res = await fetch(`/api/seller/inventory/dead-stock?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load dead stock')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setDeadStockProducts(data.products || [])
       setDeadStockTotal(data.total || 0)
     } catch (err) {
@@ -605,7 +605,7 @@ export default function SellerInventoryPage() {
       })
       const res = await fetch(`/api/seller/inventory/valuation?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load valuation')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setValuationProducts(data.products || [])
       setValuationTotal(data.total || 0)
       setValuationTotals(data.totals || null)
@@ -683,7 +683,7 @@ export default function SellerInventoryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Adjust failed')
       }
@@ -715,7 +715,7 @@ export default function SellerInventoryPage() {
           reason: quickRestockReason || 'Quick restock',
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Quick restock failed')
       }
@@ -764,7 +764,7 @@ export default function SellerInventoryPage() {
           supplier: settingsForm.supplier,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to save settings')
       toast.success('Inventory settings saved')
       setSettingsItem(null)
@@ -784,7 +784,7 @@ export default function SellerInventoryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'acknowledge', alertId }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed')
       toast.success('Alert acknowledged')
       setAlerts((prev) => prev.filter((a) => a.alertId !== alertId))
@@ -800,7 +800,7 @@ export default function SellerInventoryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'resolve', alertId }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed')
       toast.success('Alert resolved')
       setAlerts((prev) => prev.filter((a) => a.alertId !== alertId))
@@ -822,7 +822,7 @@ export default function SellerInventoryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'bulk_resolve', alertIds: ids }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed')
       toast.success(`Resolved ${data.updated} alert(s)`)
       setAlerts([])
@@ -894,7 +894,7 @@ export default function SellerInventoryPage() {
           body: JSON.stringify({ rows, reason: importReason || undefined }),
         })
       }
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Import failed')
       }
@@ -956,7 +956,7 @@ export default function SellerInventoryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ updates, reason: bulkReason || undefined }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Bulk update failed')
       toast.success(data.message || `Updated ${data.updated} product(s)`)
       if (data.errors && data.errors.length > 0) {

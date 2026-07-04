@@ -197,7 +197,7 @@ export default function DeliveryDashboardPage() {
       clearTimeout(timeoutId)
 
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         const newStats = data.stats
         const newWeekly = data.weeklyEarnings || []
 

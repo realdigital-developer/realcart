@@ -237,7 +237,7 @@ function DeliveryBoysContent() {
 
       const res = await fetch(`/api/admin/delivery-boys?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch delivery boys')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setDeliveryBoys(data.deliveryBoys || [])
       setTotalDeliveryBoys(data.total || 0)
@@ -307,7 +307,7 @@ function DeliveryBoysContent() {
       const res = await fetch(`/api/admin/delivery-boys?id=${deletingBoy._id}`, {
         method: 'DELETE',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete delivery boy')
 
       setSelectedIds((prev) => {

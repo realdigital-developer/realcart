@@ -732,7 +732,7 @@ export function CheckoutPage({
           body: JSON.stringify(addr),
         })
         if (res.ok) {
-          const data = await res.json()
+          const data = await res.json().catch(() => ({}))
           if (data.address?._id && !selectedAddressId) {
             setSelectedAddressId(data.address._id)
           }
@@ -742,7 +742,7 @@ export function CheckoutPage({
       // Refresh addresses
       const res = await fetch('/api/customer/addresses')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setAddresses(data.addresses || [])
       }
     } catch (err) {
@@ -796,7 +796,7 @@ export function CheckoutPage({
           items: buildCouponItemsPayload(),
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (data.coupons) setAvailableCoupons(data.coupons)
     } catch {
       // Non-fatal — the manual coupon input still works
@@ -824,7 +824,7 @@ export function CheckoutPage({
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (data.valid) {
         setCouponDiscount(data.discount || 0)
@@ -1273,7 +1273,7 @@ export function CheckoutPage({
         body: JSON.stringify(requestBody),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (!data.success && !data.fallbackMode) {
         throw new Error(data.error || 'Payment failed. Please try again.')
@@ -1530,7 +1530,7 @@ export function CheckoutPage({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'partial', orderId, amount: walletAppliedAmount }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (data.success) {
         setWalletBalance(data.newBalance || 0)
       } else {
@@ -1577,7 +1577,7 @@ export function CheckoutPage({
       if (!res.ok) {
         // Duplicate (409) is expected if the method was already saved —
         // treat as success. Other errors are non-critical (payment already succeeded).
-        const errData = await res.json().catch(() => ({}))
+        const errData = await res.json().catch(() => ({})).catch(() => ({}))
         if (errData?.error && !String(errData.error).toLowerCase().includes('already')) {
           console.warn('[Save Payment Method] Non-critical save error:', errData.error)
         }
@@ -1674,7 +1674,7 @@ export function CheckoutPage({
           }),
         })
 
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!res.ok) {
           throw new Error(data.error || 'Wallet payment failed')
         }
@@ -1740,7 +1740,7 @@ export function CheckoutPage({
           }),
         })
 
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
 
         if (!res.ok) {
           throw new Error(data.error || 'Failed to place order')

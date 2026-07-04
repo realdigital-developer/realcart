@@ -304,10 +304,10 @@ function ExpensesContent() {
 
       const res = await fetch(`/api/admin/finance/expenses?${params.toString()}`)
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to fetch expenses')
       }
-      const data = (await res.json()) as ExpensesResponse
+      const data = (await res.json().catch(() => ({}))) as ExpensesResponse
       setExpenses(data.expenses || [])
       setTotal(data.total || 0)
     } catch (err) {
@@ -336,7 +336,7 @@ function ExpensesContent() {
     try {
       const res = await fetch('/api/admin/finance/expenses?limit=100&page=1')
       if (!res.ok) return
-      const data = (await res.json()) as ExpensesResponse
+      const data = (await res.json().catch(() => ({}))) as ExpensesResponse
       const items = data.expenses || []
       const s = { total: 0, pending: 0, approved: 0, paid: 0 }
       for (const e of items) {
@@ -400,7 +400,7 @@ function ExpensesContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = await res.json().catch(() => ({}))
+      const data = await res.json().catch(() => ({})).catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Failed to create expense')
       }
@@ -447,7 +447,7 @@ function ExpensesContent() {
             body: JSON.stringify({ status }),
           },
         )
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         if (!res.ok) {
           throw new Error(data.error || 'Failed to update expense')
         }

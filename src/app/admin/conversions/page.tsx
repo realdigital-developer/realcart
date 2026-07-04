@@ -203,10 +203,10 @@ function ConversionsContent() {
         `/api/admin/analytics/conversions?${params.toString()}`,
       )
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to fetch conversion report')
       }
-      const data = (await res.json()) as ConversionReport
+      const data = (await res.json().catch(() => ({}))) as ConversionReport
       setReport(data)
     } catch (err) {
       console.error('Conversions fetch error:', err)

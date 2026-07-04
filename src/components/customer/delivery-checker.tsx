@@ -443,7 +443,7 @@ export function DeliveryChecker({
             productId,
           }),
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         if (!res.ok) {
           throw new Error(data?.error || 'Failed to check delivery')
         }

@@ -51,7 +51,7 @@ export function useSiteLogo(): UseSiteLogoReturn {
         return
       }
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (data.logo) {
         // Cloudinary URLs include version tokens, but add a cache-buster
         // based on upload time for extra freshness guarantee

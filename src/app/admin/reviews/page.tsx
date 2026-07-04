@@ -286,7 +286,7 @@ function ReviewsContent() {
 
       const res = await fetch(`/api/admin/reviews?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch reviews')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setReviews(data.reviews || [])
       setTotalReviews(data.pagination?.total || 0)
@@ -326,7 +326,7 @@ function ReviewsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Action failed')
 
       const actionLabels: Record<string, string> = {

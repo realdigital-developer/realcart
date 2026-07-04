@@ -540,7 +540,7 @@ export default function AdminProductsPage() {
 
       const res = await fetch(`/api/admin/products?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setProducts(data.products || [])
       setTotalProducts(data.total || 0)
@@ -564,7 +564,7 @@ export default function AdminProductsPage() {
       setSizeChartTemplatesLoading(true)
       const res = await fetch('/api/size-chart-templates?status=Active')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setSizeChartTemplates(data.templates || [])
       }
     } catch {
@@ -688,7 +688,7 @@ export default function AdminProductsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ _id: product._id, status: 'Approved' }),
         })
-        if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
+        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Failed') }
         toast({ title: 'Approved', description: `${product.name} has been approved` })
       } else if (action === 'reject') {
         setRejectProduct(product)
@@ -702,7 +702,7 @@ export default function AdminProductsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ _id: product._id, status: 'Published' }),
         })
-        if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
+        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Failed') }
         toast({ title: 'Published', description: `${product.name} is now live` })
       } else if (action === 'suspend') {
         const res = await fetch('/api/admin/products', {
@@ -710,7 +710,7 @@ export default function AdminProductsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ _id: product._id, status: 'Suspended' }),
         })
-        if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
+        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Failed') }
         toast({ title: 'Suspended', description: `${product.name} has been suspended` })
       }
       fetchProducts()
@@ -735,7 +735,7 @@ export default function AdminProductsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: rejectProduct._id, status: 'Rejected', approvalNotes: rejectReason.trim() }),
       })
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Failed') }
       toast({ title: 'Rejected', description: `${rejectProduct.name} has been rejected` })
       setRejectOpen(false)
       setRejectProduct(null)
@@ -754,7 +754,7 @@ export default function AdminProductsPage() {
     setSubmitting(true)
     try {
       const res = await fetch(`/api/admin/products?id=${deleteProduct._id}`, { method: 'DELETE' })
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Failed') }
       toast({ title: 'Deleted', description: `${deleteProduct.name} has been deleted` })
       setDeleteOpen(false)
       setDeleteProduct(null)
@@ -796,8 +796,8 @@ export default function AdminProductsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
-      const data = await res.json()
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Failed') }
+      const data = await res.json().catch(() => ({}))
       toast({
         title: 'Bulk action completed',
         description: `${data.processed || 0} product(s) ${action}d`,
@@ -908,7 +908,7 @@ export default function AdminProductsPage() {
       })
 
       if (!res.ok) {
-        const d = await res.json()
+        const d = await res.json().catch(() => ({}))
         throw new Error(d.error || d.details?.join(', ') || 'Failed')
       }
 
@@ -2686,7 +2686,7 @@ function ProductFormFields({
           subcategory: formSubcategory,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Failed to get suggestions')
       }

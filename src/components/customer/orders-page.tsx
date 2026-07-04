@@ -1477,7 +1477,7 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
 
       const res = await fetch(`/api/customer/orders?${params}`)
       if (!res.ok) throw new Error('Failed to fetch orders')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setOrders(data.orders || [])
       setTotalPages(data.totalPages || 1)
     } catch {
@@ -1506,7 +1506,7 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
       setDetailLoading(true)
       const res = await fetch(`/api/customer/orders?id=${orderId}`)
       if (!res.ok) throw new Error('Failed to fetch order detail')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setDetailData(data)
       setSelectedOrder(data.order)
     } catch {
@@ -1567,7 +1567,7 @@ export function OrdersPage({ onBack, onNavigate }: { onBack?: () => void; onNavi
           reason,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Action failed')
 
       // Refresh detail

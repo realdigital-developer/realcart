@@ -275,7 +275,7 @@ function CategoriesContent() {
     try {
       const res = await fetch('/api/admin/highlights?limit=100')
       if (!res.ok) return
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       // Only show Active highlights
       setAllHighlights((data.highlights || []).filter((h: HighlightItem) => h.status === 'Active'))
     } catch {
@@ -300,7 +300,7 @@ function CategoriesContent() {
 
       const res = await fetch(`/api/admin/categories?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch categories')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setCategories(data.categories || [])
       setAllCategoryNames(data.allCategoryNames || [])
@@ -448,7 +448,7 @@ function CategoriesContent() {
         method: 'POST',
         body: formData,
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to create category')
 
       setCreateOpen(false)
@@ -510,7 +510,7 @@ function CategoriesContent() {
         method: 'PUT',
         body: formData,
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to update category')
 
       setEditOpen(false)
@@ -541,7 +541,7 @@ function CategoriesContent() {
       const res = await fetch(`/api/admin/categories?id=${deletingCategory._id}`, {
         method: 'DELETE',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete category')
 
       setSelectedIds((prev) => {
@@ -573,7 +573,7 @@ function CategoriesContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: Array.from(selectedIds) }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete categories')
 
       const count = selectedIds.size
@@ -1719,7 +1719,7 @@ function ReorderModal({ open, onOpenChange, categories, onMessage, onSaved }: Re
         body: JSON.stringify({ items }),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to save order')
       }
       setHasParentChanges(false)
@@ -1748,7 +1748,7 @@ function ReorderModal({ open, onOpenChange, categories, onMessage, onSaved }: Re
         body: JSON.stringify({ items }),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to save order')
       }
       setHasSubChanges(false)

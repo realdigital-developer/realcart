@@ -341,7 +341,7 @@ export default function SellerEarnings() {
       }
 
       if (!res.ok) throw new Error('Failed to fetch earnings')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setEarningsData(data)
     } catch {
       toast({

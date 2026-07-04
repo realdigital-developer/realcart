@@ -61,7 +61,7 @@ export function CreditNoteDialog({
     fetch(url)
       .then(async (res) => {
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
+          const data = await res.json().catch(() => ({})).catch(() => ({}))
           throw new Error(data.error || 'Failed to load credit note')
         }
         const html = await res.text()
@@ -84,7 +84,7 @@ export function CreditNoteDialog({
     try {
       const res = await fetch(`/api/customer/credit-notes/${orderId}?action=download&_t=${Date.now()}`)
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to download credit note')
       }
 
@@ -115,7 +115,7 @@ export function CreditNoteDialog({
       const res = await fetch(`/api/customer/credit-notes/${orderId}/resend`, {
         method: 'POST',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({})).catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Failed to send email')
       }

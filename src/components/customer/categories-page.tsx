@@ -101,7 +101,7 @@ export function CategoriesPage({ onNavigate, onBack, categories: propCategories,
         // cache: 'no-store' ensures the browser never serves a stale cached
         // response — the admin's reorder is always reflected immediately.
         const res = await fetch('/api/categories', { cache: 'no-store' })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!cancelled && res.ok && data.categories) {
           setLocalCategories(data.categories)
         }

@@ -707,11 +707,11 @@ export default function SellerProfilePage() {
       })
 
       if (!res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'Failed to upload image')
       }
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       // Update profile state with new image
       if (profile && data.profileImage) {
         setProfile({
@@ -760,11 +760,11 @@ export default function SellerProfilePage() {
       })
 
       if (!res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'Failed to upload cover image')
       }
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (profile && data.coverImage) {
         setProfile({
           ...profile,
@@ -803,7 +803,7 @@ export default function SellerProfilePage() {
         return
       }
       if (!res.ok) throw new Error('Failed to fetch profile')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setProfile(data.profile as SellerProfile)
       setStats(data.stats as ProfileStats)
     } catch {
@@ -833,7 +833,7 @@ export default function SellerProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      const resData = await res.json()
+      const resData = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(resData.error || 'Failed to update profile')
       setProfile(resData.profile as SellerProfile)
       setEditPersonalOpen(false)
@@ -853,7 +853,7 @@ export default function SellerProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      const resData = await res.json()
+      const resData = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(resData.error || 'Failed to update business details')
       setProfile(resData.profile as SellerProfile)
       setEditBusinessOpen(false)
@@ -873,7 +873,7 @@ export default function SellerProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bankDetails: data }),
       })
-      const resData = await res.json()
+      const resData = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(resData.error || 'Failed to update bank details')
       setProfile(resData.profile as SellerProfile)
       setEditBankOpen(false)
@@ -893,7 +893,7 @@ export default function SellerProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pickupAddress: data }),
       })
-      const resData = await res.json()
+      const resData = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(resData.error || 'Failed to update pickup address')
       setProfile(resData.profile as SellerProfile)
       setEditPickupOpen(false)
@@ -925,7 +925,7 @@ export default function SellerProfilePage() {
       formData.append('documentType', documentType)
 
       const res = await fetch('/api/seller/documents', { method: 'POST', body: formData })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to upload document')
 
       toast({ title: 'Document Uploaded', description: `${DOC_LABELS[documentType] || documentType} has been uploaded successfully. It will be reviewed shortly.` })
@@ -953,7 +953,7 @@ export default function SellerProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentType }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete document')
       toast({ title: 'Document Removed', description: `${DOC_LABELS[documentType]} has been removed.` })
       await fetchProfileStats()

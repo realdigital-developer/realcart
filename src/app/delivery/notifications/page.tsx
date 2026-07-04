@@ -353,7 +353,7 @@ export default function DeliveryNotificationsPage() {
       clearTimeout(timeoutId)
 
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         const newNotifications = append
           ? [...notifications, ...data.notifications]
           : data.notifications
@@ -540,7 +540,7 @@ export default function DeliveryNotificationsPage() {
         body: JSON.stringify({ clearRead: true }),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setNotifications(prev => prev.filter(n => !n.read))
         setTotal(prev => Math.max(0, prev - (data.deletedCount || 0)))
       }

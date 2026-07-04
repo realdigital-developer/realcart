@@ -43,7 +43,7 @@ export function CategorySection({ onCategoryClick, categories: propCategories, l
           signal: createTimeoutSignal(10000),
           cache: 'no-store',
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         if (!cancelled && res.ok && data.categories && Array.isArray(data.categories)) {
           setLocalCategories(data.categories)
         }

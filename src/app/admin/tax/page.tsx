@@ -192,10 +192,10 @@ function TaxContent() {
 
       const res = await fetch(`/api/admin/finance/tax?${params.toString()}`)
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to fetch GST report')
       }
-      const data = (await res.json()) as GstReport
+      const data = (await res.json().catch(() => ({}))) as GstReport
       setReport(data)
     } catch (err) {
       console.error('Tax report fetch error:', err)

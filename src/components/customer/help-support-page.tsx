@@ -82,7 +82,7 @@ export function HelpSupportPage({ onBack, onNavigate }: HelpSupportPageProps) {
       setLoading(true)
       const res = await fetch('/api/customer/support')
       if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({})).catch(() => ({}))
       setFaqCategories(data.faqCategories || [])
       setError(null)
     } catch {

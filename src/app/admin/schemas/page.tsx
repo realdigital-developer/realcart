@@ -46,7 +46,7 @@ export default function SchemasPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/admin/schemas')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setSchemas(data.schemas || [])
       setStats(data.collectionStats || [])
     } finally {

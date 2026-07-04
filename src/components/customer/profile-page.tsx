@@ -39,7 +39,7 @@ export function ProfilePage() {
       setLoading(true)
       const res = await fetch('/api/customer/profile')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setProfile(data.profile)
         setForm({
           name: data.profile.name || '',
@@ -68,7 +68,7 @@ export function ProfilePage() {
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
         setError(data.error || 'Failed to update profile')
@@ -129,7 +129,7 @@ export function ProfilePage() {
         body: formData,
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
         setError(data.error || 'Failed to upload image')

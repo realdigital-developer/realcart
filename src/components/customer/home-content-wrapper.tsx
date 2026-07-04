@@ -229,7 +229,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
           signal: createTimeoutSignal(10000),
           cache: 'no-store',
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!cancelled && res.ok && data.categories && Array.isArray(data.categories)) {
           setCachedCategories(data.categories)
         }
@@ -258,7 +258,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
           signal: createTimeoutSignal(10000),
           cache: 'no-store',
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!cancelled && res.ok && data.slides && Array.isArray(data.slides)) {
           setCachedHeroSlides(data.slides)
         }

@@ -258,10 +258,10 @@ function RevenueContent() {
 
       const res = await fetch(`/api/admin/finance/revenue?${params.toString()}`)
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to fetch revenue report')
       }
-      const data = (await res.json()) as RevenueReport
+      const data = (await res.json().catch(() => ({}))) as RevenueReport
       setReport(data)
     } catch (err) {
       console.error('Revenue fetch error:', err)

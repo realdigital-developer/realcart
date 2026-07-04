@@ -89,7 +89,7 @@ export function SellerAuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch('/api/auth/seller/session')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         if (data.authenticated && data.user) {
           setUser(data.user)
           setAuthenticated(true)
@@ -130,7 +130,7 @@ export function SellerAuthProvider({ children }: { children: ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({})).catch(() => ({}))
     if (!res.ok) throw new Error(data.error || 'Login failed')
     setUser(data.user)
     setAuthenticated(true)
@@ -142,7 +142,7 @@ export function SellerAuthProvider({ children }: { children: ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(registerData),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({})).catch(() => ({}))
     if (!res.ok) throw new Error(data.error || 'Registration failed')
     setUser(data.user)
     setAuthenticated(true)

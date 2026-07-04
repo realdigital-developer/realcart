@@ -256,10 +256,10 @@ function PayoutsContent() {
 
       const res = await fetch(`/api/admin/finance/payouts?${params.toString()}`)
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(data.error || 'Failed to fetch payouts')
       }
-      const data = (await res.json()) as PayoutsResponse
+      const data = (await res.json().catch(() => ({}))) as PayoutsResponse
       setPayouts(data.payouts || [])
       setTotal(data.total || 0)
     } catch (err) {
@@ -303,7 +303,7 @@ function PayoutsContent() {
       // Fetch unfiltered payouts (up to 100) to compute summary
       const res = await fetch('/api/admin/finance/payouts?limit=100&page=1')
       if (!res.ok) return
-      const data = (await res.json()) as PayoutsResponse
+      const data = (await res.json().catch(() => ({}))) as PayoutsResponse
       const items = data.payouts || []
       const s = {
         pendingAmount: 0,
@@ -344,7 +344,7 @@ function PayoutsContent() {
       try {
         const res = await fetch('/api/admin/sellers?limit=100')
         if (!res.ok) throw new Error('Failed to load sellers')
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setSellers((data.sellers || []) as SellerOption[])
       } catch (err) {
         console.error('Sellers fetch error:', err)
@@ -371,7 +371,7 @@ function PayoutsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sellerId: selectedSellerId }),
       })
-      const data = await res.json().catch(() => ({}))
+      const data = await res.json().catch(() => ({})).catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Failed to create settlement')
       }
@@ -428,7 +428,7 @@ function PayoutsContent() {
           }),
         },
       )
-      const data = await res.json().catch(() => ({}))
+      const data = await res.json().catch(() => ({})).catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Failed to update payout')
       }

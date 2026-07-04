@@ -424,7 +424,7 @@ export async function createUpiCollectPayment(params: {
       }),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
       console.error('[Payment] UPI Collect API error:', JSON.stringify(data))
@@ -592,7 +592,7 @@ export async function createCardPayment(params: {
       }),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
       console.error('[Payment] Card payment API error:', JSON.stringify(data))
@@ -677,7 +677,7 @@ export async function createNetbankingPayment(params: {
       body: JSON.stringify(body),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
       console.error('[Payment] Netbanking payment API error:', data)
@@ -764,7 +764,7 @@ export async function createWalletPayment(params: {
       body: JSON.stringify(body),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
       console.error('[Payment] Wallet payment API error:', data)

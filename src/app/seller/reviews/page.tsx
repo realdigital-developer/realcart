@@ -565,7 +565,7 @@ export default function SellerReviewsPage() {
 
       if (!res.ok) throw new Error('Failed to fetch')
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setReviews(data.reviews || [])
       setStats(data.stats || null)
       setPagination(data.pagination || { page, limit: 10, total: 0, totalPages: 0 })
@@ -602,7 +602,7 @@ export default function SellerReviewsPage() {
         body: JSON.stringify({ reviewId: replyingToId, replyText: replyText.trim() }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
         throw new Error(data.error || 'Failed to submit reply')

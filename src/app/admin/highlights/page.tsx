@@ -221,7 +221,7 @@ function HighlightsContent() {
 
       const res = await fetch(`/api/admin/highlights?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch highlights')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setHighlights(data.highlights || [])
       setTotalHighlights(data.total || 0)
@@ -320,7 +320,7 @@ function HighlightsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: formName.trim() }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to create highlight')
 
       setCreateOpen(false)
@@ -355,7 +355,7 @@ function HighlightsContent() {
           status: formStatus,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to update highlight')
 
       setEditOpen(false)
@@ -381,7 +381,7 @@ function HighlightsContent() {
       const res = await fetch(`/api/admin/highlights?id=${deletingHighlight._id}`, {
         method: 'DELETE',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete highlight')
 
       setSelectedIds((prev) => {
@@ -413,7 +413,7 @@ function HighlightsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: Array.from(selectedIds) }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete highlights')
 
       const count = data.deletedCount || selectedIds.size

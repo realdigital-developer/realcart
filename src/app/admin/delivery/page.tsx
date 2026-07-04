@@ -229,7 +229,7 @@ export default function DeliverySettingsPage() {
       setFetching(true)
       const res = await fetch('/api/admin/delivery-settings')
       if (res.ok) {
-        const data = (await res.json()) as DeliverySettings
+        const data = (await res.json().catch(() => ({}))) as DeliverySettings
         const incomingSla = data.sla || {}
         setForm({
           freeDeliveryAbove: data.freeDeliveryAbove ?? DEFAULT_FORM.freeDeliveryAbove,
@@ -316,7 +316,7 @@ export default function DeliverySettingsPage() {
           sla: form.sla,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to save settings')
       setForm((prev) => ({ ...prev, updatedAt: data.updatedAt ?? new Date().toISOString() }))
       setMessage({ type: 'success', text: 'Delivery settings saved successfully!' })

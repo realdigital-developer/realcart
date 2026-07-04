@@ -116,7 +116,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch('/api/auth/customer/session', { signal: controller.signal })
       clearTimeout(timeoutId)
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         if (data.authenticated && data.user) {
           setUser(data.user)
           setAuthenticated(true)
@@ -137,7 +137,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mobile, passcode }),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({})).catch(() => ({}))
     if (!res.ok) throw new Error(data.error || 'Login failed')
     setUser(data.user)
     setAuthenticated(true)
@@ -149,7 +149,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mobile, passcode, name }),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({})).catch(() => ({}))
     if (!res.ok) throw new Error(data.error || 'Registration failed')
     setUser(data.user)
     setAuthenticated(true)

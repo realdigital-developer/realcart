@@ -111,7 +111,7 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
       setLoading(true)
       const res = await fetch('/api/customer/bank-upi')
       if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setMethods(data.paymentMethods || [])
       setError(null)
     } catch {
@@ -201,7 +201,7 @@ export function BankUpiPage({ onBack, onNavigate }: BankUpiPageProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         setFormError(data.error || 'Failed to add')
         setSubmitting(false)

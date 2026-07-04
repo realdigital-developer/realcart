@@ -72,7 +72,7 @@ async function checkSessionOnce(): Promise<{ authenticated: boolean; user: Deliv
   })
   clearTimeout(timeoutId)
 
-  const data = await res.json()
+  const data = await res.json().catch(() => ({})).catch(() => ({}))
   if (data.authenticated && data.user) {
     return { authenticated: true, user: data.user }
   }
@@ -284,7 +284,7 @@ export function DeliveryBoyAuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
       body: JSON.stringify({ mobile, passcode }),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({})).catch(() => ({}))
     if (!res.ok) throw new Error(data.error || 'Login failed')
     setUser(data.user)
     setAuthenticated(true)
@@ -297,7 +297,7 @@ export function DeliveryBoyAuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
       body: JSON.stringify({ mobile, passcode, name }),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({})).catch(() => ({}))
     if (!res.ok) throw new Error(data.error || 'Registration failed')
     setUser(data.user)
     setAuthenticated(true)

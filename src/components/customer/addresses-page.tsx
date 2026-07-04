@@ -345,7 +345,7 @@ export function AddressesPage({ onBack }: { onBack?: () => void }) {
       setLoading(true)
       const res = await fetch('/api/customer/addresses')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         setAddresses(data.addresses || [])
       }
     } catch (err) {

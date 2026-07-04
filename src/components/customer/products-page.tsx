@@ -940,7 +940,7 @@ export function ProductsPage({ initialSearch, initialCategory, initialSubcategor
 
       const res = await fetch(`/api/products?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch products')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({})).catch(() => ({}))
 
       setProducts(data.products || [])
       setTotal(data.total || 0)
@@ -1003,7 +1003,7 @@ export function ProductsPage({ initialSearch, initialCategory, initialSubcategor
         // ── Source 1: Global filter metadata from the API ──
         const res = await fetch('/api/products?limit=1&filters=true')
         if (!res.ok) return
-        const data = await res.json()
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         if (cancelled || !data.filters) return
 
         // ── Source 2: Derive subcategories from the image search results ──

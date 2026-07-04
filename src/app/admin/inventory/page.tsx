@@ -493,7 +493,7 @@ function StockAdjustmentDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.success) throw new Error(data.message || 'Adjust failed')
       toast.success(`Stock adjusted. New stock: ${data.newStock ?? '—'}`)
       onOpenChange(false)
@@ -712,7 +712,7 @@ export default function AdminInventoryPage() {
     try {
       const res = await fetch('/api/admin/inventory/overview', { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load overview')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setSummary(data.summary)
       setSellerHealth(data.sellerHealth || [])
       setActiveAlerts(data.activeAlerts || [])
@@ -736,7 +736,7 @@ export default function AdminInventoryPage() {
       })
       const res = await fetch(`/api/admin/inventory/low-stock?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load low stock')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setLowStockList(data.products || [])
       setLowStockTotal(data.total || 0)
     } catch (err) {
@@ -758,7 +758,7 @@ export default function AdminInventoryPage() {
       if (movementSellerSearch) params.set('sellerId', movementSellerSearch)
       const res = await fetch(`/api/admin/inventory/movements?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load movements')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setMovements(data.movements || [])
       setMovementsTotal(data.total || 0)
     } catch (err) {
@@ -781,7 +781,7 @@ export default function AdminInventoryPage() {
       if (alertsSellerSearch) params.set('sellerId', alertsSellerSearch)
       const res = await fetch(`/api/admin/inventory/alerts?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load alerts')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setAlerts(data.alerts || [])
       setAlertsTotal(data.total || 0)
       setAlertsTotalPages(data.totalPages || 1)
@@ -803,7 +803,7 @@ export default function AdminInventoryPage() {
       if (reorderSellerSearch) params.set('sellerId', reorderSellerSearch)
       const res = await fetch(`/api/admin/inventory/reorder?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load reorder suggestions')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setReorderProducts(data.products || [])
       setReorderTotal(data.total || 0)
     } catch (err) {
@@ -825,7 +825,7 @@ export default function AdminInventoryPage() {
       if (deadStockSellerSearch) params.set('sellerId', deadStockSellerSearch)
       const res = await fetch(`/api/admin/inventory/dead-stock?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load dead stock')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       const list: DeadStockProduct[] = data.products || []
       setDeadStockProducts(list)
       setDeadStockTotal(data.total || 0)
@@ -852,7 +852,7 @@ export default function AdminInventoryPage() {
       if (valuationSellerSearch) params.set('sellerId', valuationSellerSearch)
       const res = await fetch(`/api/admin/inventory/valuation?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load valuation')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setValuationProducts(data.products || [])
       setValuationTotal(data.total || 0)
       setValuationTotals(data.totals || null)
@@ -879,10 +879,10 @@ export default function AdminInventoryPage() {
       })
       const res = await fetch(`/api/admin/inventory/forecast?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) {
-        const err = await res.json().catch(() => null)
+        const err = await res.json().catch(() => ({})).catch(() => null)
         throw new Error(err?.message || 'Failed to generate forecast')
       }
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setForecastData(data)
     } catch (err) {
       console.error('[Admin Inventory] Forecast fetch error:', err)
@@ -918,7 +918,7 @@ export default function AdminInventoryPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action, alertId }),
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!res.ok || !data.success) throw new Error(data.message || 'Action failed')
         toast.success(`Alert ${action === 'acknowledge' ? 'acknowledged' : 'resolved'}`)
         fetchAlerts()
@@ -944,7 +944,7 @@ export default function AdminInventoryPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action, alertIds: ids }),
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(data.message || 'Bulk action failed')
         toast.success(data.message || `Bulk ${action} completed`)
         fetchAlerts()
@@ -983,7 +983,7 @@ export default function AdminInventoryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.success) throw new Error(data.message || 'Adjust failed')
       toast.success(`Stock adjusted. New stock: ${data.newStock ?? '—'}`)
       setAdjustQuantity('')
@@ -1026,7 +1026,7 @@ export default function AdminInventoryPage() {
           reason: importReason || undefined,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.message || 'Import failed')
       setImportResult(data)
       toast.success(data.message || 'Import completed')
@@ -1042,7 +1042,7 @@ export default function AdminInventoryPage() {
     setSweepResult(null)
     try {
       const res = await fetch('/api/admin/inventory/sweep', { method: 'POST' })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.message || 'Sweep failed')
       setSweepResult({ released: data.released || 0 })
       toast.success(`Released ${data.released || 0} expired reservation(s)`)

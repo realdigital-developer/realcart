@@ -1252,7 +1252,7 @@ export default function DeliveryOrdersPage() {
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (res.ok) {
         // Refresh data

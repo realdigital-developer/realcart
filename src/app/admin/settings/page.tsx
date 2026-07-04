@@ -170,7 +170,7 @@ function CloudinaryConfigSection() {
       // This avoids the 401 error that was causing "Cloudinary Not Configured" display
       const res = await fetch('/api/upload-status')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setStatus(data)
       }
     } catch (err) {
@@ -387,7 +387,7 @@ function LogoUploadSection() {
         const formData = new FormData()
         formData.append('logo', file)
         const res = await fetch('/api/admin/logo', { method: 'POST', body: formData })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(data.error || 'Upload failed')
         setMessage({ type: 'success', text: 'Logo uploaded successfully!' })
         await refetch()
@@ -406,7 +406,7 @@ function LogoUploadSection() {
     try {
       const res = await fetch('/api/admin/logo', { method: 'DELETE' })
       if (!res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'Delete failed')
       }
       setMessage({ type: 'success', text: 'Logo removed successfully!' })
@@ -732,7 +732,7 @@ function TaxSettingsSection() {
       setLoading(true)
       const res = await fetch('/api/admin/tax-settings')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setSettings({
           isTaxInclusive: data.isTaxInclusive ?? DEFAULT_TAX_SETTINGS.isTaxInclusive,
           defaultGstRate: data.defaultGstRate ?? DEFAULT_TAX_SETTINGS.defaultGstRate,
@@ -806,7 +806,7 @@ function TaxSettingsSection() {
           deliveryBaseWeight: settings.deliveryBaseWeight,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to save settings')
       setSettings(prev => ({ ...prev, updatedAt: data.updatedAt }))
       setMessage({ type: 'success', text: 'Tax settings saved successfully!' })
@@ -1404,7 +1404,7 @@ function CommissionSettingsSection() {
       setLoading(true)
       const res = await fetch('/api/admin/commission')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setSettings({
           commissionRate: data.commissionRate ?? DEFAULT_SETTINGS.commissionRate,
           deliveryFee: data.deliveryFee ?? DEFAULT_SETTINGS.deliveryFee,
@@ -1454,7 +1454,7 @@ function CommissionSettingsSection() {
           autoCancelHours: settings.autoCancelHours,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to save settings')
       setSettings(prev => ({ ...prev, updatedAt: data.updatedAt }))
       setMessage({ type: 'success', text: 'Commission settings saved successfully!' })
@@ -1679,7 +1679,7 @@ function EmailSettingsSection() {
       setLoading(true)
       const res = await fetch('/api/admin/email-settings')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setSettings({
           smtpHost: data.smtpHost || '',
           smtpPort: data.smtpPort ?? 587,
@@ -1726,7 +1726,7 @@ function EmailSettingsSection() {
           smtpFrom: settings.smtpFrom,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to save email settings')
       setMessage({ type: 'success', text: data.message || 'Email settings saved successfully!' })
       fetchSettings()
@@ -1750,7 +1750,7 @@ function EmailSettingsSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: testEmailAddr }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Test email failed')
       setMessage({ type: 'success', text: data.message || 'Test email sent successfully!' })
     } catch (err) {
@@ -1767,7 +1767,7 @@ function EmailSettingsSection() {
       const res = await fetch('/api/admin/email-settings/flush', {
         method: 'POST',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Queue flush failed')
       setMessage({ type: 'success', text: data.message || 'Email queue flushed.' })
     } catch (err) {

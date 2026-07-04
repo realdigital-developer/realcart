@@ -105,7 +105,7 @@ export function InvoiceDialog({
       const res = await fetch(`/api/customer/invoices/${orderId}/resend`, {
         method: 'POST',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Failed to send email')
       }

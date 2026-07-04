@@ -103,7 +103,7 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
       setLoading(true)
       const res = await fetch('/api/customer/referral')
       if (!res.ok) throw new Error('Failed to fetch')
-      const json = await res.json()
+      const json = await res.json().catch(() => ({})).catch(() => ({}))
       setData(json)
       setError(null)
     } catch {
@@ -186,7 +186,7 @@ export function ReferralPage({ onBack, onNavigate }: ReferralPageProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ referralCode: applyCode.trim() }),
       })
-      const json = await res.json()
+      const json = await res.json().catch(() => ({})).catch(() => ({}))
       if (!res.ok) {
         setApplyError(json.error || 'Failed to apply referral code')
         return

@@ -311,7 +311,7 @@ function CouponsContent() {
 
       const res = await fetch(`/api/seller/coupons?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch coupons')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setCoupons(data.coupons || [])
       setTotalCoupons(data.total || 0)
@@ -327,7 +327,7 @@ function CouponsContent() {
     try {
       const res = await fetch('/api/seller/coupons?limit=1000')
       if (!res.ok) return
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       const all: ClientCoupon[] = data.coupons || []
       const now = new Date()
       setStats({
@@ -464,7 +464,7 @@ function CouponsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload(form)),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to create coupon')
 
       setCreateOpen(false)
@@ -498,7 +498,7 @@ function CouponsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: editingCoupon._id, ...buildPayload(form) }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to update coupon')
 
       setEditOpen(false)
@@ -527,7 +527,7 @@ function CouponsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: deletingCoupon._id }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete coupon')
 
       setDeleteOpen(false)
@@ -559,7 +559,7 @@ function CouponsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: coupon._id, isActive: newValue }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to update coupon')
       fetchStats()
     } catch (err) {

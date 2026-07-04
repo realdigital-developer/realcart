@@ -116,7 +116,7 @@ export function HeroSlider({ slides: propSlides, loading: propLoading }: HeroSli
         // so admin changes appear immediately on the customer home page.
         const res = await fetch('/api/hero-slides', { cache: 'no-store' })
         if (!res.ok || cancelled) return
-        const data = await res.json()
+        const data = await res.json().catch(() => ({})).catch(() => ({}))
         if (cancelled) return
         const fetched: HeroSlide[] = Array.isArray(data.slides) ? data.slides : []
         setLocalSlides(fetched)

@@ -190,7 +190,7 @@ function DashboardContent() {
       setRefreshing(true)
       const res = await fetch('/api/admin/stats')
       if (!res.ok) throw new Error('Failed to fetch stats')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setStats(data)
       setError(null)
     } catch (err) {

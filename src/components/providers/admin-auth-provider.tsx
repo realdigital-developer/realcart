@@ -43,7 +43,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const checkSession = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/session')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({})).catch(() => ({}))
 
       if (data.authenticated && data.user) {
         setState({ user: data.user, authenticated: true, loading: false })
@@ -66,7 +66,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify({ email, password }),
     })
 
-    const data = await res.json()
+    const data = await res.json().catch(() => ({})).catch(() => ({}))
 
     if (!res.ok) {
       throw new Error(data.error || 'Login failed')

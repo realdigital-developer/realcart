@@ -262,11 +262,11 @@ function OrdersContent() {
       }
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
+        const errorData = await res.json().catch(() => ({})).catch(() => ({}))
         throw new Error(errorData.error || 'Failed to fetch orders')
       }
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       const orderList: Order[] = data.orders || []
 
       setOrders(orderList)
@@ -307,7 +307,7 @@ function OrdersContent() {
     try {
       const res = await fetch(`/api/seller/orders?orderId=${orderId}`)
       if (!res.ok) throw new Error('Failed to fetch order detail')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       setSelectedOrder(data.order)
       setDetailDeliveryBoys(data.deliveryBoys || [])
       setDetailStatusLogs(data.statusLogs || [])
@@ -342,7 +342,7 @@ function OrdersContent() {
         body: JSON.stringify({ action, orderId, orderItemId, deliveryBoyId, reason }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Action failed')
 
       toast({
@@ -387,7 +387,7 @@ function OrdersContent() {
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Assignment failed')
 
       toast({
@@ -443,7 +443,7 @@ function OrdersContent() {
     try {
       const res = await fetch('/api/seller/delivery-boys')
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setAssignDeliveryBoys(data.deliveryBoys || [])
       } else {
         setAssignDeliveryBoys([])

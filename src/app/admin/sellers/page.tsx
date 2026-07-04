@@ -254,7 +254,7 @@ function SellersContent() {
 
       const res = await fetch(`/api/admin/sellers?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch sellers')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       setSellers(data.sellers || [])
       setTotalSellers(data.total || 0)
@@ -324,7 +324,7 @@ function SellersContent() {
       const res = await fetch(`/api/admin/sellers?id=${deletingSeller._id}`, {
         method: 'DELETE',
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to delete seller')
 
       setSelectedIds((prev) => {
@@ -398,7 +398,7 @@ function SellersContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Verification action failed')
 
       // Update the viewing seller with fresh data
