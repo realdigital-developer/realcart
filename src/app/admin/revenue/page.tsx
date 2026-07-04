@@ -86,6 +86,7 @@ interface RevenueReport {
   totalPlatformFee: number
   totalTds: number
   totalTcs: number
+  totalRtoCharges: number
   totalSellerEarnings: number
   totalRefunds: number
   refundCount: number
@@ -317,6 +318,7 @@ function RevenueContent() {
       ['Delivery Fees', report.totalDeliveryFees],
       ['COD Fee', report.totalCodFee],
       ['Platform Fee', report.totalPlatformFee],
+      ['RTO Charges', report.totalRtoCharges],
       ['TDS Deducted', report.totalTds],
       ['TCS Collected', report.totalTcs],
       ['Seller Earnings', report.totalSellerEarnings],
@@ -812,7 +814,7 @@ function RevenueContent() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
               {/* Revenue sources */}
               <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Commission</p>
@@ -829,6 +831,11 @@ function RevenueContent() {
               <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Platform Fee</p>
                 <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatINR(report.totalPlatformFee)}</p>
+              </div>
+              <div className="rounded-lg bg-orange-50 dark:bg-orange-950/20 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">RTO Charges</p>
+                <p className="text-sm font-bold text-orange-600 dark:text-orange-400 mt-1">{formatINR(report.totalRtoCharges)}</p>
+                <p className="text-[9px] text-muted-foreground/70 mt-0.5">From seller returns</p>
               </div>
               {/* Deductions — only the platform's actual loss from refunds, not the full refund amount */}
               <div className="rounded-lg bg-rose-50 dark:bg-rose-950/20 p-3">
@@ -934,6 +941,7 @@ function RevenueContent() {
                 <MetricRow label="Delivery Fees" value={formatCurrency(report.totalDeliveryFees, 0)} />
                 <MetricRow label="COD Fee" value={formatCurrency(report.totalCodFee, 0)} />
                 <MetricRow label="Platform Fee" value={formatCurrency(report.totalPlatformFee, 0)} />
+                <MetricRow label="RTO Charges" value={formatCurrency(report.totalRtoCharges, 0)} />
                 <MetricRow label="TDS Deducted" value={formatCurrency(report.totalTds, 0)} />
                 <MetricRow label="TCS Collected" value={formatCurrency(report.totalTcs, 0)} />
                 <MetricRow label="Seller Earnings" value={formatCurrency(report.totalSellerEarnings, 0)} />

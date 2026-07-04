@@ -1321,6 +1321,7 @@ interface CommissionSettings {
   commissionRate: number
   deliveryFee: number
   pickupFee: number
+  rtoCharge: number
   returnWindowDays: number
   autoCancelHours: number
   updatedAt: string | null
@@ -1330,6 +1331,7 @@ const DEFAULT_SETTINGS: CommissionSettings = {
   commissionRate: 10,
   deliveryFee: 40,
   pickupFee: 30,
+  rtoCharge: 50,
   returnWindowDays: 7,
   autoCancelHours: 48,
   updatedAt: null,
@@ -1368,6 +1370,17 @@ const commissionFields = [
     max: 9999,
     step: 1,
     color: 'rose',
+  },
+  {
+    key: 'rtoCharge' as const,
+    label: 'RTO Charge (Return to Origin)',
+    description: 'Charged to seller on each return',
+    suffix: '₹',
+    icon: IndianRupee,
+    min: 0,
+    max: 9999,
+    step: 1,
+    color: 'orange',
   },
   {
     key: 'returnWindowDays' as const,
@@ -1409,6 +1422,7 @@ function CommissionSettingsSection() {
           commissionRate: data.commissionRate ?? DEFAULT_SETTINGS.commissionRate,
           deliveryFee: data.deliveryFee ?? DEFAULT_SETTINGS.deliveryFee,
           pickupFee: data.pickupFee ?? DEFAULT_SETTINGS.pickupFee,
+          rtoCharge: data.rtoCharge ?? DEFAULT_SETTINGS.rtoCharge,
           returnWindowDays: data.returnWindowDays ?? DEFAULT_SETTINGS.returnWindowDays,
           autoCancelHours: data.autoCancelHours ?? DEFAULT_SETTINGS.autoCancelHours,
           updatedAt: data.updatedAt ?? null,
@@ -1450,6 +1464,7 @@ function CommissionSettingsSection() {
           commissionRate: settings.commissionRate,
           deliveryFee: settings.deliveryFee,
           pickupFee: settings.pickupFee,
+          rtoCharge: settings.rtoCharge,
           returnWindowDays: settings.returnWindowDays,
           autoCancelHours: settings.autoCancelHours,
         }),

@@ -45,7 +45,7 @@ export interface FinancialTransaction {
   /** Transaction ID for display (e.g. TXN-20260101-XXXX) */
   transactionId: string
   /** Type of transaction */
-  type: 'order_payment' | 'commission_earned' | 'gst_collected' | 'tds_deducted' | 'tcs_collected' | 'delivery_earned' | 'cod_fee' | 'platform_fee' | 'seller_payout' | 'refund_issued' | 'expense' | 'adjustment'
+  type: 'order_payment' | 'commission_earned' | 'gst_collected' | 'tds_deducted' | 'tcs_collected' | 'delivery_earned' | 'cod_fee' | 'platform_fee' | 'seller_payout' | 'refund_issued' | 'expense' | 'adjustment' | 'rto_charge'
   /** Sub-type for finer classification */
   subType?: string
   /** Order ID (if related to an order) */
@@ -157,6 +157,8 @@ export interface RevenueReport {
   // Statutory deductions
   totalTds: number
   totalTcs: number
+  // RTO charges collected from sellers on returns
+  totalRtoCharges: number
   // Seller payouts
   totalSellerEarnings: number    // Net payable to sellers
   // Refunds
@@ -810,6 +812,7 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
   let totalTds = 0
   let totalTcs = 0
   let totalSellerEarnings = 0
+  let totalRtoCharges = 0
   let codOrders = 0
   let codRevenue = 0
   let onlineOrders = 0
@@ -839,6 +842,15 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
     totalTds += order.totalTds || 0
     totalTcs += order.totalTcs || 0
     totalSellerEarnings += order.totalSellerEarnings || 0
+
+    // Accumulate RTO charges from items that have rtoCharge set
+    if (Array.isArray(order.items)) {
+      for (const item of order.items as any[]) {
+        if (item.rtoCharge && item.rtoCharge > 0) {
+          totalRtoCharges += item.rtoCharge
+        }
+      }
+    }
 
     // Payment method split
     if (order.paymentMethod === 'cod') {
@@ -939,8 +951,8 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
   }).toArray()
   const platformExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
 
-  // Platform revenue = commission + GST on commission + COD fee + platform fee
-  const platformRevenue = totalCommission + totalGstOnCommission + totalCodFee + totalPlatformFee
+  // Platform revenue = commission + GST on commission + COD fee + platform fee + RTO charges
+  const platformRevenue = totalCommission + totalGstOnCommission + totalCodFee + totalPlatformFee + totalRtoCharges
   // Platform profit = Platform revenue - commission/fees reversed due to refunds - operating expenses
   const platformProfit = platformRevenue - refundImpactOnPlatform - platformExpenses
 
@@ -976,6 +988,7 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
     totalPlatformFee: round2(totalPlatformFee),
     totalTds: round2(totalTds),
     totalTcs: round2(totalTcs),
+    totalRtoCharges: round2(totalRtoCharges),
     totalSellerEarnings: round2(totalSellerEarnings),
     totalRefunds: round2(totalRefunds),
     refundCount,

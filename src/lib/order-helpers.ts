@@ -1638,6 +1638,62 @@ async function handleReturnComplete(orderId: string, orderItemId: string): Promi
       )
     }
 
+    // === RTO Charge: Charge the seller for the return (as Flipkart/Amazon/Meesho do) ===
+    // When a customer returns an item, the seller is charged an RTO (Return to Origin)
+    // fee to cover the return logistics and processing. This is deducted from the
+    // seller's earnings on this order item.
+    if (item && item.sellerId) {
+      try {
+        // Fetch RTO charge from commission settings
+        const commissionSettings = await db.collection('settings').findOne({ key: 'commission' })
+        const rtoCharge = Number(commissionSettings?.rtoCharge) || 0
+
+        if (rtoCharge > 0) {
+          const now = new Date().toISOString()
+
+          // Deduct RTO charge from the item's seller earnings
+          const newSellerEarnings = Math.max(0, (item.sellerEarnings || 0) - rtoCharge)
+
+          // Update the item: set rtoCharge, rtoAppliedAt, and adjusted sellerEarnings
+          await db.collection('orders').updateOne(
+            { orderId, 'items.id': orderItemId },
+            {
+              $set: {
+                'items.$.rtoCharge': rtoCharge,
+                'items.$.rtoAppliedAt': now,
+                'items.$.sellerEarnings': newSellerEarnings,
+              },
+            },
+          )
+
+          // Also decrement the order-level totalSellerEarnings
+          await db.collection('orders').updateOne(
+            { orderId },
+            { $inc: { totalSellerEarnings: -rtoCharge } },
+          )
+
+          // Record a ledger transaction for the RTO charge (platform revenue)
+          const { recordTransaction } = await import('./finance-management')
+          await recordTransaction({
+            type: 'rto_charge',
+            subType: 'return_rto',
+            orderId,
+            sellerId: item.sellerId,
+            amount: rtoCharge,
+            description: `RTO charge for returned item in order ${orderId}`,
+            paymentMethod: 'internal',
+            status: 'completed',
+            date: new Date(),
+          })
+
+          console.log(`[Order ${orderId}] RTO charge of ₹${rtoCharge} applied to seller ${item.sellerId} for returned item ${orderItemId}`)
+        }
+      } catch (rtoErr) {
+        console.error(`[Order ${orderId}] RTO charge application error:`, rtoErr)
+        // Non-fatal — don't block return completion if RTO charge fails
+      }
+    }
+
     // === Generate & send GST credit note for the returned item ===
     // Per GST Rule 16 (CGST Rules 2017) and matching Flipkart / Amazon /
     // Meesho practice, a credit note is issued on return completion to

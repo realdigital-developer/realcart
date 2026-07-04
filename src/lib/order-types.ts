@@ -156,6 +156,10 @@ export interface OrderItem {
   returnReason?: string
   /** When return was requested for this item */
   returnRequestedAt?: string
+  /** RTO (Return to Origin) charge applied to seller when this item is returned */
+  rtoCharge?: number
+  /** When the RTO charge was applied */
+  rtoAppliedAt?: string
   /** Delivery fee for this item */
   deliveryFee: number
   /** Platform commission for this item */
