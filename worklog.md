@@ -5813,3 +5813,35 @@ Stage Summary:
 - **No damage**: No UI or code modified during upload.
 - **Local and remote SHAs match exactly**: `0871223212bd55659d8f5746a8e943561b71a9cc` (IN SYNC).
 - PAT used via GIT_ASKPASS (one-time, not persisted).
+
+---
+Task ID: merge-account-info-into-personal
+Agent: main-orchestrator
+Task: Remove "Account Information" section from seller settings page. Merge its content into "Personal Information" section in seller profile page. Keep the same logic intact.
+
+Work Log:
+- **Code study**: 
+  * Settings page (`src/app/seller/settings/page.tsx`): Had an "Account Information" card (lines 309-406) showing: Email (read-only), Store Name (read-only), Account Status (Active/Blocked + Verified badge), Last Login, and an info note about contacting support.
+  * Profile page (`src/app/seller/profile/page.tsx`): Had a "Personal Information" card (lines 1118-1140) showing: Full Name, Email Address, Phone Number, Store ID.
+- **Changes applied** (2 files, 17 insertions, 102 deletions):
+  1. **Profile page** (`src/app/seller/profile/page.tsx`): 
+     * Added `Shield` and `Lock` to the icon imports.
+     * Merged the Account Information fields into the Personal Information card. The card now has two sections separated by a divider:
+       - **Personal details** (top): Full Name, Email Address (with Lock icon), Phone Number
+       - **Account Details** (bottom, with "Account Details" subheading): Store Name (with Lock icon), Account Status (with status dot + Verified badge), Store ID (with copy button), Last Login
+     * Added an info note: "To change your email or store name, please contact support. You can update your name and phone number using the Edit button."
+     * Updated the card description to "Your account details and login information".
+     * Added a CardDescription import (already existed).
+  2. **Settings page** (`src/app/seller/settings/page.tsx`): Removed the entire "Account Information" card (99 lines deleted). The remaining sections (Change Password, Notifications, etc.) are preserved.
+- **End-to-end verification** (Agent Browser):
+  * **Profile page**: "Personal Information" FOUND ✓, "Account Information" NOT found ✓. All merged fields visible: Full Name ✓, Email Address ✓ (with Lock), Phone Number ✓, Store Name ✓ (with Lock), Account Status ✓ (with badge), Store ID ✓ (with copy), Last Login ✓, info note ✓.
+  * **Settings page**: "Account Information" NOT found ✓. "Change Password" still present ✓. "Notifications" still present ✓.
+  * No browser/console errors (only pre-existing ChunkLoadError from fast navigation).
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `6d57fae` — 2 files changed, 17 insertions(+), 102 deletions(-).
+
+Stage Summary:
+- **Account Information removed from settings**: The entire card was removed from the seller settings page.
+- **Merged into Personal Information on profile**: The profile page's Personal Information card now shows both personal details (name, email, phone) AND account details (store name, account status, store ID, last login) in one unified card with a divider.
+- **Same logic intact**: All fields display the same data with the same read-only indicators (Lock icons for email and store name), status badges, and copy buttons.
+- **No damage**: Only 2 files modified (17 insertions, 102 deletions). All other profile/settings sections preserved. Lint: 0 errors.
