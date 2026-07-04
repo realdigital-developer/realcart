@@ -183,6 +183,13 @@ export interface RevenueReport {
     commission: number
     orders: number
   }>
+  // Daily breakdown (for chart rendering on short date ranges)
+  dailyBreakdown: Array<{
+    date: string          // YYYY-MM-DD
+    revenue: number
+    commission: number
+    orders: number
+  }>
   // Seller-wise breakdown
   sellerWiseBreakdown: Array<{
     sellerId: string
@@ -718,7 +725,7 @@ export async function processPayout(payoutId: string, transactionRef?: string): 
   try {
     const result = await db.collection('seller_payouts').updateOne(
       { payoutId },
-      { $set: { status: 'processed', processedAt: now, transactionRef: transactionRef || '', updatedAt: now.toISOString() } },
+      { $set: { status: 'processed', processedAt: now.toISOString(), transactionRef: transactionRef || '', updatedAt: now.toISOString() } },
     )
 
     if (result.matchedCount === 0) {
@@ -749,7 +756,7 @@ export async function completePayout(payoutId: string, transactionRef?: string):
   try {
     const result = await db.collection('seller_payouts').updateOne(
       { payoutId },
-      { $set: { status: 'paid', paidAt: now, transactionRef: transactionRef || '', updatedAt: now.toISOString() } },
+      { $set: { status: 'paid', paidAt: now.toISOString(), transactionRef: transactionRef || '', updatedAt: now.toISOString() } },
     )
 
     if (result.matchedCount === 0) {
@@ -812,6 +819,7 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
 
   const sellerMap = new Map<string, { sellerName: string; storeName: string; orderCount: number; grossSales: number; commission: number; netPayout: number }>()
   const monthlyMap = new Map<string, { revenue: number; commission: number; orders: number }>()
+  const dailyMap = new Map<string, { revenue: number; commission: number; orders: number }>()
 
   for (const order of orders) {
     grossOrderValue += order.totalAmount || 0
@@ -855,6 +863,14 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
     monthEntry.orders++
     monthlyMap.set(monthKey, monthEntry)
 
+    // Daily breakdown
+    const dayKey = `${od.getFullYear()}-${(od.getMonth() + 1).toString().padStart(2, '0')}-${od.getDate().toString().padStart(2, '0')}`
+    const dayEntry = dailyMap.get(dayKey) || { revenue: 0, commission: 0, orders: 0 }
+    dayEntry.revenue += order.totalAmount || 0
+    dayEntry.commission += order.totalCommission || 0
+    dayEntry.orders++
+    dailyMap.set(dayKey, dayEntry)
+
     // Seller-wise breakdown
     for (const item of (order.items as any[]) || []) {
       const sid = item.sellerId?.toString()
@@ -894,6 +910,11 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
     .map(([month, data]) => ({ month, ...data }))
     .sort((a, b) => a.month.localeCompare(b.month))
 
+  // Sort daily breakdown chronologically
+  const dailyBreakdown = Array.from(dailyMap.entries())
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+
   // Sort seller-wise by grossSales desc
   const sellerWiseBreakdown = Array.from(sellerMap.entries())
     .map(([sellerId, data]) => ({ sellerId, ...data }))
@@ -931,6 +952,7 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
     onlineOrders,
     onlineRevenue: round2(onlineRevenue),
     monthlyBreakdown,
+    dailyBreakdown,
     sellerWiseBreakdown,
   }
 }

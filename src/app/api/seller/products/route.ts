@@ -649,6 +649,17 @@ export async function PUT(request: NextRequest) {
     if (updateData.lowStockThreshold !== undefined) safeUpdate.lowStockThreshold = Number(updateData.lowStockThreshold) || 5
     if (updateData.trackInventory !== undefined) safeUpdate.trackInventory = updateData.trackInventory !== false
 
+    // ── Inventory Management Settings (SKU-level) ──
+    // These fields power the reorder, forecast, and valuation features.
+    // They are optional but essential for production-level inventory management.
+    if (updateData.reorderPoint !== undefined) safeUpdate.reorderPoint = Math.max(0, Number(updateData.reorderPoint) || 0)
+    if (updateData.reorderQuantity !== undefined) safeUpdate.reorderQuantity = Math.max(0, Number(updateData.reorderQuantity) || 0)
+    if (updateData.safetyStock !== undefined) safeUpdate.safetyStock = Math.max(0, Number(updateData.safetyStock) || 0)
+    if (updateData.costPrice !== undefined) safeUpdate.costPrice = Math.max(0, Number(updateData.costPrice) || 0)
+    if (updateData.warehouseLocation !== undefined) safeUpdate.warehouseLocation = String(updateData.warehouseLocation || '').trim()
+    if (updateData.leadTimeDays !== undefined) safeUpdate.leadTimeDays = Math.max(0, Number(updateData.leadTimeDays) || 0)
+    if (updateData.supplier !== undefined) safeUpdate.supplier = String(updateData.supplier || '').trim()
+
     // ── Specifications ──
     if (updateData.specifications !== undefined) {
       safeUpdate.specifications = Array.isArray(updateData.specifications)

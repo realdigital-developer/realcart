@@ -96,7 +96,10 @@ interface InventoryItem {
   trackInventory: boolean
   reorderPoint: number
   reorderQuantity: number
+  safetyStock: number
   warehouseLocation: string
+  leadTimeDays: number
+  supplier: string
   sellingPrice: number
   mrp: number
   costPrice?: number
@@ -343,16 +346,16 @@ function MiniStat({
   bg: string
 }) {
   return (
-    <Card className="p-3 py-2.5 gap-0 hover:shadow-sm transition-shadow">
-      <div className="flex items-center gap-2.5">
-        <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0', bg)}>
-          <Icon className={cn('h-4 w-4', color)} />
+    <Card className="p-4 gap-0 hover:shadow-md transition-shadow">
+      <div className="flex items-center gap-3">
+        <div className={cn('h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0', bg)}>
+          <Icon className={cn('h-5 w-5', color)} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">{label}</p>
+          <p className="text-xs text-muted-foreground truncate mb-0.5">{label}</p>
           <div className="flex items-baseline gap-1.5">
-            <span className={cn('text-base sm:text-lg font-bold leading-tight', color)}>{value}</span>
-            {sublabel && <span className="text-[10px] text-muted-foreground truncate">{sublabel}</span>}
+            <span className={cn('text-lg font-bold leading-tight', color)}>{value}</span>
+            {sublabel && <span className="text-[11px] text-muted-foreground/80 truncate">{sublabel}</span>}
           </div>
         </div>
       </div>
@@ -470,6 +473,19 @@ export default function SellerInventoryPage() {
   // Adjust dialog mode (Absolute vs Delta)
   const [adjustMode, setAdjustMode] = useState<'absolute' | 'delta'>('absolute')
   const [adjustDelta, setAdjustDelta] = useState<number>(0)
+
+  // Inventory Settings dialog state (SKU-level inventory configuration)
+  const [settingsItem, setSettingsItem] = useState<InventoryItem | null>(null)
+  const [settingsForm, setSettingsForm] = useState({
+    lowStockThreshold: 5,
+    reorderPoint: 0,
+    reorderQuantity: 0,
+    safetyStock: 0,
+    costPrice: 0,
+    warehouseLocation: '',
+    leadTimeDays: 0,
+    supplier: '',
+  })
 
   useEffect(() => {
     if (!loading && !authenticated) {
@@ -709,6 +725,53 @@ export default function SellerInventoryPage() {
       fetchDashboard()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to restock')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  /* ── Inventory Settings: Open dialog & Save ── */
+  const openSettingsDialog = (item: InventoryItem) => {
+    setSettingsItem(item)
+    setSettingsForm({
+      lowStockThreshold: item.lowStockThreshold ?? 5,
+      reorderPoint: item.reorderPoint ?? 0,
+      reorderQuantity: item.reorderQuantity ?? 0,
+      safetyStock: item.safetyStock ?? 0,
+      costPrice: item.costPrice ?? 0,
+      warehouseLocation: item.warehouseLocation ?? '',
+      leadTimeDays: item.leadTimeDays ?? 0,
+      supplier: item.supplier ?? '',
+    })
+  }
+
+  const handleSaveSettings = async () => {
+    if (!settingsItem) return
+    setActionLoading(true)
+    try {
+      const res = await fetch('/api/seller/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          _id: settingsItem._id,
+          lowStockThreshold: settingsForm.lowStockThreshold,
+          reorderPoint: settingsForm.reorderPoint,
+          reorderQuantity: settingsForm.reorderQuantity,
+          safetyStock: settingsForm.safetyStock,
+          costPrice: settingsForm.costPrice,
+          warehouseLocation: settingsForm.warehouseLocation,
+          leadTimeDays: settingsForm.leadTimeDays,
+          supplier: settingsForm.supplier,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save settings')
+      toast.success('Inventory settings saved')
+      setSettingsItem(null)
+      fetchList()
+      fetchDashboard()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save inventory settings')
     } finally {
       setActionLoading(false)
     }
@@ -964,76 +1027,57 @@ export default function SellerInventoryPage() {
   ]
 
   return (
-    <div className="space-y-4 sm:space-y-5">
-      {/* ── Compact Header ── */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center flex-shrink-0">
-            <Boxes className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">Inventory</h1>
-            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">Track stock, alerts & movements</p>
-          </div>
+    <div className="space-y-5">
+      {/* ── Page Title Bar ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Inventory Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">Track stock levels, manage alerts, and audit every movement</p>
         </div>
-        {/* Inline mini-stats */}
-        {summary && (
-          <div className="hidden md:flex items-center gap-1.5 flex-shrink-0">
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              <span className="text-xs font-bold text-emerald-600">{summary.inStockSkus}</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-              <span className="text-xs font-bold text-amber-600">{summary.lowStockSkus}</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/30">
-              <PackageX className="h-3.5 w-3.5 text-red-600" />
-              <span className="text-xs font-bold text-red-600">{summary.outOfStockSkus}</span>
-            </div>
-          </div>
-        )}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <Button variant="outline" size="sm" onClick={() => { fetchDashboard(); fetchList() }} className="h-9 rounded-xl gap-1.5">
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Refresh</span>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => { fetchDashboard(); fetchList() }} className="h-9 rounded-lg gap-2">
+            <RefreshCw className="h-4 w-4" />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={items.length === 0} className="h-9 rounded-xl gap-1.5">
-            <Download className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Export</span>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={items.length === 0} className="h-9 rounded-lg gap-2">
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Export</span>
           </Button>
-          <Button size="sm" onClick={() => setBulkOpen(true)} className="h-9 rounded-xl gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white">
-            <Upload className="h-3.5 w-3.5" />
+          <Button size="sm" onClick={() => setBulkOpen(true)} className="h-9 rounded-lg gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Upload className="h-4 w-4" />
             <span className="hidden sm:inline">Bulk Update</span>
           </Button>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        {/* ── Compact Tab Pills ── */}
-        <TabsList className="inline-flex h-auto p-1 bg-muted/50 rounded-xl gap-0.5 mb-1 overflow-x-auto max-w-full scrollbar-none">
+        {/* ── Tab Navigation ── */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1 -mb-1">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.value
             return (
-              <TabsTrigger
+              <button
                 key={tab.value}
-                value={tab.value}
+                onClick={() => setActiveTab(tab.value)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+                  'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-shrink-0',
                   isActive
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 )}
               >
-                <tab.icon className="h-3.5 w-3.5" />
+                <tab.icon className="h-4 w-4" />
                 {tab.label}
                 {tab.badge ? (
-                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white">{tab.badge}</span>
+                  <span className={cn(
+                    'ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold',
+                    isActive ? 'bg-white/25 text-white' : 'bg-red-500 text-white'
+                  )}>{tab.badge}</span>
                 ) : null}
-              </TabsTrigger>
+              </button>
             )
           })}
-        </TabsList>
+        </div>
 
         {/* ===================== OVERVIEW TAB ===================== */}
         <TabsContent value="overview" className="space-y-4 mt-4">
@@ -1043,108 +1087,129 @@ export default function SellerInventoryPage() {
             </div>
           ) : (
             <>
-              {/* Stat cards row */}
-              <div className="grid gap-2.5 grid-cols-2 lg:grid-cols-4">
-                <MiniStat
-                  icon={Package}
-                  label="Total SKUs"
-                  value={summary?.totalSkus ?? 0}
-                  sublabel={`· ${summary?.trackedSkus ?? 0} tracked`}
-                  color="text-gray-700 dark:text-gray-300"
-                  bg="bg-gray-100 dark:bg-gray-800"
-                />
-                <MiniStat
-                  icon={CheckCircle2}
-                  label="In Stock"
-                  value={summary?.inStockSkus ?? 0}
-                  sublabel={`· ${summary?.totalUnits ?? 0} units`}
-                  color="text-emerald-600 dark:text-emerald-400"
-                  bg="bg-emerald-50 dark:bg-emerald-950/30"
-                />
-                <MiniStat
-                  icon={AlertTriangle}
-                  label="Low Stock"
-                  value={summary?.lowStockSkus ?? 0}
-                  sublabel="· restock soon"
-                  color="text-amber-600 dark:text-amber-400"
-                  bg="bg-amber-50 dark:bg-amber-950/30"
-                />
-                <MiniStat
-                  icon={PackageX}
-                  label="Out of Stock"
-                  value={summary?.outOfStockSkus ?? 0}
-                  sublabel="· action req'd"
-                  color="text-red-600 dark:text-red-400"
-                  bg="bg-red-50 dark:bg-red-950/30"
-                />
+              {/* ── Hero Summary Banner ── */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 dark:from-emerald-700 dark:to-teal-800 p-6 text-white shadow-lg shadow-emerald-600/10">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
+                <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
+                <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Boxes className="h-5 w-5" />
+                      <span className="text-sm font-medium text-emerald-50">Inventory Overview</span>
+                    </div>
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-4xl font-bold">{summary?.totalSkus ?? 0}</span>
+                      <span className="text-sm text-emerald-100">total SKUs</span>
+                    </div>
+                    <p className="text-xs text-emerald-100/80 mt-1">{summary?.trackedSkus ?? 0} tracked · {summary?.totalUnits ?? 0} units in stock</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 lg:gap-6">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-white/15 mx-auto mb-1.5">
+                        <CheckCircle2 className="h-5 w-5" />
+                      </div>
+                      <div className="text-2xl font-bold">{summary?.inStockSkus ?? 0}</div>
+                      <div className="text-[11px] text-emerald-100/80">In Stock</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-white/15 mx-auto mb-1.5">
+                        <AlertTriangle className="h-5 w-5" />
+                      </div>
+                      <div className="text-2xl font-bold">{summary?.lowStockSkus ?? 0}</div>
+                      <div className="text-[11px] text-emerald-100/80">Low Stock</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-white/15 mx-auto mb-1.5">
+                        <PackageX className="h-5 w-5" />
+                      </div>
+                      <div className="text-2xl font-bold">{summary?.outOfStockSkus ?? 0}</div>
+                      <div className="text-[11px] text-emerald-100/80">Out of Stock</div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Value cards row */}
-              <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-3">
-                <MiniStat
-                  icon={TrendingUp}
-                  label="Stock Value (Selling)"
-                  value={fmtPrice(summary?.stockValue ?? 0, 0)}
-                  sublabel={`· ${summary?.totalReservedUnits ?? 0} reserved`}
-                  color="text-emerald-600 dark:text-emerald-400"
-                  bg="bg-emerald-50 dark:bg-emerald-950/30"
-                />
-                <MiniStat
-                  icon={BadgeDollarSign}
-                  label="Stock Value (MRP)"
-                  value={fmtPrice(summary?.stockValueMrp ?? 0, 0)}
-                  sublabel="· at MRP"
-                  color="text-primary"
-                  bg="bg-primary/10"
-                />
-                <MiniStat
-                  icon={Package}
-                  label="Available Units"
-                  value={summary?.totalAvailableUnits ?? 0}
-                  sublabel="· sellable now"
-                  color="text-blue-600 dark:text-blue-400"
-                  bg="bg-blue-50 dark:bg-blue-950/30"
-                />
+              {/* ── Value Cards Row ── */}
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+                <Card className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="h-9 w-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
+                      <TrendingUp className="h-4.5 w-4.5 text-emerald-600" />
+                    </div>
+                    <Badge variant="secondary" className="text-[10px]">Selling</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">Stock Value</p>
+                  <div className="text-xl font-bold text-foreground">{fmtPrice(summary?.stockValue ?? 0, 0)}</div>
+                  <p className="text-[11px] text-muted-foreground mt-1">{summary?.totalReservedUnits ?? 0} units reserved</p>
+                </Card>
+                <Card className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="h-9 w-9 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center">
+                      <BadgeDollarSign className="h-4.5 w-4.5 text-blue-600" />
+                    </div>
+                    <Badge variant="secondary" className="text-[10px]">MRP</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">Stock Value (MRP)</p>
+                  <div className="text-xl font-bold text-foreground">{fmtPrice(summary?.stockValueMrp ?? 0, 0)}</div>
+                  <p className="text-[11px] text-muted-foreground mt-1">At maximum retail price</p>
+                </Card>
+                <Card className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="h-9 w-9 rounded-lg bg-purple-50 dark:bg-purple-950/30 flex items-center justify-center">
+                      <Package className="h-4.5 w-4.5 text-purple-600" />
+                    </div>
+                    <Badge variant="secondary" className="text-[10px]">Available</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">Available Units</p>
+                  <div className="text-xl font-bold text-foreground">{summary?.totalAvailableUnits ?? 0}</div>
+                  <p className="text-[11px] text-muted-foreground mt-1">Sellable right now</p>
+                </Card>
               </div>
 
-              {/* Two-column: Low stock + Recent movements */}
-              <div className="grid gap-2.5 grid-cols-1 lg:grid-cols-2">
+              {/* ── Two-column: Low stock + Recent movements ── */}
+              <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
                 {/* Lowest Stock Products */}
                 <Card className="overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+                  <div className="flex items-center justify-between px-4 py-3.5 border-b bg-muted/40">
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <div className="h-7 w-7 rounded-lg bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      </div>
                       <h3 className="text-sm font-semibold">Lowest Stock Products</h3>
                     </div>
                     <Badge variant="secondary" className="text-[10px]">{lowStockProducts.length}</Badge>
                   </div>
-                  <div className="p-2">
+                  <div className="p-3">
                     {lowStockProducts.length === 0 ? (
-                      <div className="text-center py-8 text-xs text-muted-foreground">
-                        <CheckCircle2 className="h-7 w-7 mx-auto mb-2 text-emerald-500" />
-                        All products are well stocked!
+                      <div className="text-center py-10">
+                        <div className="h-12 w-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mx-auto mb-2">
+                          <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground">All products well stocked</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">No items need urgent restocking</p>
                       </div>
                     ) : (
-                      <div className="space-y-1 max-h-72 overflow-y-auto scrollbar-thin">
+                      <div className="space-y-1 max-h-80 overflow-y-auto scrollbar-thin">
                         {lowStockProducts.map((p) => (
-                          <div key={p._id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                          <div key={p._id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                             <ProductThumb url={p.imageUrl} name={p.name} size="sm" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium truncate">{p.name}</p>
-                              <p className="text-[10px] text-muted-foreground">
+                              <p className="text-sm font-medium truncate">{p.name}</p>
+                              <p className="text-[11px] text-muted-foreground">
                                 {p.stock} / {p.lowStockThreshold} units
                               </p>
                             </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[p.status] || 'bg-gray-400')} />
-                              <span className="text-[10px] text-muted-foreground">{STATUS_LABEL[p.status] || p.status}</span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className={cn('h-2 w-2 rounded-full', STATUS_DOT[p.status] || 'bg-gray-400')} />
+                              <span className="text-[11px] text-muted-foreground">{STATUS_LABEL[p.status] || p.status}</span>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 px-2 text-[10px] text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                                className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                                 onClick={() => openQuickRestock(p, p.lowStockThreshold * 2 - p.stock)}
+                                title="Quick restock"
                               >
-                                <Plus className="h-3 w-3" />
+                                <Plus className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </div>
@@ -1156,44 +1221,49 @@ export default function SellerInventoryPage() {
 
                 {/* Recent Movements */}
                 <Card className="overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+                  <div className="flex items-center justify-between px-4 py-3.5 border-b bg-muted/40">
                     <div className="flex items-center gap-2">
-                      <History className="h-4 w-4 text-primary" />
+                      <div className="h-7 w-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
+                        <History className="h-4 w-4 text-emerald-600" />
+                      </div>
                       <h3 className="text-sm font-semibold">Recent Stock Movements</h3>
                     </div>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 px-2 text-[10px]"
+                      className="h-7 text-xs"
                       onClick={() => setActiveTab('movements')}
                     >
                       View All
                     </Button>
                   </div>
-                  <div className="p-2">
+                  <div className="p-3">
                     {recentMovements.length === 0 ? (
-                      <div className="text-center py-8 text-xs text-muted-foreground">
-                        <Inbox className="h-7 w-7 mx-auto mb-2 opacity-40" />
-                        No movements yet
+                      <div className="text-center py-10">
+                        <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-2">
+                          <Inbox className="h-6 w-6 text-muted-foreground/50" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground">No movements yet</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Stock changes will appear here</p>
                       </div>
                     ) : (
-                      <div className="space-y-1 max-h-72 overflow-y-auto scrollbar-thin">
+                      <div className="space-y-1 max-h-80 overflow-y-auto scrollbar-thin">
                         {recentMovements.map((m) => (
-                          <div key={m._id} className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                          <div key={m._id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                             <div className="flex-shrink-0 mt-0.5">
                               {movementTypeBadge(m.type)}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium truncate">{m.productName}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                <span className={m.quantityChange > 0 ? 'text-emerald-600' : 'text-red-600'}>
+                              <p className="text-sm font-medium truncate">{m.productName}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                <span className={cn('font-medium', m.quantityChange > 0 ? 'text-emerald-600' : 'text-red-600')}>
                                   {m.quantityChange > 0 ? '+' : ''}{m.quantityChange}
                                 </span>
-                                {' '}{m.reason ? `· ${m.reason}` : ''}
+                                {m.reason ? ` · ${m.reason}` : ''}
                               </p>
-                              <p className="text-[9px] text-muted-foreground/70">{formatRelative(m.createdAt)}</p>
+                              <p className="text-[10px] text-muted-foreground/70">{formatRelative(m.createdAt)}</p>
                             </div>
-                            <div className="text-[10px] text-muted-foreground text-right flex-shrink-0 font-mono">
+                            <div className="text-[11px] text-muted-foreground text-right flex-shrink-0 font-mono">
                               {m.stockBefore}→{m.stockAfter}
                             </div>
                           </div>
@@ -1208,28 +1278,28 @@ export default function SellerInventoryPage() {
         </TabsContent>
 
         {/* ===================== LIST TAB ===================== */}
-        <TabsContent value="list" className="space-y-3 mt-4">
-          {/* Compact toolbar: search + filters in one row */}
-          <div className="flex flex-col sm:flex-row gap-2">
+        <TabsContent value="list" className="space-y-4 mt-4">
+          {/* ── Filter Toolbar ── */}
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name, SKU, or brand..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setListPage(1) }}
-                className="pl-9 h-9 rounded-xl"
+                className="pl-10 h-10 rounded-lg bg-card"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setListPage(1) }}>
-              <SelectTrigger className="w-full sm:w-40 h-9 rounded-xl">
+              <SelectTrigger className="w-full sm:w-44 h-10 rounded-lg">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -1241,7 +1311,7 @@ export default function SellerInventoryPage() {
               </SelectContent>
             </Select>
             <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="w-full sm:w-44 h-9 rounded-xl">
+              <SelectTrigger className="w-full sm:w-48 h-10 rounded-lg">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -1254,74 +1324,100 @@ export default function SellerInventoryPage() {
             </Select>
           </div>
 
+          {/* ── Inventory Table ── */}
           <Card className="overflow-hidden">
             {loadingList ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             ) : items.length === 0 ? (
-              <div className="text-center py-12 text-sm text-muted-foreground">
-                <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                No products found
+              <div className="text-center py-20">
+                <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                  <Inbox className="h-8 w-8 text-muted-foreground/50" />
+                </div>
+                <p className="text-base font-semibold text-foreground mb-1">No products found</p>
+                <p className="text-sm text-muted-foreground">
+                  {search || statusFilter !== 'all'
+                    ? 'Try adjusting your filters or search query.'
+                    : 'Add products to start tracking inventory.'}
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="min-w-[200px] h-9 text-[11px]">Product</TableHead>
-                      <TableHead className="h-9 text-[11px]">SKU</TableHead>
-                      <TableHead className="text-right h-9 text-[11px]">Stock</TableHead>
-                      <TableHead className="text-right h-9 text-[11px]">Avail.</TableHead>
-                      <TableHead className="text-right h-9 text-[11px]">Value</TableHead>
-                      <TableHead className="h-9 text-[11px]">Status</TableHead>
-                      <TableHead className="text-right h-9 text-[11px]">Actions</TableHead>
+                    <TableRow className="hover:bg-transparent border-b">
+                      <TableHead className="min-w-[280px] h-11 text-xs font-semibold text-muted-foreground">Product</TableHead>
+                      <TableHead className="text-right h-11 text-xs font-semibold text-muted-foreground">Stock</TableHead>
+                      <TableHead className="text-right h-11 text-xs font-semibold text-muted-foreground">Available</TableHead>
+                      <TableHead className="text-right h-11 text-xs font-semibold text-muted-foreground">Value</TableHead>
+                      <TableHead className="h-11 text-xs font-semibold text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-right h-11 text-xs font-semibold text-muted-foreground">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {items.map((item) => (
-                      <TableRow key={item._id} className="h-12">
+                      <TableRow key={item._id} className="h-16 border-b last:border-0">
                         <TableCell>
-                          <div className="flex items-center gap-2.5">
-                            <ProductThumb url={item.imageUrl} name={item.name} size="sm" />
+                          <div className="flex items-center gap-3">
+                            <ProductThumb url={item.imageUrl} name={item.name} size="md" />
                             <div className="min-w-0">
-                              <p className="text-xs font-medium truncate max-w-[180px]">{item.name}</p>
-                              <p className="text-[10px] text-muted-foreground">{item.category}</p>
+                              <p className="text-sm font-medium text-foreground truncate max-w-[260px]">{item.name}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {item.category}{item.sku ? ` · ${item.sku}` : ''}
+                              </p>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="font-mono text-[10px] text-muted-foreground">{item.sku || '—'}</TableCell>
                         <TableCell className="text-right">
                           <span className={cn(
-                            'text-xs font-semibold',
+                            'text-sm font-bold',
                             item.status === 'out_of_stock' && 'text-red-600',
                             item.status === 'low_stock' && 'text-amber-600',
+                            (item.status === 'in_stock' || item.status === 'unlimited') && 'text-foreground',
                           )}>
                             {item.trackInventory ? item.stock : '∞'}
                           </span>
                           {item.reservedStock > 0 && (
-                            <span className="block text-[9px] text-amber-600/70">−{item.reservedStock} res</span>
+                            <span className="block text-[10px] text-amber-600/80 mt-0.5">{item.reservedStock} reserved</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                          {item.trackInventory ? item.availableStock : '∞'}
+                        <TableCell className="text-right">
+                          <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                            {item.trackInventory ? item.availableStock : '∞'}
+                          </span>
                         </TableCell>
-                        <TableCell className="text-right text-xs">{fmtPrice(item.stockValue, 0)}</TableCell>
+                        <TableCell className="text-right text-sm font-semibold text-foreground">{fmtPrice(item.stockValue, 0)}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1.5">
-                            <span className={cn('h-1.5 w-1.5 rounded-full flex-shrink-0', STATUS_DOT[item.status] || 'bg-gray-400')} />
-                            <span className="text-[10px] text-muted-foreground">{STATUS_LABEL[item.status] || item.status}</span>
-                          </div>
+                          <span className={cn(
+                            'inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-medium',
+                            item.status === 'in_stock' && 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400',
+                            item.status === 'low_stock' && 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400',
+                            item.status === 'out_of_stock' && 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400',
+                            item.status === 'unlimited' && 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400',
+                          )}>
+                            <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[item.status] || 'bg-gray-400')} />
+                            {STATUS_LABEL[item.status] || item.status}
+                          </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openSettingsDialog(item)}
+                              className="h-8 w-8 p-0"
+                              title="Inventory settings (reorder, cost, warehouse, supplier)"
+                            >
+                              <Settings2 className="h-3.5 w-3.5" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => openAdjustDialog(item)}
-                              className="h-7 px-2 text-[10px] gap-1"
+                              className="h-8 px-3 text-xs gap-1.5"
                             >
-                              <Pencil className="h-3 w-3" />
+                              <Pencil className="h-3.5 w-3.5" />
                               Adjust
                             </Button>
                             <Button
@@ -1329,9 +1425,9 @@ export default function SellerInventoryPage() {
                               variant="default"
                               onClick={() => openQuickRestock(item)}
                               disabled={!item.trackInventory}
-                              className="h-7 px-2 text-[10px] gap-1 bg-emerald-500 hover:bg-emerald-600"
+                              className="h-8 px-3 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700"
                             >
-                              <Plus className="h-3 w-3" />
+                              <Plus className="h-3.5 w-3.5" />
                               Restock
                             </Button>
                           </div>
@@ -1411,10 +1507,13 @@ export default function SellerInventoryPage() {
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : alerts.length === 0 ? (
-            <Card className="p-8">
-              <div className="text-center text-sm text-muted-foreground">
-                <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
-                No active alerts. All stock levels are healthy.
+            <Card className="p-12">
+              <div className="text-center">
+                <div className="h-14 w-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle2 className="h-7 w-7 text-emerald-500" />
+                </div>
+                <p className="text-sm font-medium text-foreground mb-1">No active alerts</p>
+                <p className="text-xs text-muted-foreground">All stock levels are healthy</p>
               </div>
             </Card>
           ) : (
@@ -2337,6 +2436,180 @@ export default function SellerInventoryPage() {
             >
               {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
               Apply Restock
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===================== INVENTORY SETTINGS DIALOG ===================== */}
+      <Dialog open={!!settingsItem} onOpenChange={(open) => !open && setSettingsItem(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-primary" />
+              Inventory Settings
+            </DialogTitle>
+            <DialogDescription>
+              Configure SKU-level inventory parameters for smart reorder alerts, forecasting, and valuation.
+            </DialogDescription>
+          </DialogHeader>
+          {settingsItem && (
+            <div className="space-y-4 py-2">
+              {/* Product info */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <div className="h-10 w-10 rounded-md overflow-hidden bg-background flex-shrink-0">
+                  {settingsItem.imageUrl && (
+                    <img src={settingsItem.imageUrl} alt={settingsItem.name} className="h-full w-full object-cover" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{settingsItem.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Current stock: {settingsItem.trackInventory ? settingsItem.stock : '∞'} units
+                    {settingsItem.sku ? ` · ${settingsItem.sku}` : ''}
+                  </p>
+                </div>
+                <Badge variant="secondary" className="text-[10px]">{settingsItem.category}</Badge>
+              </div>
+
+              {/* Section: Stock Alerts & Reorder */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Stock Alerts & Reorder</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lowStockThreshold" className="text-xs">Low Stock Threshold</Label>
+                    <Input
+                      id="lowStockThreshold"
+                      type="number"
+                      min={0}
+                      value={settingsForm.lowStockThreshold}
+                      onChange={(e) => setSettingsForm(prev => ({ ...prev, lowStockThreshold: Math.max(0, Number(e.target.value)) }))}
+                      className="h-9"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Alert when stock falls to this level</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="reorderPoint" className="text-xs">Reorder Point</Label>
+                    <Input
+                      id="reorderPoint"
+                      type="number"
+                      min={0}
+                      value={settingsForm.reorderPoint}
+                      onChange={(e) => setSettingsForm(prev => ({ ...prev, reorderPoint: Math.max(0, Number(e.target.value)) }))}
+                      className="h-9"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Trigger reorder alert at this stock level</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="safetyStock" className="text-xs">Safety Stock</Label>
+                    <Input
+                      id="safetyStock"
+                      type="number"
+                      min={0}
+                      value={settingsForm.safetyStock}
+                      onChange={(e) => setSettingsForm(prev => ({ ...prev, safetyStock: Math.max(0, Number(e.target.value)) }))}
+                      className="h-9"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Buffer stock added to reorder calculations</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="reorderQuantity" className="text-xs">Reorder Quantity</Label>
+                    <Input
+                      id="reorderQuantity"
+                      type="number"
+                      min={0}
+                      value={settingsForm.reorderQuantity}
+                      onChange={(e) => setSettingsForm(prev => ({ ...prev, reorderQuantity: Math.max(0, Number(e.target.value)) }))}
+                      className="h-9"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Default units to order when reordering</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Procurement & Storage */}
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Package className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procurement & Storage</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="leadTimeDays" className="text-xs">Lead Time (days)</Label>
+                    <Input
+                      id="leadTimeDays"
+                      type="number"
+                      min={0}
+                      value={settingsForm.leadTimeDays}
+                      onChange={(e) => setSettingsForm(prev => ({ ...prev, leadTimeDays: Math.max(0, Number(e.target.value)) }))}
+                      className="h-9"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Supplier delivery lead time</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="supplier" className="text-xs">Supplier</Label>
+                    <Input
+                      id="supplier"
+                      value={settingsForm.supplier}
+                      onChange={(e) => setSettingsForm(prev => ({ ...prev, supplier: e.target.value }))}
+                      placeholder="e.g., ABC Distributors"
+                      className="h-9"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Primary supplier for this product</p>
+                  </div>
+                  <div className="space-y-1.5 col-span-2">
+                    <Label htmlFor="warehouseLocation" className="text-xs">Warehouse Location</Label>
+                    <Input
+                      id="warehouseLocation"
+                      value={settingsForm.warehouseLocation}
+                      onChange={(e) => setSettingsForm(prev => ({ ...prev, warehouseLocation: e.target.value }))}
+                      placeholder="e.g., A1-B3-Shelf-12"
+                      className="h-9"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Bin/shelf location for picking</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Financial */}
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <BadgeDollarSign className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Financial</span>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="costPrice" className="text-xs">Cost Price (per unit)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
+                    <Input
+                      id="costPrice"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={settingsForm.costPrice}
+                      onChange={(e) => setSettingsForm(prev => ({ ...prev, costPrice: Math.max(0, Number(e.target.value)) }))}
+                      className="pl-7 h-9"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Used for inventory valuation and profit calculation</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSettingsItem(null)} disabled={actionLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveSettings}
+              disabled={actionLoading}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Settings
             </Button>
           </DialogFooter>
         </DialogContent>

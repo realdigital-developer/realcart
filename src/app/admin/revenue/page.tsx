@@ -17,6 +17,9 @@ import {
   CreditCard,
   Store,
   Calendar,
+  Download,
+  Percent,
+  Target,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -98,6 +101,7 @@ interface RevenueReport {
   onlineOrders: number
   onlineRevenue: number
   monthlyBreakdown: MonthlyBreakdown[]
+  dailyBreakdown: Array<{ date: string; revenue: number; commission: number; orders: number }>
   sellerWiseBreakdown: SellerBreakdown[]
 }
 
@@ -119,6 +123,18 @@ function toDateInputValue(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+/**
+ * Safely parse a date string (from <input type="date">) into a valid Date.
+ * Returns null if the input is empty, undefined, or produces an Invalid Date.
+ * This prevents RangeError: Invalid time value when calling .toISOString().
+ */
+function safeParseDate(value: string): Date | null {
+  if (!value || typeof value !== 'string' || value.trim() === '') return null
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return null
+  return d
 }
 
 function defaultStartDate(): Date {
@@ -186,25 +202,55 @@ export default function RevenuePage() {
 /*  Revenue Content                                                    */
 /* ------------------------------------------------------------------ */
 
+/** Date presets for quick filtering */
+const DATE_PRESETS = [
+  { label: '7D', days: 7 },
+  { label: '30D', days: 30 },
+  { label: '90D', days: 90 },
+  { label: 'This Month', custom: 'thisMonth' },
+  { label: 'This Year', custom: 'thisYear' },
+] as const
+
 function RevenueContent() {
   const [report, setReport] = useState<RevenueReport | null>(null)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [activePreset, setActivePreset] = useState<string>('30D')
 
-  const [startDate, setStartDate] = useState<string>(
-    toDateInputValue(defaultStartDate()),
-  )
+  // Default to last 30 days (not just current month) for meaningful chart data
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 29) // 30 days including today
+    return toDateInputValue(d)
+  })
   const [endDate, setEndDate] = useState<string>(toDateInputValue(new Date()))
 
   const fetchReport = useCallback(async () => {
     try {
       setRefreshing(true)
       setError(null)
+
+      // ── Validate dates before using them ──
+      // When a user clears a date input, the value becomes '' and
+      // new Date('') produces an Invalid Date. Calling .toISOString()
+      // on it throws RangeError: Invalid time value.
+      const start = safeParseDate(startDate)
+      const end = safeParseDate(endDate)
+      if (!start || !end) {
+        setError('Please select valid start and end dates.')
+        setReport(null)
+        return
+      }
+      if (start > end) {
+        setError('Start date cannot be after end date.')
+        setReport(null)
+        return
+      }
+
       const params = new URLSearchParams()
-      params.set('startDate', new Date(startDate).toISOString())
+      params.set('startDate', start.toISOString())
       // End date inclusive: set to end of day
-      const end = new Date(endDate)
       end.setHours(23, 59, 59, 999)
       params.set('endDate', end.toISOString())
 
@@ -228,16 +274,96 @@ function RevenueContent() {
     fetchReport()
   }, [startDate, endDate])
 
-  /* ── Chart data ── */
-  const monthlyChartData = useMemo(() => {
-    if (!report?.monthlyBreakdown) return []
-    return report.monthlyBreakdown.map((item) => ({
-      name: item.month,
+  /* ── Date preset handler ── */
+  const applyPreset = (preset: string) => {
+    setActivePreset(preset)
+    const now = new Date()
+    if (preset === 'thisMonth') {
+      setStartDate(toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1)))
+      setEndDate(toDateInputValue(now))
+    } else if (preset === 'thisYear') {
+      setStartDate(toDateInputValue(new Date(now.getFullYear(), 0, 1)))
+      setEndDate(toDateInputValue(now))
+    } else {
+      const days = parseInt(preset.replace('D', ''))
+      const d = new Date()
+      d.setDate(d.getDate() - (days - 1))
+      setStartDate(toDateInputValue(d))
+      setEndDate(toDateInputValue(now))
+    }
+  }
+
+  /* ── CSV export ── */
+  const handleExportCSV = () => {
+    if (!report) return
+    const rows = [
+      ['Metric', 'Value'],
+      ['Period Start', report.period.start],
+      ['Period End', report.period.end],
+      ['Gross Order Value', report.grossOrderValue],
+      ['Taxable Value', report.totalTaxableValue],
+      ['Total GST', report.totalGst],
+      ['CGST', report.totalCgst],
+      ['SGST', report.totalSgst],
+      ['IGST', report.totalIgst],
+      ['Cess', report.totalCess],
+      ['Commission', report.totalCommission],
+      ['GST on Commission', report.totalGstOnCommission],
+      ['Delivery Fees', report.totalDeliveryFees],
+      ['COD Fee', report.totalCodFee],
+      ['Platform Fee', report.totalPlatformFee],
+      ['TDS Deducted', report.totalTds],
+      ['TCS Collected', report.totalTcs],
+      ['Seller Earnings', report.totalSellerEarnings],
+      ['Total Refunds', report.totalRefunds],
+      ['Refund Count', report.refundCount],
+      ['Platform Revenue', report.platformRevenue],
+      ['Platform Expenses', report.platformExpenses],
+      ['Platform Profit', report.platformProfit],
+      ['Total Orders', report.totalOrders],
+      ['Delivered Orders', report.deliveredOrders],
+      ['Cancelled Orders', report.cancelledOrders],
+      ['Returned Orders', report.returnedOrders],
+      ['COD Orders', report.codOrders],
+      ['COD Revenue', report.codRevenue],
+      ['Online Orders', report.onlineOrders],
+      ['Online Revenue', report.onlineRevenue],
+      ['Average Order Value', report.totalOrders > 0 ? report.grossOrderValue / report.totalOrders : 0],
+      ['Take Rate (%)', report.grossOrderValue > 0 ? (report.platformRevenue / report.grossOrderValue) * 100 : 0],
+      ['', ''],
+      ['Seller Breakdown', ''],
+      ['Seller', 'Store', 'Orders', 'Gross Sales', 'Commission', 'Net Payout'],
+      ...report.sellerWiseBreakdown.map(s => [s.sellerName, s.storeName, s.orderCount, s.grossSales, s.commission, s.netPayout]),
+    ]
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `revenue-report-${startDate}_to_${endDate}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  /* ── Chart data: use daily breakdown for trend chart ── */
+  const trendChartData = useMemo(() => {
+    if (!report?.dailyBreakdown || report.dailyBreakdown.length === 0) {
+      // Fallback to monthly if no daily data
+      if (!report?.monthlyBreakdown) return []
+      return report.monthlyBreakdown.map((item) => ({
+        name: item.month,
+        revenue: Math.round(item.revenue),
+        commission: Math.round(item.commission),
+        orders: item.orders,
+      }))
+    }
+    return report.dailyBreakdown.map((item) => ({
+      name: item.date.slice(5), // MM-DD for compact display
       revenue: Math.round(item.revenue),
       commission: Math.round(item.commission),
       orders: item.orders,
     }))
-  }, [report?.monthlyBreakdown])
+  }, [report?.dailyBreakdown, report?.monthlyBreakdown])
 
   const paymentMethodChartData = useMemo(() => {
     if (!report) return []
@@ -261,6 +387,12 @@ function RevenueContent() {
       .sort((a, b) => (b.grossSales || 0) - (a.grossSales || 0))
       .slice(0, 10)
   }, [report?.sellerWiseBreakdown])
+
+  /* ── Computed KPIs ── */
+  const avgOrderValue = report && report.totalOrders > 0 ? report.grossOrderValue / report.totalOrders : 0
+  const takeRate = report && report.grossOrderValue > 0 ? (report.platformRevenue / report.grossOrderValue) * 100 : 0
+  const refundRate = report && report.grossOrderValue > 0 ? (report.totalRefunds / report.grossOrderValue) * 100 : 0
+  const grossSellerSales = topSellers.reduce((sum, s) => sum + (s.grossSales || 0), 0)
 
   /* ── Loading skeleton ── */
   if (loadingData) {
@@ -309,66 +441,84 @@ function RevenueContent() {
       {/* ── Page Header ── */}
       <motion.div
         variants={fadeInUp}
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        className="flex flex-col gap-4"
       >
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Revenue Management</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Gross sales, platform earnings, GST collected &amp; seller payouts
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Revenue Management</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Gross sales, platform earnings, GST collected &amp; seller payouts
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!report} className="h-9 gap-2">
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </Button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={fetchReport}
+              disabled={refreshing}
+              className={cn(
+                'flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors',
+                refreshing && 'animate-spin',
+              )}
+              title="Refresh"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </motion.button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+
+        {/* Date presets + custom range */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+            {DATE_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => applyPreset(preset.label)}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
+                  activePreset === preset.label
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                )}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
           <div className="flex items-center gap-2">
-            <Label htmlFor="rev-start" className="text-xs text-muted-foreground sr-only">
-              Start date
-            </Label>
             <div className="relative">
               <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
               <Input
                 id="rev-start"
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => { setStartDate(e.target.value); setActivePreset('') }}
                 className="pl-8 h-9 text-xs bg-muted/50 border-0"
               />
             </div>
-          </div>
-          <span className="text-xs text-muted-foreground">to</span>
-          <div className="flex items-center gap-2">
-            <Label htmlFor="rev-end" className="text-xs text-muted-foreground sr-only">
-              End date
-            </Label>
+            <span className="text-xs text-muted-foreground">to</span>
             <div className="relative">
               <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
               <Input
                 id="rev-end"
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => { setEndDate(e.target.value); setActivePreset('') }}
                 className="pl-8 h-9 text-xs bg-muted/50 border-0"
               />
             </div>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={fetchReport}
-            disabled={refreshing}
-            className={cn(
-              'flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors',
-              refreshing && 'animate-spin',
-            )}
-            title="Refresh"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </motion.button>
         </div>
       </motion.div>
 
-      {/* ── Summary Stat Cards ── */}
+      {/* ── Summary Stat Cards (9 KPIs) ── */}
       <motion.div
         variants={staggerContainer}
-        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3"
       >
         <StatCard
           title="Gross Revenue"
@@ -388,6 +538,33 @@ function RevenueContent() {
           subtitle="Commission + fees"
         />
         <StatCard
+          title="Platform Profit"
+          value={formatINR(report.platformProfit)}
+          icon={Wallet}
+          iconBg="bg-emerald-500/10"
+          iconColor="text-emerald-600 dark:text-emerald-400"
+          accentBar="bg-emerald-500"
+          subtitle="After refunds & expenses"
+        />
+        <StatCard
+          title="Avg Order Value"
+          value={formatINR(avgOrderValue)}
+          icon={Target}
+          iconBg="bg-violet-500/10"
+          iconColor="text-violet-600 dark:text-violet-400"
+          accentBar="bg-violet-500"
+          subtitle={`${report.totalOrders} orders`}
+        />
+        <StatCard
+          title="Take Rate"
+          value={`${takeRate.toFixed(1)}%`}
+          icon={Percent}
+          iconBg="bg-indigo-500/10"
+          iconColor="text-indigo-600 dark:text-indigo-400"
+          accentBar="bg-indigo-500"
+          subtitle="Platform / Gross"
+        />
+        <StatCard
           title="GST Collected"
           value={formatINR(report.totalGst)}
           icon={Receipt}
@@ -402,15 +579,7 @@ function RevenueContent() {
           iconBg="bg-rose-500/10"
           iconColor="text-rose-600 dark:text-rose-400"
           accentBar="bg-rose-500"
-          subtitle={`${report.refundCount} refunds`}
-        />
-        <StatCard
-          title="Platform Profit"
-          value={formatINR(report.platformProfit)}
-          icon={Wallet}
-          iconBg="bg-emerald-500/10"
-          iconColor="text-emerald-600 dark:text-emerald-400"
-          accentBar="bg-emerald-500"
+          subtitle={`${report.refundCount} refunds · ${refundRate.toFixed(1)}%`}
         />
         <StatCard
           title="Total Orders"
@@ -421,14 +590,23 @@ function RevenueContent() {
           accentBar="bg-sky-500"
           subtitle={`${report.deliveredOrders} delivered`}
         />
+        <StatCard
+          title="Seller Earnings"
+          value={formatINR(report.totalSellerEarnings)}
+          icon={Store}
+          iconBg="bg-purple-500/10"
+          iconColor="text-purple-600 dark:text-purple-400"
+          accentBar="bg-purple-500"
+          subtitle={`${topSellers.length} sellers`}
+        />
       </motion.div>
 
-      {/* ── Charts: Monthly Revenue + Payment Method ── */}
+      {/* ── Charts: Revenue Trend + Payment Method ── */}
       <motion.div
         variants={staggerContainer}
         className="grid grid-cols-1 lg:grid-cols-3 gap-4"
       >
-        {/* Monthly Revenue Area Chart */}
+        {/* Revenue Trend Area Chart (daily or monthly) */}
         <motion.div variants={fadeInUp} className="lg:col-span-2">
           <Card className="border-border/60 bg-card/50 backdrop-blur-sm h-full">
             <CardHeader className="pb-2">
@@ -441,17 +619,17 @@ function RevenueContent() {
                     Revenue Trend
                   </CardTitle>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Monthly revenue &amp; commission for selected period
+                    Daily revenue &amp; commission for selected period
                   </p>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="pb-2">
-              {monthlyChartData.length > 0 ? (
+              {trendChartData.length > 0 ? (
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={monthlyChartData}
+                      data={trendChartData}
                       margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                     >
                       <defs>
@@ -511,7 +689,7 @@ function RevenueContent() {
                 </div>
               ) : (
                 <div className="h-72 flex items-center justify-center text-muted-foreground text-sm">
-                  No revenue trend data available for this period
+                  No revenue data available for this period
                 </div>
               )}
             </CardContent>
@@ -609,6 +787,74 @@ function RevenueContent() {
             </CardContent>
           </Card>
         </motion.div>
+      </motion.div>
+
+      {/* ── Revenue Breakdown (Platform P&L) ── */}
+      <motion.div variants={fadeInUp}>
+        <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-500/10">
+                <Wallet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Platform Profit &amp; Loss</CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">How platform profit is calculated</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {/* Revenue sources */}
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Commission</p>
+                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatINR(report.totalCommission)}</p>
+              </div>
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">GST on Commission</p>
+                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatINR(report.totalGstOnCommission)}</p>
+              </div>
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">COD Fee</p>
+                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatINR(report.totalCodFee)}</p>
+              </div>
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Platform Fee</p>
+                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatINR(report.totalPlatformFee)}</p>
+              </div>
+              {/* Deductions */}
+              <div className="rounded-lg bg-rose-50 dark:bg-rose-950/20 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Refunds</p>
+                <p className="text-sm font-bold text-rose-600 dark:text-rose-400 mt-1">−{formatINR(report.totalRefunds)}</p>
+              </div>
+              <div className="rounded-lg bg-rose-50 dark:bg-rose-950/20 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Expenses</p>
+                <p className="text-sm font-bold text-rose-600 dark:text-rose-400 mt-1">−{formatINR(report.platformExpenses)}</p>
+              </div>
+            </div>
+            {/* P&L summary bar */}
+            <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Platform Revenue</p>
+                  <p className="text-base font-bold text-teal-600 dark:text-teal-400">{formatINR(report.platformRevenue)}</p>
+                </div>
+                <div className="text-muted-foreground">−</div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Refunds + Expenses</p>
+                  <p className="text-base font-bold text-rose-600 dark:text-rose-400">{formatINR(report.totalRefunds + report.platformExpenses)}</p>
+                </div>
+                <div className="text-muted-foreground">=</div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Platform Profit</p>
+                  <p className={cn('text-base font-bold', report.platformProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+                    {formatINR(report.platformProfit)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* ── Two-Column: Order Status Summary + Seller Breakdown ── */}
@@ -717,6 +963,9 @@ function RevenueContent() {
                           Gross Sales
                         </TableHead>
                         <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
+                          Share
+                        </TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
                           Commission
                         </TableHead>
                         <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right pr-6">
@@ -725,7 +974,9 @@ function RevenueContent() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {topSellers.map((seller, idx) => (
+                      {topSellers.map((seller, idx) => {
+                        const sharePct = grossSellerSales > 0 ? ((seller.grossSales / grossSellerSales) * 100) : 0
+                        return (
                         <TableRow
                           key={`${seller.sellerId}-${idx}`}
                           className="hover:bg-muted/20 transition-colors"
@@ -744,6 +995,14 @@ function RevenueContent() {
                           <TableCell className="text-sm font-semibold tabular-nums text-right">
                             {formatCurrency(seller.grossSales, 0)}
                           </TableCell>
+                          <TableCell className="text-sm tabular-nums text-right">
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="text-muted-foreground">{sharePct.toFixed(1)}%</span>
+                              <span className="w-12 h-1.5 rounded-full bg-muted overflow-hidden">
+                                <span className="block h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, sharePct)}%` }} />
+                              </span>
+                            </span>
+                          </TableCell>
                           <TableCell className="text-sm tabular-nums text-right text-muted-foreground">
                             {formatCurrency(seller.commission, 0)}
                           </TableCell>
@@ -751,7 +1010,8 @@ function RevenueContent() {
                             {formatCurrency(seller.netPayout, 0)}
                           </TableCell>
                         </TableRow>
-                      ))}
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </div>
