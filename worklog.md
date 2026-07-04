@@ -5653,3 +5653,39 @@ Stage Summary:
 - **Clarification**: "Return Pickup Fee" and "RTO Charge" are DIFFERENT — pickupFee is delivery boy compensation (platform pays), rtoCharge is the seller's return fee (seller pays platform).
 - **Fix**: Removed the dead "Return Pickup Fee" admin setting (was configurable but never applied). Only "RTO Charge" remains in admin settings as the seller-facing return charge. The internal delivery boy pickup fee constant is preserved.
 - **No damage**: Only 2 files modified (1 insertion, 24 deletions). All delivery boy earnings logic, RTO charge logic, and existing functionality preserved. Lint: 0 errors.
+
+---
+Task ID: fix-product-form-buttons
+Agent: main-orchestrator
+Task: Fix why action buttons (Back, Next, Save as Draft, Submit for Review) are not showing properly in the seller panel products add/edit form. Implement proper space management.
+
+Work Log:
+- **Problem identified via VLM**: On mobile (375px), the form footer buttons were cramped and "Submit for Review" was truncated to "Submit for R". The layout used a single `flex` row with `justify-between` that couldn't accommodate 4 buttons on small screens.
+- **Code study**: Read the form footer at `src/app/seller/products/page.tsx` lines 2730-2756. Found:
+  * Left group: Back (conditional, formStep > 1) + Next (conditional, formStep < 7)
+  * Right group: Save as Draft + Submit for Review
+  * All buttons had full text labels with no responsive truncation
+  * No `flex-col` to `flex-row` responsive behavior
+- **Fix applied** (1 file — `src/app/seller/products/page.tsx`, 16 insertions, 10 deletions):
+  1. **Container**: Changed from `flex items-center justify-between` to `flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2` — stacks vertically on mobile, horizontally on desktop.
+  2. **Button groups**: Both navigation and action groups use `flex-1 sm:flex-none` so buttons fill width equally on mobile, auto-size on desktop.
+  3. **Back button**: Text hidden on mobile (`hidden sm:inline`), shows only the chevron icon — saves space.
+  4. **Save as Draft**: Shows "Draft" on mobile, "Save as Draft" on desktop (`sm:hidden` / `hidden sm:inline`).
+  5. **Submit for Review**: Shows "Submit" on mobile, "Submit for Review" on desktop.
+  6. **All buttons**: Consistent `h-9` height, `gap-1.5`, `justify-center sm:justify-start`, `text-xs sm:text-sm`.
+  7. **Submit for Review**: Added `bg-emerald-600 hover:bg-emerald-700` for primary action emphasis.
+  8. **Padding**: `p-3 sm:p-4` for tighter mobile spacing.
+- **End-to-end verification** (Agent Browser + VLM):
+  * **Mobile step 1** (375px): Next, Draft, Submit all visible — no truncation ✓
+  * **Mobile step 3** (375px): Back (icon), Next on top row; Draft, Submit on bottom row — all visible ✓
+  * **Desktop step 1** (1280px): Next, Save as Draft, Submit for Review — all visible, clean spacing ✓
+  * **Desktop step 3** (1280px): Back, Next, Save as Draft, Submit for Review — all 4 visible ✓
+  * VLM confirmed: "All action buttons visible, no truncation, properly spaced"
+  * No browser/console/dev-server errors
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `6b617b2` — 1 file changed, 16 insertions(+), 10 deletions(-).
+
+Stage Summary:
+- **Root cause fixed**: Form footer buttons now adapt to screen width — 2-row stacked layout on mobile with shortened labels, single-row layout on desktop with full labels. No button is ever truncated or hidden.
+- **Smart space management**: Mobile uses icon-only Back, shortened "Draft"/"Submit" labels, and flex-1 equal-width buttons. Desktop shows full labels with justify-between.
+- **No damage**: Only 1 file modified (16 insertions, 10 deletions). All form functionality (step navigation, save draft, submit for review) preserved. Lint: 0 errors.
