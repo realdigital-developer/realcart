@@ -64,10 +64,11 @@ export function getImageSearchConfig(): ImageSearchConfig {
   const algoliaAppId = ENV('ALGOLIA_APP_ID')
   const algoliaApiKey = ENV('ALGOLIA_API_KEY')
 
-  // Embedding dimension: Jina CLIP v2 returns 1024-dim. Fallback
-  // pseudo-embedding is 512-dim (deterministic hash-based).
+  // Embedding dimension: Jina CLIP v2 always returns 1024-dim, even in
+  // fallback mode we use 1024 so pseudo-embeddings are dimensionally
+  // compatible with any existing Jina embeddings in the index.
   const jinaModel = ENV('JINA_EMBEDDING_MODEL') || 'jina-clip-v2'
-  const jinaDimension = jinaApiKey ? 1024 : 512
+  const jinaDimension = 1024
 
   cachedConfig = {
     groq: {
