@@ -2571,15 +2571,16 @@ export function ProductDetailPage() {
 
             {/* 7. Quantity + Brand selector (same row) */}
             {currentInStock && (
-              <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-3 flex-wrap">
+              <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-4">
                 {product.brand && (
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium">Brand : </span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{product.brand}</span>
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Brand :</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{product.brand}</span>
+                  </div>
                 )}
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('productDetail.qty')}</span>
-                <div className="flex items-center gap-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-shrink-0">{t('productDetail.qty')}</span>
+                <div className="flex items-center gap-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden flex-shrink-0">
                   <button
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
                     disabled={quantity <= 1}
@@ -2606,11 +2607,9 @@ export function ProductDetailPage() {
 
             {/* Brand display when out of stock (quantity selector not shown) */}
             {!currentInStock && product.brand && (
-              <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  <span className="font-medium">Brand : </span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">{product.brand}</span>
-                </span>
+              <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-1.5">
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Brand :</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{product.brand}</span>
               </div>
             )}
 
