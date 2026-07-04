@@ -5451,3 +5451,38 @@ Stage Summary:
 - **Root cause fixed**: The dev server was not running (sandbox had been reset). Started it as a detached background process via subshell: `(bun run dev > dev.log 2>&1 &)`.
 - **Preview now works**: Port 3000 listening, HTTP 200 on `/`, `/admin`, `/seller`. Browser-verified homepage renders properly.
 - **No damage**: Zero source files modified. Operational fix only.
+
+---
+Task ID: fix-revenue-preset-error
+Agent: main-orchestrator
+Task: Fix why "Please select valid start and end dates" error shows when selecting This Month/This Year presets on the admin panel revenue page. Robust solution with double-check, no errors, no damage to existing UI/code.
+
+Work Log:
+- **Error reproduced**: Logged in as admin, navigated to `/admin/revenue`, clicked "This Month" preset → page showed "Please select valid start and end dates" error.
+- **Root cause identified**: String mismatch in `applyPreset()` function:
+  * `DATE_PRESETS` array defines labels as `'This Month'` and `'This Year'` (Title Case, with space).
+  * The button calls `applyPreset(preset.label)` — passes `'This Month'` / `'This Year'`.
+  * But `applyPreset()` checked for `preset === 'thisMonth'` and `preset === 'thisYear'` (camelCase, no space).
+  * The comparison never matched, so the code fell through to the `else` branch.
+  * In the else branch: `parseInt('This Month'.replace('D', ''))` = `parseInt('This Month')` = `NaN`.
+  * `d.setDate(d.getDate() - (NaN - 1))` = `d.setDate(getDate() - NaN)` → Invalid Date.
+  * `toDateInputValue(Invalid Date)` → `"NaN-NaN-NaN"` (invalid date string).
+  * `safeParseDate("NaN-NaN-NaN")` → `null` → "Please select valid start and end dates" error.
+- **Fix applied** (1 file — `src/app/admin/revenue/page.tsx`, 3 insertions, 2 deletions):
+  1. Changed string comparisons from `'thisMonth'`/`'thisYear'` to `'This Month'`/`'This Year'` to match the actual `DATE_PRESETS` labels.
+  2. Added NaN validation in the else branch (`if (isNaN(days) || days <= 0) return`) as a safety net to prevent Invalid Date if an unknown preset label is ever passed.
+- **End-to-end verification** (Agent Browser — all 5 presets tested):
+  * **This Month** → OK (was broken, now fixed). 9 stat cards visible with data. No error.
+  * **This Year** → OK (was broken, now fixed). 9 stat cards visible with data. No error.
+  * **7D** → OK. No error.
+  * **30D** → OK. No error.
+  * **90D** → OK. No error.
+  * **No console errors** in any scenario.
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `fe5ffa7` — 1 file changed, 3 insertions(+), 2 deletions(-).
+
+Stage Summary:
+- **Root cause fixed**: The `applyPreset` function now correctly matches the `'This Month'` and `'This Year'` preset labels (was checking for camelCase `'thisMonth'`/`'thisYear'` which never matched).
+- **Safety net added**: NaN validation in the else branch prevents Invalid Date if an unknown preset is ever passed.
+- **No damage**: Only 1 file modified (3 insertions, 2 deletions). All existing functionality (all 5 presets, stat cards, charts, P&L, seller table, CSV export) preserved. Lint: 0 errors.
+- Browser-verified end-to-end (all 5 presets tested, all pass without error).
