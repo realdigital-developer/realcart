@@ -5715,3 +5715,33 @@ Work Log:
 Stage Summary:
 - **Single-row layout**: All action buttons (< > Draft Submit) always appear in ONE row on all screen sizes. Back and Next are icon-only square buttons, Draft and Submit have short text labels.
 - **No damage**: Only 1 file modified (9 insertions, 13 deletions). All form functionality preserved. Lint: 0 errors.
+
+---
+Task ID: fix-upload-error-2
+Agent: main-orchestrator
+Task: Fix why "Upload Error" is showing in the seller panel products page. Robust solution with double-check, no errors, no damage to existing UI/code.
+
+Work Log:
+- **Root cause identified**: The dev log showed `POST /api/seller/products/upload 404` — the upload API route was returning 404 (Not Found). The route directory at `src/app/api/seller/products/upload/` was **missing** (lost during a sandbox reset). When the frontend `handleImageUpload` function called `fetch('/api/seller/products/upload', { method: 'POST', body: formDataObj })`, it received a 404, caught the error, and showed the "Upload Error" toast.
+- **Fix applied**: Recreated the missing route at `src/app/api/seller/products/upload/route.ts` (82 lines):
+  * **Authentication**: Uses `authenticateSeller(request)` — same as all other seller API routes.
+  * **File parsing**: Parses FormData to extract the 'file' field.
+  * **Validation**: Uses `validateImageFile()` from `@/lib/upload` to check file type (jpeg, png, webp, gif, bmp) and size (max ~3.1MB).
+  * **Cloudinary upload**: Uses `uploadToCloudinary()` from `@/lib/cloudinary` to upload to the `realcart/products` folder.
+  * **Unique public ID**: Generates `{sellerId}-{timestamp}-{random}` for uniqueness.
+  * **Response**: Returns `{ url, publicId }` — exactly what the frontend expects.
+  * **Runtime**: `nodejs` runtime, `force-dynamic` (no caching).
+  * **Error handling**: Proper error messages for auth failure (401), missing file (400), validation errors (400), and upload failures (500).
+- **End-to-end verification** (Agent Browser):
+  * **Route exists**: `POST /api/seller/products/upload` returns 401 (auth required) instead of 404 (missing) ✓
+  * **Upload works**: Logged in as seller, opened product form, navigated to Images step, uploaded a test PNG → `POST /api/seller/products/upload 200 in 1745ms` ✓
+  * **Image appeared**: 1 product image with Cloudinary URL in `realcart/products/` folder ✓
+  * **No error toast**: No "Upload Error" toast appeared ✓
+  * **No errors**: Browser `errors` — empty. Console — only pre-existing LCP warning (unrelated). Dev log — 200, no 500s. ✓
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `4fa7063` — 1 file created (82 lines). No existing code modified.
+
+Stage Summary:
+- **Root cause fixed**: The missing `/api/seller/products/upload` route has been recreated. Sellers can now upload product images without getting "Upload Error" toast.
+- **No damage**: Only 1 file created (82 lines, 0 deletions). No existing code modified. Lint: 0 errors.
+- Browser-verified end-to-end: upload returns 200, image appears in form, no errors.
