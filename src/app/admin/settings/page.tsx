@@ -1320,7 +1320,6 @@ const GST_RATE_OPTIONS = [0, 0.25, 5, 12, 18, 28] as const
 interface CommissionSettings {
   commissionRate: number
   deliveryFee: number
-  pickupFee: number
   rtoCharge: number
   returnWindowDays: number
   autoCancelHours: number
@@ -1330,7 +1329,6 @@ interface CommissionSettings {
 const DEFAULT_SETTINGS: CommissionSettings = {
   commissionRate: 10,
   deliveryFee: 40,
-  pickupFee: 30,
   rtoCharge: 50,
   returnWindowDays: 7,
   autoCancelHours: 48,
@@ -1361,20 +1359,9 @@ const commissionFields = [
     color: 'amber',
   },
   {
-    key: 'pickupFee' as const,
-    label: 'Return Pickup Fee',
-    description: 'Charged for return pickup',
-    suffix: '₹',
-    icon: IndianRupee,
-    min: 0,
-    max: 9999,
-    step: 1,
-    color: 'rose',
-  },
-  {
     key: 'rtoCharge' as const,
     label: 'RTO Charge (Return to Origin)',
-    description: 'Charged to seller on each return',
+    description: 'Charged to seller on each return (covers return logistics & processing)',
     suffix: '₹',
     icon: IndianRupee,
     min: 0,
@@ -1421,7 +1408,6 @@ function CommissionSettingsSection() {
         setSettings({
           commissionRate: data.commissionRate ?? DEFAULT_SETTINGS.commissionRate,
           deliveryFee: data.deliveryFee ?? DEFAULT_SETTINGS.deliveryFee,
-          pickupFee: data.pickupFee ?? DEFAULT_SETTINGS.pickupFee,
           rtoCharge: data.rtoCharge ?? DEFAULT_SETTINGS.rtoCharge,
           returnWindowDays: data.returnWindowDays ?? DEFAULT_SETTINGS.returnWindowDays,
           autoCancelHours: data.autoCancelHours ?? DEFAULT_SETTINGS.autoCancelHours,
@@ -1463,7 +1449,6 @@ function CommissionSettingsSection() {
         body: JSON.stringify({
           commissionRate: settings.commissionRate,
           deliveryFee: settings.deliveryFee,
-          pickupFee: settings.pickupFee,
           rtoCharge: settings.rtoCharge,
           returnWindowDays: settings.returnWindowDays,
           autoCancelHours: settings.autoCancelHours,

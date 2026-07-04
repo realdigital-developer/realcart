@@ -10,7 +10,6 @@ import { DEFAULT_CATEGORY_COMMISSIONS, type CategoryCommission } from '@/lib/fin
 const DEFAULT_COMMISSION = {
   commissionRate: 10,
   deliveryFee: 49,
-  pickupFee: 30,
   rtoCharge: 50,
   returnWindowDays: 7,
   autoCancelHours: 48,
@@ -45,7 +44,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       commissionRate: settings.commissionRate ?? DEFAULT_COMMISSION.commissionRate,
       deliveryFee: settings.deliveryFee ?? DEFAULT_COMMISSION.deliveryFee,
-      pickupFee: settings.pickupFee ?? DEFAULT_COMMISSION.pickupFee,
       rtoCharge: settings.rtoCharge ?? DEFAULT_COMMISSION.rtoCharge,
       returnWindowDays: settings.returnWindowDays ?? DEFAULT_COMMISSION.returnWindowDays,
       autoCancelHours: settings.autoCancelHours ?? DEFAULT_COMMISSION.autoCancelHours,
@@ -76,7 +74,6 @@ export async function PUT(request: NextRequest) {
     // Validate and sanitize input
     const commissionRate = Number(body.commissionRate)
     const deliveryFee = Number(body.deliveryFee)
-    const pickupFee = Number(body.pickupFee)
     const rtoCharge = Number(body.rtoCharge)
     const returnWindowDays = Number(body.returnWindowDays)
     const autoCancelHours = Number(body.autoCancelHours)
@@ -87,9 +84,6 @@ export async function PUT(request: NextRequest) {
     }
     if (isNaN(deliveryFee) || deliveryFee < 0) {
       return NextResponse.json({ error: 'Delivery fee must be 0 or greater' }, { status: 400 })
-    }
-    if (isNaN(pickupFee) || pickupFee < 0) {
-      return NextResponse.json({ error: 'Return pickup fee must be 0 or greater' }, { status: 400 })
     }
     if (isNaN(rtoCharge) || rtoCharge < 0) {
       return NextResponse.json({ error: 'RTO charge must be 0 or greater' }, { status: 400 })
@@ -107,7 +101,6 @@ export async function PUT(request: NextRequest) {
       key: 'commission',
       commissionRate,
       deliveryFee,
-      pickupFee,
       rtoCharge,
       returnWindowDays,
       autoCancelHours,
@@ -125,7 +118,6 @@ export async function PUT(request: NextRequest) {
       success: true,
       commissionRate,
       deliveryFee,
-      pickupFee,
       rtoCharge,
       returnWindowDays,
       autoCancelHours,
