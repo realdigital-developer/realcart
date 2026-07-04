@@ -278,14 +278,15 @@ function RevenueContent() {
   const applyPreset = (preset: string) => {
     setActivePreset(preset)
     const now = new Date()
-    if (preset === 'thisMonth') {
+    if (preset === 'This Month') {
       setStartDate(toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1)))
       setEndDate(toDateInputValue(now))
-    } else if (preset === 'thisYear') {
+    } else if (preset === 'This Year') {
       setStartDate(toDateInputValue(new Date(now.getFullYear(), 0, 1)))
       setEndDate(toDateInputValue(now))
     } else {
       const days = parseInt(preset.replace('D', ''))
+      if (isNaN(days) || days <= 0) return // safety net for invalid preset labels
       const d = new Date()
       d.setDate(d.getDate() - (days - 1))
       setStartDate(toDateInputValue(d))
