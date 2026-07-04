@@ -5689,3 +5689,29 @@ Stage Summary:
 - **Root cause fixed**: Form footer buttons now adapt to screen width — 2-row stacked layout on mobile with shortened labels, single-row layout on desktop with full labels. No button is ever truncated or hidden.
 - **Smart space management**: Mobile uses icon-only Back, shortened "Draft"/"Submit" labels, and flex-1 equal-width buttons. Desktop shows full labels with justify-between.
 - **No damage**: Only 1 file modified (16 insertions, 10 deletions). All form functionality (step navigation, save draft, submit for review) preserved. Lint: 0 errors.
+
+---
+Task ID: fix-product-form-buttons-single-row
+Agent: main-orchestrator
+Task: Show Back as "<", Next as ">", "Draft" and "Submit" in the same row using proper space management in the seller panel product add/edit form.
+
+Work Log:
+- **Code study**: Read the current footer at `src/app/seller/products/page.tsx` lines 2730-2758. The previous fix used a 2-row stacked layout on mobile (flex-col sm:flex-row) with shortened labels. The user wants ALL buttons in ONE row always.
+- **Fix applied** (1 file, 9 insertions, 13 deletions):
+  * Changed container from `flex flex-col sm:flex-row` to `flex items-center justify-between` — always single row.
+  * **Back button**: Icon-only `<` (ChevronLeft), square `h-9 w-9 p-0`, `title="Back"` for accessibility tooltip.
+  * **Next button**: Icon-only `>` (ChevronRight), square `h-9 w-9 p-0`, `title="Next"` for accessibility tooltip.
+  * **Draft button**: Icon + "Draft" text (always short), `h-9 px-3 sm:px-4`, `flex-shrink-0`.
+  * **Submit button**: Icon + "Submit" text (always short), `h-9 px-3 sm:px-4`, `bg-emerald-600`, `flex-shrink-0`.
+  * Removed all `sm:hidden`/`hidden sm:inline` conditional text spans — labels are always the same.
+  * Removed `flex-1` that made buttons stretch on mobile — now buttons are natural width with `flex-shrink-0`.
+- **End-to-end verification** (Agent Browser + VLM):
+  * **Desktop (1280px)**: All 4 buttons (< > Draft Submit) in ONE row — < > on left, Draft Submit on right. VLM confirmed: "everything is in ONE row, no layout issues." ✓
+  * **Mobile (375px)**: All 3 buttons (> Draft Submit) in ONE row — > on left, Draft Submit on right. VLM confirmed: "buttons are in one row, no truncation." ✓
+  * No browser/console errors.
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `102d1b3` — 1 file changed, 9 insertions(+), 13 deletions(-).
+
+Stage Summary:
+- **Single-row layout**: All action buttons (< > Draft Submit) always appear in ONE row on all screen sizes. Back and Next are icon-only square buttons, Draft and Submit have short text labels.
+- **No damage**: Only 1 file modified (9 insertions, 13 deletions). All form functionality preserved. Lint: 0 errors.
