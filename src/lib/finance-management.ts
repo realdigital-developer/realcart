@@ -162,7 +162,8 @@ export interface RevenueReport {
   // Refunds
   totalRefunds: number
   refundCount: number
-  // Platform profit (commission + fees - refunds - expenses)
+  refundImpactOnPlatform: number   // Commission + fees reversed due to refunds (platform's actual loss)
+  // Platform profit (commission + fees - refund impact - expenses)
   platformRevenue: number        // commission + codFee + platformFee + gstOnCommission
   platformExpenses: number
   platformProfit: number
@@ -894,6 +895,43 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
   const totalRefunds = refunds.reduce((sum, r) => sum + (r.amount || 0), 0)
   const refundCount = refunds.length
 
+  // ── Calculate the platform's ACTUAL loss from refunds ──
+  // The full refund amount (totalRefunds) is the customer's money returned,
+  // which comes from the seller's earnings (product value) + the platform's
+  // reversed commission/fees. The platform only loses the commission + GST
+  // on commission + any platform/COD fees it had collected on the refunded
+  // order. Subtracting the full refund from platform profit is incorrect
+  // (it would make profit negative even when the platform is profitable).
+  // This is how Flipkart/Amazon/Meesho calculate platform P&L.
+  let refundImpactOnPlatform = 0
+  const refundedOrderIds = [...new Set(refunds.map(r => r.orderId).filter(Boolean))]
+  if (refundedOrderIds.length > 0) {
+    const refundedOrders = await db.collection('orders').find({
+      orderId: { $in: refundedOrderIds },
+    }).toArray()
+    const orderMap = new Map(refundedOrders.map(o => [o.orderId, o]))
+
+    for (const refund of refunds) {
+      const order = orderMap.get(refund.orderId)
+      if (!order) continue
+
+      if (refund.orderItemId && Array.isArray(order.items)) {
+        // Item-level refund: reverse only that item's commission + GST
+        const item = order.items.find((i: any) => i.id === refund.orderItemId || i._id === refund.orderItemId)
+        if (item) {
+          refundImpactOnPlatform += (item.commission || 0) + (item.gstOnCommission || 0)
+        }
+      } else {
+        // Full order refund: reverse all commission + GST + platform fees
+        refundImpactOnPlatform += (order.totalCommission || 0)
+          + (order.totalGstOnCommission || 0)
+          + (order.platformFee || 0)
+          + (order.codFee || 0)
+      }
+    }
+  }
+  refundImpactOnPlatform = round2(refundImpactOnPlatform)
+
   // Get expenses in the period (expenses store date as a Date object)
   const expenses = await db.collection('expenses').find({
     date: { $gte: startDate, $lte: endDate },
@@ -901,9 +939,10 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
   }).toArray()
   const platformExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
 
-  // Platform revenue = commission + GST on commission + COD fee + platform fee + delivery margin
+  // Platform revenue = commission + GST on commission + COD fee + platform fee
   const platformRevenue = totalCommission + totalGstOnCommission + totalCodFee + totalPlatformFee
-  const platformProfit = platformRevenue - totalRefunds - platformExpenses
+  // Platform profit = Platform revenue - commission/fees reversed due to refunds - operating expenses
+  const platformProfit = platformRevenue - refundImpactOnPlatform - platformExpenses
 
   // Sort monthly breakdown
   const monthlyBreakdown = Array.from(monthlyMap.entries())
