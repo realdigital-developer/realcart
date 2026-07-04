@@ -5486,3 +5486,39 @@ Stage Summary:
 - **Safety net added**: NaN validation in the else branch prevents Invalid Date if an unknown preset is ever passed.
 - **No damage**: Only 1 file modified (3 insertions, 2 deletions). All existing functionality (all 5 presets, stat cards, charts, P&L, seller table, CSV export) preserved. Lint: 0 errors.
 - Browser-verified end-to-end (all 5 presets tested, all pass without error).
+
+---
+Task ID: revenue-preset-select-date
+Agent: main-orchestrator
+Task: Replace "This Month" tab with "Select Date" tab on admin revenue page. Hide date inputs unless "Select Date" is selected. Verify all date calculations are correct for 7D/30D/90D/This Year/Select Date.
+
+Work Log:
+- **Date calculation verification**: Tested all existing presets via Agent Browser — confirmed calculations are correct:
+  * 7D: 2026-06-28 to 2026-07-04 (7 days including today) ✓
+  * 30D: 2026-06-05 to 2026-07-04 (30 days including today) ✓
+  * 90D: 2026-04-06 to 2026-07-04 (90 days including today) ✓
+  * This Year: 2026-01-01 to 2026-07-04 (Jan 1 to today) ✓
+  * Revenue data varies correctly by range: 7D=₹9,980 (narrower), 30D/90D/Year=₹1,05,189 (broader)
+- **Changes applied** (1 file — `src/app/admin/revenue/page.tsx`, 34 insertions, 28 deletions):
+  1. **DATE_PRESETS array**: Removed `{ label: 'This Month', custom: 'thisMonth' }`, added `{ label: 'Select Date', custom: 'selectDate' }` after 'This Year'. New order: 7D, 30D, 90D, This Year, Select Date.
+  2. **applyPreset() function**: Removed `'This Month'` case. Added `'Select Date'` case that returns early without changing dates (keeps previous preset's dates as defaults, just reveals the date inputs). Removed the `setActivePreset('')` calls from date input onChange handlers (no longer needed since preset stays 'Select Date').
+  3. **Render section**: Wrapped the date inputs `<div>` in a conditional `{activePreset === 'Select Date' && (...)}`. Date inputs are now hidden by default and only appear when "Select Date" tab is active.
+- **End-to-end verification** (Agent Browser):
+  * **Preset tabs**: 5 tabs visible — 7D, 30D, 90D, This Year, Select Date. "This Month" removed. ✓
+  * **Date inputs hidden**: When 30D is active, date inputs are hidden (`start hidden`). ✓
+  * **7D**: Clicks → data loads (9 stat cards, gross ₹9,980), no error. ✓
+  * **30D**: Clicks → data loads (9 stat cards, gross ₹1,05,189), no error. ✓
+  * **90D**: Clicks → data loads (9 stat cards, gross ₹1,05,189), no error. ✓
+  * **This Year**: Clicks → data loads (9 stat cards, gross ₹1,05,189), no error. ✓
+  * **Select Date**: Clicks → date inputs appear (showing previous preset's dates as defaults: 2026-01-01 to 2026-07-04), data loads (9 stat cards), no error. ✓
+  * **Change dates in Select Date mode**: Set start to 2026-06-15 → data refreshes, no error, 9 stat cards. ✓
+  * **Switch back to 30D**: Date inputs hide again, data loads. ✓
+  * **No console errors** in any scenario.
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `2884c9f` — 1 file changed, 34 insertions(+), 28 deletions(-).
+
+Stage Summary:
+- **User requirements met**: "This Month" tab removed, "Select Date" tab added after "This Year", date inputs hidden unless "Select Date" is active, admin can select custom dates when "Select Date" is clicked.
+- **Date calculations verified correct**: All 5 presets produce correct date ranges and revenue data varies appropriately by range.
+- **No damage**: Only 1 file modified (34 insertions, 28 deletions). All existing functionality (9 stat cards, charts, P&L, seller table, CSV export, refresh) preserved. Lint: 0 errors.
+- Browser-verified end-to-end (all 5 presets + date changing + switching back, all pass without error).
