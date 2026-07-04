@@ -5966,3 +5966,35 @@ Work Log:
 Stage Summary:
 - **Performance fixed**: Product gallery images now load 50-80% faster using Cloudinary on-the-fly transformations (f_auto, q_auto, w_800 for main, w_150 for thumbnails).
 - **No damage**: Only 1 file modified (32 insertions, 8 deletions). All existing UI, zoom, lightbox, and thumbnail functionality preserved. Lint: 0 errors.
+
+---
+Task ID: remove-highlights-move-brand
+Agent: main-orchestrator
+Task: Remove highlights/key features section from below product title. Move brand beside quantity section in same row with 'Brand : [name]' format.
+
+Work Log:
+- **Code study**: Found 3 sections in `src/components/customer/product-detail-page.tsx`:
+  1. **Brand above title** (lines 2364-2366): Small emerald text showing brand name above the product title
+  2. **Highlights below title** (lines 2371-2381): Bullet-point list with Check icons showing product highlights/key features
+  3. **Quantity selector** (lines 2587-2614): Qty label + minus/plus buttons
+- **Changes applied** (1 file, 20 insertions, 19 deletions):
+  1. Removed the brand text from above the product title
+  2. Removed the entire highlights/key features section (bullet points with checkmark icons)
+  3. Added `Brand : [brand name]` in the same row as the quantity selector:
+     - Format: `<span className="font-medium">Brand : </span><span className="font-semibold">{product.brand}</span>`
+     - Uses `flex-wrap` for proper space management on small screens
+     - Placed before the "Qty" label in the same flex row
+  4. Added brand display for out-of-stock products (when `!currentInStock`, the quantity selector is hidden, so brand gets its own row)
+- **End-to-end verification** (Agent Browser + VLM):
+  * Highlights below title: NOT found ✓ (removed)
+  * Brand above title: NOT found ✓ (removed)
+  * `Brand : plo` visible beside quantity selector in same row ✓
+  * VLM confirmed: "Brand and quantity selector are in a single row, with 'Brand :' and brand name on the left, followed by the quantity controls"
+  * No browser/console errors
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `3727573` — 1 file changed, 20 insertions(+), 19 deletions(-).
+
+Stage Summary:
+- **Highlights removed**: The bullet-point key features section that appeared below the product title has been removed.
+- **Brand moved**: The brand name now appears as "Brand : [name]" beside the quantity selector in the same row, using proper space management. When out of stock, brand appears in its own row.
+- **No damage**: Only 1 file modified (20 insertions, 19 deletions). All other product details page sections preserved. Lint: 0 errors.
