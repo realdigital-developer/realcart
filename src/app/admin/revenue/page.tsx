@@ -89,6 +89,7 @@ interface RevenueReport {
   totalSellerEarnings: number
   totalRefunds: number
   refundCount: number
+  refundImpactOnPlatform: number  // Commission + fees reversed due to refunds (platform's actual loss)
   platformRevenue: number
   platformExpenses: number
   platformProfit: number
@@ -829,10 +830,11 @@ function RevenueContent() {
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Platform Fee</p>
                 <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatINR(report.totalPlatformFee)}</p>
               </div>
-              {/* Deductions */}
+              {/* Deductions — only the platform's actual loss from refunds, not the full refund amount */}
               <div className="rounded-lg bg-rose-50 dark:bg-rose-950/20 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Refunds</p>
-                <p className="text-sm font-bold text-rose-600 dark:text-rose-400 mt-1">−{formatINR(report.totalRefunds)}</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Refund Impact</p>
+                <p className="text-sm font-bold text-rose-600 dark:text-rose-400 mt-1">−{formatINR(report.refundImpactOnPlatform)}</p>
+                <p className="text-[9px] text-muted-foreground/70 mt-0.5">Commission reversed (of ₹{Math.round(report.totalRefunds).toLocaleString('en-IN')} refunded)</p>
               </div>
               <div className="rounded-lg bg-rose-50 dark:bg-rose-950/20 p-3">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Expenses</p>
@@ -840,16 +842,21 @@ function RevenueContent() {
               </div>
             </div>
             {/* P&L summary bar */}
-            <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between">
-              <div className="flex items-center gap-6">
+            <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-4 flex-wrap">
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Platform Revenue</p>
                   <p className="text-base font-bold text-teal-600 dark:text-teal-400">{formatINR(report.platformRevenue)}</p>
                 </div>
                 <div className="text-muted-foreground">−</div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Refunds + Expenses</p>
-                  <p className="text-base font-bold text-rose-600 dark:text-rose-400">{formatINR(report.totalRefunds + report.platformExpenses)}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Refund Impact</p>
+                  <p className="text-base font-bold text-rose-600 dark:text-rose-400">{formatINR(report.refundImpactOnPlatform)}</p>
+                </div>
+                <div className="text-muted-foreground">−</div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Expenses</p>
+                  <p className="text-base font-bold text-rose-600 dark:text-rose-400">{formatINR(report.platformExpenses)}</p>
                 </div>
                 <div className="text-muted-foreground">=</div>
                 <div>
@@ -860,6 +867,10 @@ function RevenueContent() {
                 </div>
               </div>
             </div>
+            {/* Clarification note */}
+            <p className="text-[10px] text-muted-foreground/70 mt-2">
+              Refund Impact = commission + GST reversed on refunded orders. The full refund amount ({formatINR(report.totalRefunds)} across {report.refundCount} refunds) is returned to the customer from the seller&apos;s earnings — the platform only loses its commission on those orders.
+            </p>
           </CardContent>
         </Card>
       </motion.div>

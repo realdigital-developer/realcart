@@ -979,6 +979,7 @@ export async function generateRevenueReport(startDate: Date, endDate: Date): Pro
     totalSellerEarnings: round2(totalSellerEarnings),
     totalRefunds: round2(totalRefunds),
     refundCount,
+    refundImpactOnPlatform,
     platformRevenue: round2(platformRevenue),
     platformExpenses: round2(platformExpenses),
     platformProfit: round2(platformProfit),
