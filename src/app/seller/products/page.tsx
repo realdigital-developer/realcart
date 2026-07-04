@@ -2728,28 +2728,34 @@ export default function SellerProductsPage() {
           </div>
 
           {/* ── Form Footer ── */}
-          <div className="border-t p-4 bg-background">
-            <div className="flex items-center justify-between gap-3">
+          <div className="border-t p-3 sm:p-4 bg-background">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+              {/* Navigation: Back + Next */}
               <div className="flex items-center gap-2">
                 {formStep > 1 && (
-                  <Button variant="outline" onClick={prevStep} className="gap-1">
-                    <ChevronLeft className="h-4 w-4" /> Back
+                  <Button variant="outline" onClick={prevStep} className="gap-1.5 h-9 flex-1 sm:flex-none justify-center sm:justify-start">
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Back</span>
                   </Button>
                 )}
                 {formStep < 7 && (
-                  <Button variant="outline" onClick={nextStep} className="gap-1">
-                    Next <ChevronRight className="h-4 w-4" />
+                  <Button variant="outline" onClick={nextStep} className="gap-1.5 h-9 flex-1 sm:flex-none justify-center sm:justify-start">
+                    <span>Next</span>
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 )}
               </div>
+              {/* Actions: Save as Draft + Submit for Review */}
               <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => saveProduct(false)} disabled={saving} className="gap-1">
+                <Button variant="outline" onClick={() => saveProduct(false)} disabled={saving} className="gap-1.5 h-9 flex-1 sm:flex-none justify-center sm:justify-start text-xs sm:text-sm">
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                  Save as Draft
+                  <span className="sm:hidden">Draft</span>
+                  <span className="hidden sm:inline">Save as Draft</span>
                 </Button>
-                <Button onClick={() => saveProduct(true)} disabled={saving} className="gap-1">
+                <Button onClick={() => saveProduct(true)} disabled={saving} className="gap-1.5 h-9 flex-1 sm:flex-none justify-center sm:justify-start text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700">
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  Submit for Review
+                  <span className="sm:hidden">Submit</span>
+                  <span className="hidden sm:inline">Submit for Review</span>
                 </Button>
               </div>
             </div>
