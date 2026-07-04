@@ -5845,3 +5845,35 @@ Stage Summary:
 - **Merged into Personal Information on profile**: The profile page's Personal Information card now shows both personal details (name, email, phone) AND account details (store name, account status, store ID, last login) in one unified card with a divider.
 - **Same logic intact**: All fields display the same data with the same read-only indicators (Lock icons for email and store name), status badges, and copy buttons.
 - **No damage**: Only 2 files modified (17 insertions, 102 deletions). All other profile/settings sections preserved. Lint: 0 errors.
+
+---
+Task ID: remove-quick-actions
+Agent: main-orchestrator
+Task: Remove the "Quick Actions" section from all seller panel pages.
+
+Work Log:
+- **Search**: Found "Quick Actions" in 2 files: `dashboard/page.tsx` (lines 376-414 + skeleton at line 73 + QuickActionButton component at line 423) and `profile/page.tsx` (lines 1430-1445).
+- **Changes applied** (2 files, 0 insertions, 102 deletions):
+  1. **Dashboard page** (`src/app/seller/dashboard/page.tsx`): 
+     - Removed the Quick Actions card (3 buttons: Add Product, Check Earnings, Edit Store)
+     - Removed the QuickActionButton component (now unused — 35 lines)
+     - Removed unused icon imports: `Plus`, `IndianRupee`, `Settings`
+     - Removed the Quick Actions loading skeleton (`<div className="h-40 bg-muted animate-pulse rounded-xl" />`)
+  2. **Profile page** (`src/app/seller/profile/page.tsx`): 
+     - Removed the Quick Actions card (4 buttons: Manage Products, View Orders, Earnings, Settings)
+- **End-to-end verification** (Agent Browser): Checked ALL 8 seller pages:
+  * Dashboard: "Quick Actions" NOT found ✓
+  * Profile: NOT found ✓
+  * Orders: NOT found ✓
+  * Products: NOT found ✓
+  * Inventory: NOT found ✓
+  * Earnings: NOT found ✓
+  * Payouts: NOT found ✓
+  * Analytics: NOT found ✓
+  * No browser/console/dev-server errors
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `46d450d` — 2 files changed, 102 deletions(-).
+
+Stage Summary:
+- **Quick Actions removed from all seller pages**: Both the dashboard and profile pages no longer show the Quick Actions section. All other content on these pages is preserved.
+- **No damage**: Only 2 files modified (102 deletions, 0 insertions). All other UI and code preserved. Lint: 0 errors.
