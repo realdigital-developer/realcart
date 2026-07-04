@@ -207,8 +207,8 @@ const DATE_PRESETS = [
   { label: '7D', days: 7 },
   { label: '30D', days: 30 },
   { label: '90D', days: 90 },
-  { label: 'This Month', custom: 'thisMonth' },
   { label: 'This Year', custom: 'thisYear' },
+  { label: 'Select Date', custom: 'selectDate' },
 ] as const
 
 function RevenueContent() {
@@ -277,11 +277,14 @@ function RevenueContent() {
   /* ── Date preset handler ── */
   const applyPreset = (preset: string) => {
     setActivePreset(preset)
+    // For "Select Date", don't change the date values — just reveal the
+    // date inputs so the admin can pick a custom range. The existing
+    // startDate/endDate (from the previous preset) are kept as defaults.
+    if (preset === 'Select Date') {
+      return
+    }
     const now = new Date()
-    if (preset === 'This Month') {
-      setStartDate(toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1)))
-      setEndDate(toDateInputValue(now))
-    } else if (preset === 'This Year') {
+    if (preset === 'This Year') {
       setStartDate(toDateInputValue(new Date(now.getFullYear(), 0, 1)))
       setEndDate(toDateInputValue(now))
     } else {
@@ -472,7 +475,7 @@ function RevenueContent() {
           </div>
         </div>
 
-        {/* Date presets + custom range */}
+        {/* Date presets + custom range (date inputs only shown for "Select Date") */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
             {DATE_PRESETS.map((preset) => (
@@ -490,29 +493,32 @@ function RevenueContent() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-              <Input
-                id="rev-start"
-                type="date"
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setActivePreset('') }}
-                className="pl-8 h-9 text-xs bg-muted/50 border-0"
-              />
+          {/* Date inputs — only visible when "Select Date" preset is active */}
+          {activePreset === 'Select Date' && (
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="rev-start"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => { setStartDate(e.target.value) }}
+                  className="pl-8 h-9 text-xs bg-muted/50 border-0"
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">to</span>
+              <div className="relative">
+                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="rev-end"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => { setEndDate(e.target.value) }}
+                  className="pl-8 h-9 text-xs bg-muted/50 border-0"
+                />
+              </div>
             </div>
-            <span className="text-xs text-muted-foreground">to</span>
-            <div className="relative">
-              <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-              <Input
-                id="rev-end"
-                type="date"
-                value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setActivePreset('') }}
-                className="pl-8 h-9 text-xs bg-muted/50 border-0"
-              />
-            </div>
-          </div>
+          )}
         </div>
       </motion.div>
 
