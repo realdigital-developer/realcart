@@ -5998,3 +5998,30 @@ Stage Summary:
 - **Highlights removed**: The bullet-point key features section that appeared below the product title has been removed.
 - **Brand moved**: The brand name now appears as "Brand : [name]" beside the quantity selector in the same row, using proper space management. When out of stock, brand appears in its own row.
 - **No damage**: Only 1 file modified (20 insertions, 19 deletions). All other product details page sections preserved. Lint: 0 errors.
+
+---
+Task ID: fix-brand-qty-highlights
+Agent: main-orchestrator
+Task: Remove highlights/key features section below product title. Show brand beside quantity in the same row with proper space management.
+
+Work Log:
+- **Highlights section**: Investigated thoroughly — the API returns `highlights` array (7 items: "Premium Cotton Fabric", "Breathable for All Seasons", etc.) but the product-detail-page.tsx component **does NOT render them**. VLM confirmed: "No highlights/key features section visible." The highlights were already not showing.
+- **Brand + Quantity layout**: The brand was already in the same row as quantity but with `flex-wrap` which could cause wrapping on narrow screens. Improved the layout:
+  * Changed container from `flex items-center gap-3 flex-wrap` to `flex items-center gap-4` (removed flex-wrap, increased gap)
+  * Brand: `flex items-center gap-1.5 flex-shrink-0` — "Brand :" label (medium weight, gray-500) + brand name (semibold, gray-900)
+  * Added a thin vertical divider: `h-6 w-px bg-gray-200` between brand and qty
+  * Qty label: `flex-shrink-0` to prevent shrinking
+  * Qty selector buttons: `flex-shrink-0` to prevent shrinking
+  * All elements use `flex-shrink-0` so they stay in one row
+- **Out-of-stock brand**: Updated to match the same "Brand : {name}" format for visual consistency.
+- **Verification** (Agent Browser + VLM):
+  * Brand and Qty are in the SAME ROW ✓
+  * No highlights/key features section visible ✓
+  * No browser errors (only pre-existing React state warning)
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `26e7af3` — 1 file changed, 11 insertions(+), 12 deletions(-).
+
+Stage Summary:
+- **Highlights**: Already not shown on the product detail page (confirmed via VLM).
+- **Brand beside Quantity**: Brand and Qty are now in the same row with a vertical divider, proper spacing, and flex-shrink-0 to prevent wrapping. Brand displayed as "Brand : {name}" format.
+- **No damage**: Only 1 file modified (11 insertions, 12 deletions). All existing functionality preserved. Lint: 0 errors.
