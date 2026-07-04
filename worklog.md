@@ -5929,3 +5929,40 @@ Stage Summary:
 - **No damage**: No UI or code modified during upload.
 - **IN SYNC**: `db0346dcbd5924c0d244805426a8cfb28d456272`
 - PAT used via GIT_ASKPASS (one-time, not persisted).
+
+---
+Task ID: optimize-product-image-loading
+Agent: main-orchestrator
+Task: Fix why product images take too long to load in customer panel product details page image gallery.
+
+Work Log:
+- **Root cause identified**: Product gallery images were loading full-size Cloudinary URLs (100-200KB each) without any optimization parameters. With multiple images on the page (main + thumbnails + lightbox), this caused slow loading, especially on mobile networks.
+- **Evidence from testing**:
+  * Full-size image: 100,444 bytes, 508ms load time
+  * Optimized (w_800): 45,512 bytes, 61ms load time — **55% smaller, 8x faster**
+  * Thumbnail (w_150): ~15-20KB, <100ms — **80% smaller**
+- **Fix applied** (1 file — `src/components/customer/product-detail-page.tsx`, 32 insertions, 8 deletions):
+  1. Added `optimizeCloudinaryUrl()` helper that inserts Cloudinary transformation params (`f_auto,q_auto,w_{width}`) into the URL between `/upload/` and the version path. Non-Cloudinary URLs are returned unchanged (safe fallback).
+  2. Created `optimizedImages` memo that pre-computes optimized URLs for each image:
+     - Main display: `f_auto,q_auto,w_800` (sufficient for detail view + zoom, 50-65% smaller)
+     - Thumbnails: `f_auto,q_auto,w_150` (80% smaller, fast-loading)
+  3. Updated all image rendering to use `optimizedImages`:
+     - Main gallery image (MagnifierImage `src`)
+     - Desktop vertical thumbnail strip (`img.thumbUrl`)
+     - Mobile horizontal thumbnail strip (`img.thumbUrl`)
+     - Lightbox images prop
+- **Cloudinary transformation params explained**:
+  * `f_auto`: Auto format — serves WebP for Chrome/Firefox/Edge, AVIF where supported
+  * `q_auto`: Auto quality — Cloudinary picks optimal quality based on content
+  * `w_800`: Width capped at 800px — sufficient for product detail view + 2.5x zoom
+  * `w_150`: Width capped at 150px — perfect for 64x64px thumbnails (with retina margin)
+- **End-to-end verification** (Agent Browser):
+  * Main gallery image: `f_auto,q_auto,w_800` ✓ (OPTIMIZED)
+  * All gallery thumbnails: `f_auto,q_auto,w_150` ✓ (OPTIMIZED)
+  * No browser/console errors
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `6e92055` — 1 file changed, 32 insertions(+), 8 deletions(-).
+
+Stage Summary:
+- **Performance fixed**: Product gallery images now load 50-80% faster using Cloudinary on-the-fly transformations (f_auto, q_auto, w_800 for main, w_150 for thumbnails).
+- **No damage**: Only 1 file modified (32 insertions, 8 deletions). All existing UI, zoom, lightbox, and thumbnail functionality preserved. Lint: 0 errors.
