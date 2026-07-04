@@ -5522,3 +5522,49 @@ Stage Summary:
 - **Date calculations verified correct**: All 5 presets produce correct date ranges and revenue data varies appropriately by range.
 - **No damage**: Only 1 file modified (34 insertions, 28 deletions). All existing functionality (9 stat cards, charts, P&L, seller table, CSV export, refresh) preserved. Lint: 0 errors.
 - Browser-verified end-to-end (all 5 presets + date changing + switching back, all pass without error).
+
+---
+Task ID: fix-platform-profit-negative
+Agent: main-orchestrator
+Task: Fix why platform profit is showing negative on the admin revenue page. Implement proper calculation as Flipkart/Amazon/Meesho do. Robust solution with double-check, no errors, no damage to existing UI/code.
+
+Work Log:
+- **Problem identified**: Platform Profit was showing as −₹7,430 (negative) on the revenue page, even though the platform was actually profitable.
+- **Code study**: Read `src/lib/finance-management.ts` lines 880-997. Found that the backend already had the correct calculation logic:
+  * `refundImpactOnPlatform` was computed (lines 906-933) as only the commission + GST reversed on refunded orders (NOT the full refund amount).
+  * `platformProfit = platformRevenue - refundImpactOnPlatform - platformExpenses` (line 945) — correct formula.
+  * But `refundImpactOnPlatform` was **NOT returned** in the API response object (missing from the return statement at line 980).
+- **Root cause**: Since `refundImpactOnPlatform` wasn't returned, the frontend P&L card displayed the full `totalRefunds` (₹16,941) as the deduction. This made the equation look wrong: ₹9,511 (revenue) − ₹16,941 (refunds) = −₹7,430, even though the actual backend profit was ₹7,586. The displayed equation didn't match the displayed profit number.
+- **How Flipkart/Amazon/Meesho calculate platform P&L**:
+  * Platform Revenue = Commission + GST on Commission + COD Fee + Platform Fee
+  * Refund Impact = only the commission + GST reversed on refunded orders (the platform's actual loss). The full refund amount (customer money returned) comes from the seller's earnings, not the platform.
+  * Platform Profit = Platform Revenue − Refund Impact − Expenses
+- **Actual numbers verified via API**:
+  * Platform Revenue: ₹9,510.74
+  * Refund Impact on Platform: ₹1,924.42 (commission+GST reversed on 12 refunds)
+  * Full Refund Amount: ₹16,941 (returned to customers from seller earnings)
+  * Expenses: ₹0
+  * Platform Profit: ₹7,586.32 (₹9,510.74 − ₹1,924.42 − ₹0 = ₹7,586.32) ✓
+- **Fix applied** (2 files, 19 insertions, 7 deletions):
+  1. **Backend** (`src/lib/finance-management.ts`): Added `refundImpactOnPlatform` to the return object (1 line). The value was already computed at line 933 but missing from the response.
+  2. **Frontend** (`src/app/admin/revenue/page.tsx`):
+     * Added `refundImpactOnPlatform` to the `RevenueReport` type
+     * Updated P&L card deduction grid: Changed "Refunds: −₹16,941" to "Refund Impact: −₹1,924" with subtitle "Commission reversed (of ₹16,941 refunded)"
+     * Updated P&L summary equation: Changed "Revenue − Refunds+Expenses = Profit" to "Revenue − Refund Impact − Expenses = Profit" (3 separate terms now)
+     * Added clarification note: "Refund Impact = commission + GST reversed on refunded orders. The full refund amount (₹16,941 across 12 refunds) is returned to the customer from the seller's earnings — the platform only loses its commission on those orders."
+- **End-to-end verification** (Agent Browser):
+  * API now returns `refundImpactOnPlatform: 1924.42`
+  * Equation balances: 9510.74 − 1924.42 − 0 = 7586.32 ✓
+  * Platform Profit stat card: ₹7,586 (positive — was −₹7,430)
+  * P&L card shows: Revenue ₹9,511 − Refund Impact ₹1,924 − Expenses ₹0 = Profit ₹7,586
+  * All 9 stat cards show correct values
+  * Clarification note visible
+  * No browser/console/dev-server errors
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `c377403` — 2 files changed, 19 insertions(+), 7 deletions(-).
+
+Stage Summary:
+- **Root cause fixed**: Platform profit now shows as positive ₹7,586 (was −₹7,430). The P&L card now correctly displays "Refund Impact" (₹1,924 — commission reversed) instead of the full refund amount (₹16,941) in the deduction, making the equation balance correctly.
+- **Flipkart/Amazon/Meesho parity**: The platform P&L now follows the correct e-commerce accounting model — only the platform's actual loss (reversed commission) is deducted, not the full customer refund (which comes from seller earnings).
+- **No damage**: Only 2 files modified (19 insertions, 7 deletions). All existing functionality (9 stat cards, charts, P&L, seller table, CSV export, date presets) preserved. Lint: 0 errors.
+- Browser-verified end-to-end: equation balances, profit is positive, no errors.
