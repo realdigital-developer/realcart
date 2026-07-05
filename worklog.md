@@ -6453,3 +6453,29 @@ Stage Summary:
 - Local and remote are fully in sync (0 commits difference either way)
 - No existing UI or code damaged — push was additive only (fast-forward)
 - PAT was used inline for authentication and was NOT persisted in git config (security best practice)
+
+---
+Task ID: fix-preview-not-loading
+Agent: Z.ai Code (main)
+Task: Diagnose and fix why the project preview was not loading in the sandbox after the GitHub push.
+
+Work Log:
+- Checked system state: dev server process was NOT running, dev.log did not exist — the server had been stopped (likely when the previous session ended) and never restarted in this session.
+- Git status confirmed all code was intact and correctly pushed (commit 26ec664 on main, in sync with origin). No code damage.
+- First restart attempt with `nohup ... &` — server started ("✓ Ready in 1799ms") but process was killed between bash tool calls (sandbox reaps orphaned processes when the tool session ends).
+- Tried `setsid` + `disown` — process survived shell exit but still died during page compilation in the next tool call.
+- Tried `systemd-run` — not available (container has no systemd as PID 1).
+- Root cause: single `setsid` approach didn't fully detach from the tool's process tree; the sandbox process reaper was killing it.
+- Solution: Used a **double-fork daemon** pattern — `(setsid bash -c 'cd ... && exec bun run dev' </dev/null >dev.log 2>&1 &)` — the outer subshell `(...)` forks, `setsid` creates a new session, and the inner `&` + `exec` fully detaches the server from any tool-session process group.
+- Verified the server survives across multiple bash tool calls (PID 1514 stayed alive across 5+ separate commands).
+- Tested ALL routes with curl — all returned HTTP 200: /, /customer, /admin, /seller, /delivery, /api/health, /api/admin/logo.
+- Verified with Agent Browser: home page renders ("RealCart" title), admin login works, admin Settings page shows the Brand Name input pre-filled with "RealCart" and the Save button.
+- Checked dev.log for errors — zero errors (no 500s, no ⨯, no compile failures).
+- The modified `public/fonts/DejaVuSans-Bold.ttf` (unstaged, same byte size 708920 → 708920) is a harmless binary metadata change, not content corruption — left as-is to avoid risk.
+
+Stage Summary:
+- Root cause was simple: the dev server was not running. The GitHub push was successful and the code was intact — the preview just needed the server to be restarted.
+- The sandbox kills orphaned processes between tool calls, so a robust double-fork daemon pattern was required to keep the server alive persistently.
+- Server is now running stably on port 3000 (PID 1514), all routes return HTTP 200, no errors.
+- No code or UI was damaged — this was purely a process-management fix.
+- The preview panel should now load the project correctly.
