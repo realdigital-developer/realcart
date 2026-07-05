@@ -6313,3 +6313,28 @@ Stage Summary:
 - **Tax summary fixed**: All amounts (Total Taxable Value, CGST/SGST/IGST, Total GST) now render properly in the left column of the tax summary box — right-aligned within the column boundaries.
 - **Description fixed**: Long product names no longer wrap and overlap — they are truncated with ellipsis for clean single-line display.
 - **No damage**: Only 1 file modified (17 insertions, 12 deletions). All existing functionality preserved. Lint: 0 errors.
+
+---
+Task ID: fix-variant-not-showing-pdf
+Agent: main-orchestrator
+Task: Fix why attributes/variant section is not showing in the ordered product description in downloaded invoice PDF.
+
+Work Log:
+- **Root cause identified**: The description text (product name) wraps to 2 lines when it's long (e.g., "Attractive modern kids boys fashionable T-shirt" wraps at width=195.8pt). The variant/attributes text was placed at a fixed offset `descY + 11` — which is **WITHIN the description's 2-line block** (description occupies Y=100 to Y=119.79). The variant text overlapped with the second line of the description and was hidden.
+- **Previous attempt made it worse**: The `lineBreak: false` on the description (added to fix haziness) caused PDFKit to not advance the Y position, so the variant text at `descY+11` was rendered on top of the description, making both invisible.
+- **Fix applied** (1 file — `src/lib/invoice-engine.ts`, 8 insertions, 4 deletions):
+  1. **Removed `lineBreak: false` from description** — reverted to default line wrapping (description wraps naturally).
+  2. **Changed variant Y position** from fixed `descY + 11` to `doc.y` — the current Y position after the description finishes wrapping. This ensures the variant is always placed AFTER the description text, regardless of how many lines it wraps to.
+  3. **Added `lineBreak: false` to variant text** — variant text is short (e.g., "Age: 1-2 Years") and shouldn't wrap.
+  4. Applied to both `generateInvoicePDF()` and `generateCreditNotePDF()`.
+- **Verification** (PDF-to-image conversion + VLM):
+  * Product name: visible (wraps to 2 lines) ✓
+  * Variant "Age: 1-2 Years": visible below product name ✓
+  * HSN, Qty, Rate, Taxable, GST%, Total: all visible ✓
+  * API compiles: 401 (auth required), not 500 (error) ✓
+  * Lint: 0 errors, 24 warnings (all pre-existing) ✓
+- **Git**: Committed as `cb404d8` — 1 file changed, 8 insertions(+), 4 deletions(-).
+
+Stage Summary:
+- **Root cause fixed**: Attributes/variant text now renders properly in the invoice PDF — placed after the description text using `doc.y` instead of a fixed offset that overlapped with wrapped description lines.
+- **No damage**: Only 1 file modified (8 insertions, 4 deletions). All existing functionality preserved. Lint: 0 errors.
