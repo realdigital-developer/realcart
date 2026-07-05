@@ -25,6 +25,7 @@ import { getOrderStatusLogs } from '@/lib/order-helpers'
 import { normalizeStatus } from '@/lib/order-state-machine'
 import type { Order } from '@/lib/order-types'
 import { buildInvoiceData, generateInvoicePDF, generateInvoiceEmailHTML } from '@/lib/invoice-engine'
+import { getBrandSettings } from '@/lib/brand-settings'
 import { sendInvoiceEmail } from '@/lib/email-service'
 import {
   checkStockAvailability,
@@ -598,26 +599,12 @@ async function sendInvoiceForOrder(order: Order, customerId: string): Promise<vo
       return
     }
 
-    // 2. Fetch platform settings (name, GSTIN, address)
-    let platformName = 'ShopHub'
-    let platformGstin = ''
-    let platformAddress: string | undefined
-    try {
-      const [siteSettings, taxSettings] = await Promise.all([
-        db.collection('settings').findOne({ key: 'site' }),
-        db.collection('settings').findOne({ key: 'tax' }),
-      ])
-      if (siteSettings?.siteName) platformName = siteSettings.siteName
-      if (taxSettings?.platformGstin) platformGstin = taxSettings.platformGstin
-      if (taxSettings?.platformAddress) platformAddress = taxSettings.platformAddress
-    } catch { /* use defaults */ }
+    // 2. Fetch platform settings (brand name + logo + GSTIN + address).
+    //    Falls back to "RealCart" when not configured.
+    const platformInfo = await getBrandSettings(db)
 
     // 3. Build invoice data
-    const invoiceData = await buildInvoiceData(order, {
-      platformName,
-      platformGstin,
-      platformAddress,
-    })
+    const invoiceData = await buildInvoiceData(order, platformInfo)
 
     // 4. Generate PDF + email HTML (in parallel for speed)
     const [pdfBuffer, emailHTML] = await Promise.all([

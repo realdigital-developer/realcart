@@ -559,7 +559,7 @@ export async function sendOrderDeliveredEmail(params: {
   itemsSummary: string
   platformName?: string
 }): Promise<EmailResult> {
-  const platformName = params.platformName || 'ShopHub'
+  const platformName = params.platformName || 'RealCart'
   const deliveredDateStr = new Date(params.deliveredAt).toLocaleDateString('en-IN', {
     day: '2-digit', month: 'long', year: 'numeric',
   })
@@ -641,7 +641,7 @@ export async function sendReturnRequestAcceptedEmail(params: {
   approvedAt: string
   platformName?: string
 }): Promise<EmailResult> {
-  const platformName = params.platformName || 'ShopHub'
+  const platformName = params.platformName || 'RealCart'
   const approvedDateStr = new Date(params.approvedAt).toLocaleDateString('en-IN', {
     day: '2-digit', month: 'long', year: 'numeric',
   })

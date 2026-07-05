@@ -6378,3 +6378,49 @@ Stage Summary:
   * Credit note HTML (in-app preview + email)
 - **Robust**: If no logo is set, or logo fetch fails, the invoice falls back to text-only header (no error).
 - **No damage**: 6 files modified (74 insertions, 18 deletions). All existing functionality preserved. Lint: 0 errors.
+
+---
+Task ID: brand-invoice
+Agent: Z.ai Code (main)
+Task: Make the brand name appear dynamically in invoices (using the project's brand name "RealCart"), and use the brand logo in invoices with the background removed (without using any z.ai tools). Must be robust, double-checked, and must not break any existing UI/code.
+
+Work Log:
+- Studied the full invoice/branding codebase: invoice-engine.ts (PDF + HTML generation for invoices and credit notes), all invoice/credit-note API routes, order-helpers.ts, email-service.ts, admin logo API, useSiteLogo hook, admin settings page, and Cloudinary upload lib.
+- Discovered the brand name fallback was "ShopHub" everywhere (wrong — the project brand is "RealCart"), and siteName was read from settings.site.siteName but never settable via admin UI.
+- Discovered the logo was embedded in invoices without any background removal.
+- Created src/lib/brand-settings.ts — single source of truth with:
+  • DEFAULT_BRAND_NAME = "RealCart"
+  • getBrandSettings(db) — fetches platformName/logoUrl/GSTIN/address from settings.site + settings.tax
+  • getLogoUrlWithBgRemoval(url) — injects Cloudinary native `e_make_transparent:20,f_png` URL transformation (NOT a z.ai tool). Handles: non-Cloudinary URLs (passthrough), SVGs (passthrough — already transparent), idempotency (skip if already transformed), query-string-safe SVG detection, never throws.
+- Updated invoice-engine.ts:
+  • Imported DEFAULT_BRAND_NAME + getLogoUrlWithBgRemoval
+  • Changed "ShopHub" fallback → DEFAULT_BRAND_NAME in buildInvoiceData + buildCreditNoteData
+  • Applied getLogoUrlWithBgRemoval to logo URL in 4 places: invoice PDF, invoice HTML, credit note PDF, credit note HTML
+- Updated all API routes to use shared getBrandSettings(db) helper (removed duplicated getPlatformInfo functions):
+  • src/app/api/customer/invoices/[orderId]/route.ts
+  • src/app/api/customer/invoices/[orderId]/resend/route.ts
+  • src/app/api/customer/credit-notes/[orderId]/route.ts
+  • src/app/api/customer/credit-notes/[orderId]/resend/route.ts
+  • src/app/api/customer/orders/route.ts (initial invoice on order placement)
+  • src/lib/order-helpers.ts (generateAndSendCreditNote + getPlatformInfoForEmail)
+- Updated src/lib/email-service.ts: "ShopHub" → "RealCart" in sendOrderDeliveredEmail + sendReturnAcceptedEmail fallbacks.
+- Extended src/app/api/admin/logo/route.ts:
+  • GET now also returns `siteName` (falls back to "RealCart")
+  • Added PUT method to save brand name (admin-auth, validates non-empty + max 60 chars, upserts settings.site.siteName)
+- Updated src/hooks/use-site-logo.ts to also return `siteName` (initialized to "RealCart").
+- Added Brand Name input section to admin settings page (src/app/admin/settings/page.tsx) inside the Website Logo card: pre-fills with fetched siteName, Save button (disabled until touched), Enter-to-save, success/error toast via existing message system.
+- Ran `bun run lint` → 0 errors (only pre-existing warnings in unrelated files).
+- Verified with Agent Browser end-to-end:
+  • Admin settings page renders Brand Name input pre-filled with "RealCart"
+  • PUT /api/admin/logo saves custom brand name → DB returns it via GET
+  • Customer invoice HTML (fetched via /api/customer/invoices/[orderId]?format=html) shows the dynamic brand name in the <h1> (verified "RealCart", then "My Shop Test" after changing it, then reverted)
+  • Invoice logo <img src> contains `e_make_transparent:20,f_png` → confirmed transparent PNG via curl (content-type: image/png, 111897 bytes)
+  • PDF download returns valid PDF (status 200, %PDF header, 149796 bytes)
+  • No page errors, no console errors, no dev log errors
+
+Stage Summary:
+- Brand name is now fully dynamic in invoices/credit notes/emails: reads from settings.site.siteName (configurable via admin Settings → Brand Name), falls back to "RealCart".
+- Brand logo background is removed on-the-fly via Cloudinary's native e_make_transparent effect + f_png (forces PNG for alpha transparency). No z.ai tools used. Works for JPEG/PNG/WebP/GIF logos; SVGs pass through unchanged.
+- All changes are backward-compatible: no existing UI/API signatures broken; useSiteLogo hook gained a new `siteName` field but existing destructuring still works.
+- Files created: src/lib/brand-settings.ts
+- Files modified: src/lib/invoice-engine.ts, src/lib/order-helpers.ts, src/lib/email-service.ts, src/app/api/admin/logo/route.ts, src/hooks/use-site-logo.ts, src/app/admin/settings/page.tsx, src/app/api/customer/invoices/[orderId]/route.ts, src/app/api/customer/invoices/[orderId]/resend/route.ts, src/app/api/customer/credit-notes/[orderId]/route.ts, src/app/api/customer/credit-notes/[orderId]/resend/route.ts, src/app/api/customer/orders/route.ts

@@ -9,6 +9,7 @@ import { getCustomerSession } from '@/lib/customer-auth'
 import { connectToDatabase } from '@/lib/mongodb'
 import { ObjectId } from 'mongodb'
 import { buildInvoiceData, generateInvoicePDF, generateInvoiceEmailHTML } from '@/lib/invoice-engine'
+import { getBrandSettings } from '@/lib/brand-settings'
 import { sendInvoiceEmail } from '@/lib/email-service'
 import type { Order } from '@/lib/order-types'
 
@@ -54,29 +55,12 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Get platform info
-    let platformName = 'ShopHub'
-    let platformGstin = ''
-    let platformAddress: string | undefined
-    let logoUrl: string | undefined
-    try {
-      const [siteSettings, taxSettings] = await Promise.all([
-        db.collection('settings').findOne({ key: 'site' }),
-        db.collection('settings').findOne({ key: 'tax' }),
-      ])
-      if (siteSettings?.siteName) platformName = siteSettings.siteName
-      if (siteSettings?.logo?.url) logoUrl = siteSettings.logo.url
-      if (taxSettings?.platformGstin) platformGstin = taxSettings.platformGstin
-      if (taxSettings?.platformAddress) platformAddress = taxSettings.platformAddress
-    } catch { /* use defaults */ }
+    // Get platform info (brand name + logo + GSTIN + address) — falls back
+    // to "RealCart" when not configured. Single source of truth: brand-settings.ts.
+    const platformInfo = await getBrandSettings(db)
 
     // Build invoice data
-    const invoiceData = await buildInvoiceData(order, {
-      platformName,
-      platformGstin,
-      platformAddress,
-      logoUrl,
-    })
+    const invoiceData = await buildInvoiceData(order, platformInfo)
 
     // Generate PDF + email HTML
     const [pdfBuffer, emailHTML] = await Promise.all([

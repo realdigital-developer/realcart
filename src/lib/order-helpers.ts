@@ -34,6 +34,7 @@ import { calculateCommission, calculateTds, calculateTcs, calculateDeliveryCharg
 import { decrementStock, restockProduct } from './inventory-manager'
 import { processReferralOnDelivery } from './referral-engine'
 import { createCustomerNotification } from './customer-notifications'
+import { getBrandSettings } from './brand-settings'
 import {
   getDeliveryEstimate,
   sanitizeDeliverySettings,
@@ -1772,19 +1773,9 @@ async function generateAndSendCreditNote(
       }
     }
 
-    // 2. Fetch platform settings (name, GSTIN, address)
-    let platformName = 'ShopHub'
-    let platformGstin = ''
-    let platformAddress: string | undefined
-    try {
-      const [siteSettings, taxSettings] = await Promise.all([
-        db.collection('settings').findOne({ key: 'site' }),
-        db.collection('settings').findOne({ key: 'tax' }),
-      ])
-      if (siteSettings?.siteName) platformName = siteSettings.siteName
-      if (taxSettings?.platformGstin) platformGstin = taxSettings.platformGstin
-      if (taxSettings?.platformAddress) platformAddress = taxSettings.platformAddress
-    } catch { /* use defaults */ }
+    // 2. Fetch platform settings (brand name + logo + GSTIN + address).
+    //    Falls back to "RealCart" when not configured.
+    const platformInfo = await getBrandSettings(db)
 
     // 3. Generate a unique credit note number
     const creditNoteNumber = generateCreditNoteNumber()
@@ -1792,9 +1783,7 @@ async function generateAndSendCreditNote(
 
     // 4. Build credit note data for the cancelled item(s) only
     const creditNoteData = await buildCreditNoteData(order, {
-      platformName,
-      platformGstin,
-      platformAddress,
+      ...platformInfo,
       itemIds: itemIds.length > 0 ? itemIds : undefined,
       reason,
       cancelledBy,
@@ -1936,26 +1925,24 @@ function buildItemsSummary(order: Order, filterItemIds?: Set<string>): string {
 }
 
 /**
- * Fetch platform settings (name, GSTIN, address) for email/credit-note branding.
+ * Fetch platform settings (brand name + logo + GSTIN + address) for email /
+ * credit-note branding. Delegates to the shared brand-settings helper so the
+ * fallback brand name ("RealCart") stays consistent everywhere.
  * Returns sensible defaults if settings are missing or DB is unavailable.
  */
 async function getPlatformInfoForEmail(): Promise<{ platformName: string; platformGstin: string; platformAddress?: string; logoUrl?: string }> {
-  let platformName = 'ShopHub'
-  let platformGstin = ''
-  let platformAddress: string | undefined
-  let logoUrl: string | undefined
   try {
     const { db } = await connectToDatabase()
-    const [siteSettings, taxSettings] = await Promise.all([
-      db.collection('settings').findOne({ key: 'site' }),
-      db.collection('settings').findOne({ key: 'tax' }),
-    ])
-    if (siteSettings?.siteName) platformName = siteSettings.siteName
-    if (siteSettings?.logo?.url) logoUrl = siteSettings.logo.url
-    if (taxSettings?.platformGstin) platformGstin = taxSettings.platformGstin
-    if (taxSettings?.platformAddress) platformAddress = taxSettings.platformAddress
-  } catch { /* use defaults */ }
-  return { platformName, platformGstin, platformAddress, logoUrl }
+    return await getBrandSettings(db)
+  } catch {
+    // DB unavailable — return defaults (brand = "RealCart").
+    return {
+      platformName: 'RealCart',
+      platformGstin: '',
+      platformAddress: undefined,
+      logoUrl: undefined,
+    }
+  }
 }
 
 /**

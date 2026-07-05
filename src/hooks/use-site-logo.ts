@@ -14,13 +14,15 @@ interface SiteLogo {
 
 interface UseSiteLogoReturn {
   logo: SiteLogo | null
+  /** Configured brand/site name (e.g. "RealCart"). Falls back to "RealCart" if unset. */
+  siteName: string
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
 }
 
 /**
- * Custom hook to fetch the current site logo.
+ * Custom hook to fetch the current site logo AND brand name.
  * Cloudinary URLs are already versioned/unique, but we add
  * a cache-buster based on upload time for extra safety.
  *
@@ -29,6 +31,7 @@ interface UseSiteLogoReturn {
  */
 export function useSiteLogo(): UseSiteLogoReturn {
   const [logo, setLogo] = useState<SiteLogo | null>(null)
+  const [siteName, setSiteName] = useState<string>('RealCart')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -52,6 +55,14 @@ export function useSiteLogo(): UseSiteLogoReturn {
       }
 
       const data = await res.json().catch(() => ({}))
+
+      // Brand name — always present in the API response (defaults to "RealCart").
+      if (typeof data.siteName === 'string' && data.siteName.trim().length > 0) {
+        setSiteName(data.siteName.trim())
+      } else {
+        setSiteName('RealCart')
+      }
+
       if (data.logo) {
         // Cloudinary URLs include version tokens, but add a cache-buster
         // based on upload time for extra freshness guarantee
@@ -81,5 +92,5 @@ export function useSiteLogo(): UseSiteLogoReturn {
     void fetchLogo()
   }, [fetchLogo])
 
-  return { logo, loading, error, refetch: fetchLogo }
+  return { logo, siteName, loading, error, refetch: fetchLogo }
 }

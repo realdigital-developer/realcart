@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
 import { getSessionFromRequest } from '@/lib/auth'
 import { uploadLogoImage, deleteLogoImage, isUploadConfigured } from '@/lib/upload'
+import { DEFAULT_BRAND_NAME } from '@/lib/brand-settings'
 
 // Allowed MIME types for logo upload
 const ALLOWED_TYPES = new Set([
@@ -15,20 +16,44 @@ const ALLOWED_TYPES = new Set([
 // Max file size: 5 MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
+// Max length for the brand name (prevents abuse / layout overflow on invoices)
+const MAX_BRAND_NAME_LENGTH = 60
+
 // Settings collection name in MongoDB
 const SETTINGS_COLLECTION = 'settings'
 
 /**
  * GET /api/admin/logo
- * Returns the current logo configuration.
+ * Returns the current logo configuration AND the configured brand (site) name.
+ *
+ * Response shape:
+ *   {
+ *     logo: { url, publicId, width, height, format, uploadedAt, size } | null,
+ *     siteName: string,            // configured brand name, or DEFAULT_BRAND_NAME
+ *     cloudinaryConfigured: boolean
+ *   }
+ *
+ * This endpoint is PUBLIC (no auth) so the customer-facing navbar can call it
+ * on every page load. Only the logo URL + brand name are exposed — no secrets.
  */
 export async function GET() {
   try {
     const { db } = await connectToDatabase()
     const settings = await db.collection(SETTINGS_COLLECTION).findOne({ key: 'site' })
 
+    // Resolve brand name — use configured value, else fall back to default.
+    let siteName = DEFAULT_BRAND_NAME
+    const rawName = settings?.siteName
+    if (typeof rawName === 'string' && rawName.trim().length > 0) {
+      siteName = rawName.trim()
+    }
+
     if (!settings?.logo) {
-      return NextResponse.json({ logo: null, cloudinaryConfigured: isUploadConfigured() })
+      return NextResponse.json({
+        logo: null,
+        siteName,
+        cloudinaryConfigured: isUploadConfigured(),
+      })
     }
 
     return NextResponse.json({
@@ -41,11 +66,71 @@ export async function GET() {
         uploadedAt: settings.logo.uploadedAt,
         size: settings.logo.size,
       },
+      siteName,
       cloudinaryConfigured: isUploadConfigured(),
     })
   } catch (error) {
     console.error('[Logo GET Error]', error)
     return NextResponse.json({ error: 'Failed to fetch logo' }, { status: 500 })
+  }
+}
+
+/**
+ * PUT /api/admin/logo
+ * Updates the brand (site) name only. Expects a JSON body: `{ siteName: string }`.
+ *
+ * The brand name is stored on the `settings.site` document (same document that
+ * holds the logo) and is read by the invoice / credit-note / email engines to
+ * render the brand name dynamically on every generated document.
+ *
+ * Requires admin authentication.
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    // Verify admin session
+    const session = await getSessionFromRequest(request)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let body: { siteName?: unknown }
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
+    const rawName = typeof body.siteName === 'string' ? body.siteName.trim() : ''
+    if (rawName.length === 0) {
+      return NextResponse.json({ error: 'Brand name cannot be empty' }, { status: 400 })
+    }
+    if (rawName.length > MAX_BRAND_NAME_LENGTH) {
+      return NextResponse.json(
+        { error: `Brand name must be ${MAX_BRAND_NAME_LENGTH} characters or fewer` },
+        { status: 400 },
+      )
+    }
+
+    const { db } = await connectToDatabase()
+    await db.collection(SETTINGS_COLLECTION).updateOne(
+      { key: 'site' },
+      {
+        $set: {
+          key: 'site',
+          siteName: rawName,
+          updatedAt: new Date(),
+        },
+        $setOnInsert: {
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true },
+    )
+
+    return NextResponse.json({ success: true, siteName: rawName })
+  } catch (error) {
+    console.error('[Logo PUT Error]', error)
+    return NextResponse.json({ error: 'Failed to update brand name' }, { status: 500 })
   }
 }
 

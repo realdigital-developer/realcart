@@ -346,12 +346,23 @@ function CloudinaryConfigSection() {
 /* ------------------------------------------------------------------ */
 
 function LogoUploadSection() {
-  const { logo, loading: logoLoading, refetch } = useSiteLogo()
+  const { logo, siteName: fetchedSiteName, loading: logoLoading, refetch } = useSiteLogo()
   const [cloudinaryReady, setCloudinaryReady] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Brand name (site name) editing state.
+  // Initialised from the fetched siteName; updated when the fetched value changes
+  // (e.g. after refetch following a save) so the input stays in sync.
+  const [brandName, setBrandName] = useState('')
+  const [savingName, setSavingName] = useState(false)
+  const [brandNameTouched, setBrandNameTouched] = useState(false)
+  useEffect(() => {
+    setBrandName(fetchedSiteName || 'RealCart')
+    setBrandNameTouched(false)
+  }, [fetchedSiteName])
 
   // Check upload status via public endpoint
   useEffect(() => {
@@ -449,6 +460,42 @@ function LogoUploadSection() {
     },
     [handleUpload],
   )
+
+  // Save the brand (site) name via PUT /api/admin/logo.
+  // Trims whitespace and rejects empty values. The saved name is used
+  // dynamically on every generated invoice / credit note / email.
+  const handleSaveBrandName = useCallback(async () => {
+    const trimmed = brandName.trim()
+    if (!trimmed) {
+      setMessage({ type: 'error', text: 'Brand name cannot be empty' })
+      return
+    }
+    if (trimmed.length > 60) {
+      setMessage({ type: 'error', text: 'Brand name must be 60 characters or fewer' })
+      return
+    }
+    setSavingName(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/logo', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteName: trimmed }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to save brand name')
+      setMessage({ type: 'success', text: 'Brand name updated — invoices will use the new name.' })
+      setBrandNameTouched(false)
+      await refetch()
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to save brand name',
+      })
+    } finally {
+      setSavingName(false)
+    }
+  }, [brandName, refetch])
 
   if (logoLoading) {
     return (
@@ -710,6 +757,57 @@ function LogoUploadSection() {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Brand Name — shown on invoices, credit notes & emails.
+              Stored on settings.site.siteName; falls back to "RealCart". */}
+          <div className="mt-5 pt-5 border-t border-border/30">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10 text-primary shrink-0">
+                <Building2 className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold leading-tight">Brand Name</h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Shown dynamically on invoices, credit notes &amp; transactional emails.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                value={brandName}
+                onChange={(e) => {
+                  setBrandName(e.target.value)
+                  setBrandNameTouched(true)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !savingName) {
+                    e.preventDefault()
+                    void handleSaveBrandName()
+                  }
+                }}
+                placeholder="RealCart"
+                maxLength={60}
+                disabled={savingName}
+                className="h-9 text-sm flex-1"
+                aria-label="Brand name"
+              />
+              <Button
+                onClick={() => void handleSaveBrandName()}
+                disabled={savingName || !brandNameTouched || brandName.trim().length === 0}
+                className="h-9 text-xs gap-1.5 sm:w-auto"
+              >
+                {savingName ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Save className="h-3.5 w-3.5" />
+                )}
+                Save
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-1.5">
+              Press Enter or click Save to apply. Leave as &ldquo;RealCart&rdquo; to use the default brand.
+            </p>
           </div>
         </div>
       </motion.div>

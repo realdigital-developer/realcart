@@ -20,6 +20,7 @@
 import PDFDocument from 'pdfkit'
 import { join } from 'path'
 import type { Order, OrderItem } from './order-types'
+import { DEFAULT_BRAND_NAME, getLogoUrlWithBgRemoval } from './brand-settings'
 
 /* ------------------------------------------------------------------ */
 /*  Font Registration — DejaVu Sans supports ₹ (U+20B9)                */
@@ -290,7 +291,7 @@ export async function buildInvoiceData(
 
     placeOfSupply: addr.state || '',
 
-    platformName: options?.platformName || 'ShopHub',
+    platformName: options?.platformName || DEFAULT_BRAND_NAME,
     platformGstin: options?.platformGstin || '',
     platformAddress: options?.platformAddress,
     logoUrl: options?.logoUrl,
@@ -361,11 +362,16 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
       const contentWidth = pageWidth - 80 // 40px margins both sides
 
       // ===== HEADER =====
-      // Logo (left) — dynamically fetch and embed the brand logo
+      // Logo (left) — dynamically fetch and embed the brand logo.
+      // The logo URL is transformed with Cloudinary's native e_make_transparent
+      // effect so any solid background is removed (transparent PNG), giving a
+      // clean, professional look on the white invoice. Non-Cloudinary URLs
+      // (e.g. SVG) are returned unchanged by the helper.
       let logoEmbedded = false
-      if (data.logoUrl) {
+      const invoiceLogoUrl = getLogoUrlWithBgRemoval(data.logoUrl)
+      if (invoiceLogoUrl) {
         try {
-          const logoRes = await fetch(data.logoUrl)
+          const logoRes = await fetch(invoiceLogoUrl)
           if (logoRes.ok) {
             const logoBuffer = Buffer.from(await logoRes.arrayBuffer())
             // Embed logo at top-left, max height 40px, auto-scale width
@@ -867,7 +873,12 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid #059669;margin-bottom:20px;flex-wrap:wrap;gap:16px;">
       <div>
-        ${data.logoUrl ? `<img src="${escapeHtml(data.logoUrl)}" alt="${escapeHtml(data.platformName)}" style="max-height:48px;max-width:180px;margin-bottom:8px;" />` : ''}
+        ${(() => {
+          const htmlLogoUrl = getLogoUrlWithBgRemoval(data.logoUrl)
+          return htmlLogoUrl
+            ? `<img src="${escapeHtml(htmlLogoUrl)}" alt="${escapeHtml(data.platformName)}" style="max-height:48px;max-width:180px;margin-bottom:8px;" />`
+            : ''
+        })()}
         <h1 style="font-size:24px;color:#059669;margin:0 0 4px 0;font-weight:700;">${escapeHtml(data.platformName)}</h1>
         ${data.platformAddress ? `<p style="font-size:11px;color:#6b7280;margin:0;">${escapeHtml(data.platformAddress)}</p>` : ''}
         ${data.platformGstin ? `<p style="font-size:11px;color:#6b7280;margin:4px 0 0 0;">GSTIN: <strong>${escapeHtml(data.platformGstin)}</strong></p>` : ''}
@@ -1475,7 +1486,7 @@ export async function buildCreditNoteData(
 
     placeOfSupply: addr.state || '',
 
-    platformName: options?.platformName || 'ShopHub',
+    platformName: options?.platformName || DEFAULT_BRAND_NAME,
     platformGstin: options?.platformGstin || '',
     platformAddress: options?.platformAddress,
     logoUrl: options?.logoUrl,
@@ -1575,11 +1586,13 @@ export async function generateCreditNotePDF(data: CreditNoteData): Promise<Buffe
       const contentWidth = pageWidth - 80
 
       // ===== HEADER =====
-      // Logo (left) — dynamically fetch and embed the brand logo
+      // Logo (left) — dynamically fetch and embed the brand logo.
+      // Background removed via Cloudinary e_make_transparent (see brand-settings.ts).
       let logoEmbedded = false
-      if (data.logoUrl) {
+      const cnLogoUrl = getLogoUrlWithBgRemoval(data.logoUrl)
+      if (cnLogoUrl) {
         try {
-          const logoRes = await fetch(data.logoUrl)
+          const logoRes = await fetch(cnLogoUrl)
           if (logoRes.ok) {
             const logoBuffer = Buffer.from(await logoRes.arrayBuffer())
             doc.image(logoBuffer, 40, 35, { fit: [140, 40] })
@@ -2096,7 +2109,12 @@ export function generateCreditNoteHTML(data: CreditNoteData): string {
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid #d97706;margin-bottom:20px;flex-wrap:wrap;gap:16px;">
       <div>
-        ${data.logoUrl ? `<img src="${escapeHtml(data.logoUrl)}" alt="${escapeHtml(data.platformName)}" style="max-height:48px;max-width:180px;margin-bottom:8px;" />` : ''}
+        ${(() => {
+          const cnHtmlLogoUrl = getLogoUrlWithBgRemoval(data.logoUrl)
+          return cnHtmlLogoUrl
+            ? `<img src="${escapeHtml(cnHtmlLogoUrl)}" alt="${escapeHtml(data.platformName)}" style="max-height:48px;max-width:180px;margin-bottom:8px;" />`
+            : ''
+        })()}
         <h1 style="font-size:24px;color:#d97706;margin:0 0 4px 0;font-weight:700;">${escapeHtml(data.platformName)}</h1>
         ${data.platformAddress ? `<p style="font-size:11px;color:#6b7280;margin:0;">${escapeHtml(data.platformAddress)}</p>` : ''}
         ${data.platformGstin ? `<p style="font-size:11px;color:#6b7280;margin:4px 0 0 0;">GSTIN: <strong>${escapeHtml(data.platformGstin)}</strong></p>` : ''}

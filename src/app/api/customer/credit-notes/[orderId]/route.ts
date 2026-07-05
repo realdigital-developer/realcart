@@ -16,29 +16,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCustomerSession } from '@/lib/customer-auth'
 import { connectToDatabase } from '@/lib/mongodb'
 import { buildCreditNoteData, generateCreditNotePDF, generateCreditNoteHTML } from '@/lib/invoice-engine'
+import { getBrandSettings } from '@/lib/brand-settings'
 import type { Order, CreditNoteRecord } from '@/lib/order-types'
-
-/**
- * Fetch platform settings for credit note branding.
- */
-async function getPlatformInfo() {
-  let platformName = 'ShopHub'
-  let platformGstin = ''
-  let platformAddress: string | undefined
-  let logoUrl: string | undefined
-  try {
-    const { db } = await connectToDatabase()
-    const [siteSettings, taxSettings] = await Promise.all([
-      db.collection('settings').findOne({ key: 'site' }),
-      db.collection('settings').findOne({ key: 'tax' }),
-    ])
-    if (siteSettings?.siteName) platformName = siteSettings.siteName
-    if (siteSettings?.logo?.url) logoUrl = siteSettings.logo.url
-    if (taxSettings?.platformGstin) platformGstin = taxSettings.platformGstin
-    if (taxSettings?.platformAddress) platformAddress = taxSettings.platformAddress
-  } catch { /* use defaults */ }
-  return { platformName, platformGstin, platformAddress, logoUrl }
-}
 
 export async function GET(
   request: NextRequest,
@@ -87,8 +66,9 @@ export async function GET(
       }, { status: 404 })
     }
 
-    // Get platform info
-    const platformInfo = await getPlatformInfo()
+    // Get platform info (brand name + logo + GSTIN + address) — falls back
+    // to "RealCart" when not configured. Single source of truth: brand-settings.ts.
+    const platformInfo = await getBrandSettings(db)
 
     // Build credit note data — restricts items to those covered by this credit note
     const creditNoteData = await buildCreditNoteData(order, {

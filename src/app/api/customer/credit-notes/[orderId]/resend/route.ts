@@ -11,6 +11,7 @@ import { getCustomerSession } from '@/lib/customer-auth'
 import { connectToDatabase } from '@/lib/mongodb'
 import { ObjectId } from 'mongodb'
 import { buildCreditNoteData, generateCreditNotePDF, generateCreditNoteEmailHTML } from '@/lib/invoice-engine'
+import { getBrandSettings } from '@/lib/brand-settings'
 import { sendCreditNoteEmail } from '@/lib/email-service'
 import type { Order, CreditNoteRecord } from '@/lib/order-types'
 
@@ -79,28 +80,13 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Get platform info
-    let platformName = 'ShopHub'
-    let platformGstin = ''
-    let platformAddress: string | undefined
-    let logoUrl: string | undefined
-    try {
-      const [siteSettings, taxSettings] = await Promise.all([
-        db.collection('settings').findOne({ key: 'site' }),
-        db.collection('settings').findOne({ key: 'tax' }),
-      ])
-      if (siteSettings?.siteName) platformName = siteSettings.siteName
-      if (siteSettings?.logo?.url) logoUrl = siteSettings.logo.url
-      if (taxSettings?.platformGstin) platformGstin = taxSettings.platformGstin
-      if (taxSettings?.platformAddress) platformAddress = taxSettings.platformAddress
-    } catch { /* use defaults */ }
+    // Get platform info (brand name + logo + GSTIN + address) — falls back
+    // to "RealCart" when not configured. Single source of truth: brand-settings.ts.
+    const platformInfo = await getBrandSettings(db)
 
     // Build credit note data
     const creditNoteData = await buildCreditNoteData(order, {
-      platformName,
-      platformGstin,
-      platformAddress,
-      logoUrl,
+      ...platformInfo,
       itemIds: creditNote.itemIds,
       reason: creditNote.reason,
       cancelledBy: creditNote.cancelledBy,
