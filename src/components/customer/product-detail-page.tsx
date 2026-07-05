@@ -2569,16 +2569,9 @@ export function ProductDetailPage() {
               </div>
             )}
 
-            {/* 7. Quantity + Brand selector (same row) */}
+            {/* 7. Quantity selector */}
             {currentInStock && (
               <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-4">
-                {product.brand && (
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Brand :</span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{product.brand}</span>
-                  </div>
-                )}
-                <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-shrink-0">{t('productDetail.qty')}</span>
                 <div className="flex items-center gap-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden flex-shrink-0">
                   <button
@@ -2605,8 +2598,8 @@ export function ProductDetailPage() {
               </div>
             )}
 
-            {/* Brand display when out of stock (quantity selector not shown) */}
-            {!currentInStock && product.brand && (
+            {/* Brand display (below quantity, above sold-by) */}
+            {product.brand && (
               <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-1.5">
                 <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Brand :</span>
                 <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{product.brand}</span>
