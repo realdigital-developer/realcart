@@ -6066,3 +6066,34 @@ Work Log:
 Stage Summary:
 - **Brand moved**: Brand section is now its own dedicated row below the quantity selector and above the sold-by section. Simplified by removing the duplicate out-of-stock brand display.
 - **No damage**: Only 1 file modified (3 insertions, 10 deletions). All existing functionality preserved. Lint: 0 errors.
+
+---
+Task ID: remove-quantity-selector
+Agent: main-orchestrator
+Task: Remove the quantity selector from the customer panel product details page.
+
+Work Log:
+- **Code study**: Found the quantity selector at lines 2572-2599 of `src/components/customer/product-detail-page.tsx`. It included:
+  * Qty label
+  * Minus button (decrement quantity)
+  * Quantity number display
+  * Plus button (increment quantity)
+  * "Only X left" stock warning
+- **Key insight**: The `quantity` state (line 1540: `useState(1)`) is used in cart/buy-now logic (lines 2101, 2125). Removing the state would break cart functionality. Only the **UI selector** needs to be removed — the state stays and defaults to 1.
+- **Fix applied** (1 file, 0 insertions, 31 deletions):
+  * Removed the entire quantity selector UI block (lines 2572-2599)
+  * Removed unused `Minus` icon import
+  * Removed unused `Plus` icon import (`UserPlus` is a separate import, still used)
+  * Kept `quantity` state (defaults to 1) for cart/buy-now logic
+  * Kept `setQuantity` for the product fetch reset (line 1769)
+- **Verification** (Agent Browser):
+  * Qty: NOT found ✓ (removed)
+  * Brand: found ✓ (still present)
+  * Sold by: found ✓ (still present)
+  * No browser/console errors ✓
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `d9333f0` — 1 file changed, 31 deletions(-).
+
+Stage Summary:
+- **Quantity selector removed**: The Qty label and +/- buttons are no longer shown on the product details page. The quantity state (defaults to 1) is kept intact so cart/buy-now functionality works correctly.
+- **No damage**: Only 1 file modified (31 deletions, 0 insertions). All other UI and code preserved. Lint: 0 errors.
