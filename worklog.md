@@ -6479,3 +6479,41 @@ Stage Summary:
 - Server is now running stably on port 3000 (PID 1514), all routes return HTTP 200, no errors.
 - No code or UI was damaged — this was purely a process-management fix.
 - The preview panel should now load the project correctly.
+
+---
+Task ID: github-upload-2
+Agent: Z.ai Code (main)
+Task: Upload the code to GitHub (https://github.com/realdigital-developer/realcart.git) using the provided PAT. Ensure no errors and no damage to existing UI/code.
+
+Work Log:
+- Checked git state: working tree clean, on main, 2 commits ahead of origin (26ec664, 7fc75ba).
+- CRITICAL DISCOVERY: Commit 7fc75ba (automated sandbox commit) had DELETED src/app/api/seller/products/upload/route.ts (82 lines removed) with NO replacement. The frontend seller products page still calls POST /api/seller/products/upload (page.tsx:659), so this deletion would BREAK the seller image upload feature.
+- Verified the deletion was NOT intentional: no replacement endpoint exists, frontend reference still present, file simply gone from disk.
+- Investigated other changes in the unpushed commits:
+  • Font files (DejaVuSans.ttf, DejaVuSans-Bold.ttf): valid TrueType fonts, identical byte sizes — the "Bin" diff is just a harmless mode change (100644→100755, executable bit).
+  • brand-settings.ts: "0 lines" change = mode change only (100644→100755), content fully intact (203 lines).
+  • worklog.md: 55 insertions = previous task's worklog update. Expected.
+- Restored the deleted file from git history: `git show 7fc75ba^:src/app/api/seller/products/upload/route.ts` → recreated the upload/ directory and wrote the file back (82 lines, 2329 bytes, exact match).
+- Verified restored file: complete content, valid TypeScript, imports reference existing modules (@/lib/seller-api-auth, @/lib/upload, @/lib/cloudinary).
+- Ran `bun run lint` → 0 errors (24 pre-existing warnings in unrelated files).
+- Tested the restored endpoint against the running dev server: POST /api/seller/products/upload → HTTP 401 (Unauthorized). This is the CORRECT response (no seller session = 401, not 500/compile-error/404). Dev log confirmed successful compilation (3.0s compile, 12ms render).
+- Committed the restoration: commit 3b9b2c9 "fix(seller): restore accidentally-deleted product image upload API".
+- Pre-push security audit: .env NOT tracked, scanned unpushed diff for real secrets (ghp_, password=, api_key=) — none found (only worklog text mentioning previous checks).
+- Pushed 3 commits using PAT inline in URL (https://<token>@github.com/...) — token NOT stored in .git/config.
+- Push result: 7c6f613..3b9b2c9 main -> main (all 3 commits uploaded).
+
+Post-Push Verification:
+- git fetch origin → confirmed origin/main = 3b9b2c9
+- Sync status: 0 0 (fully in sync)
+- HEAD match: local 3b9b2c9 == origin 3b9b2c9 ✓
+- grep -c "ghp_" .git/config → 0 (token NOT stored — secure) ✓
+- git cat-file -e origin/main:src/app/api/seller/products/upload/route.ts → EXISTS on GitHub ✓
+- Dev server still running (PID 2346, port 3000), home page HTTP 200, zero errors in dev log ✓
+
+Stage Summary:
+- All code successfully uploaded to https://github.com/realdigital-developer/realcart.git on main branch.
+- CRITICAL FIX: Caught and reversed an accidental file deletion (seller product image upload API) that would have broken the seller upload feature. The restored file is now on GitHub.
+- 3 commits pushed: worklog update, sandbox commit (font/brand-settings mode changes + accidental deletion), and my restoration fix.
+- Local and remote fully in sync (0 commits difference either way).
+- PAT used inline for authentication, NOT persisted in git config (security best practice).
+- No existing UI or code damaged — the push was additive/corrective only. Preview remains functional.
