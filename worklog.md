@@ -6338,3 +6338,43 @@ Work Log:
 Stage Summary:
 - **Root cause fixed**: Attributes/variant text now renders properly in the invoice PDF — placed after the description text using `doc.y` instead of a fixed offset that overlapped with wrapped description lines.
 - **No damage**: Only 1 file modified (8 insertions, 4 deletions). All existing functionality preserved. Lint: 0 errors.
+
+---
+Task ID: dynamic-logo-in-invoice
+Agent: main-orchestrator
+Task: Add dynamic brand logo to invoice PDFs — any logo used in the project as brand should dynamically show in the invoice.
+
+Work Log:
+- **Code study**: Found that the site logo is stored in MongoDB `settings` collection under `key: 'site'` as `settings.logo.url` (Cloudinary URL). The admin uploads it via `/api/admin/logo`. The logo URL is `https://res.cloudinary.com/dw4rztuom/image/upload/v1780459375/realcart/site-logo.jpg`.
+- **Changes applied** (6 files, 74 insertions, 18 deletions):
+  1. **`src/lib/invoice-engine.ts`** (core changes):
+     * Added `logoUrl?: string` to both `InvoiceData` and `CreditNoteData` interfaces
+     * Updated `buildInvoiceData()` and `buildCreditNoteData()` to accept `logoUrl` option
+     * Updated `generateInvoicePDF()` and `generateCreditNotePDF()`:
+       - Changed to `async` functions (to support `await fetch()` for logo download)
+       - Fetch logo image from URL, embed in PDF at top-left (`fit: [140, 40]`)
+       - If logo present: platform name moves below logo (14pt instead of 20pt)
+       - If logo fetch fails: falls back to text-only header (no error)
+     * Updated `generateInvoiceHTML()` and `generateCreditNoteHTML()`:
+       - Added `<img>` tag with logo URL above platform name (max-height: 48px)
+  2. **`src/app/api/customer/invoices/[orderId]/route.ts`**: Fetch `logoUrl` from `settings.site.logo.url` in `getPlatformInfo()`
+  3. **`src/app/api/customer/credit-notes/[orderId]/route.ts`**: Same
+  4. **`src/app/api/customer/invoices/[orderId]/resend/route.ts`**: Same
+  5. **`src/app/api/customer/credit-notes/[orderId]/resend/route.ts`**: Same
+  6. **`src/lib/order-helpers.ts`**: Updated `getPlatformInfoForEmail()` to fetch `logoUrl`, pass to `buildCreditNoteData()`
+- **Verification** (test PDF + VLM):
+  * Logo image embedded at top-left of PDF ✓
+  * Platform name 'RealCart' visible below logo ✓
+  * GSTIN text visible ✓
+  * API compiles: 401 (auth required), not 500 (error) ✓
+  * Lint: 0 errors, 24 warnings (all pre-existing) ✓
+- **Git**: Committed as `7173a6f` — 6 files changed, 74 insertions(+), 18 deletions(-).
+
+Stage Summary:
+- **Dynamic brand logo**: The brand logo (uploaded by admin in Settings → Site → Logo) now appears dynamically in:
+  * Invoice PDF (top-left, above platform name)
+  * Credit note PDF (top-left, above platform name)
+  * Invoice HTML (in-app preview + email)
+  * Credit note HTML (in-app preview + email)
+- **Robust**: If no logo is set, or logo fetch fails, the invoice falls back to text-only header (no error).
+- **No damage**: 6 files modified (74 insertions, 18 deletions). All existing functionality preserved. Lint: 0 errors.
