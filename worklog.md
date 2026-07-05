@@ -6424,3 +6424,32 @@ Stage Summary:
 - All changes are backward-compatible: no existing UI/API signatures broken; useSiteLogo hook gained a new `siteName` field but existing destructuring still works.
 - Files created: src/lib/brand-settings.ts
 - Files modified: src/lib/invoice-engine.ts, src/lib/order-helpers.ts, src/lib/email-service.ts, src/app/api/admin/logo/route.ts, src/hooks/use-site-logo.ts, src/app/admin/settings/page.tsx, src/app/api/customer/invoices/[orderId]/route.ts, src/app/api/customer/invoices/[orderId]/resend/route.ts, src/app/api/customer/credit-notes/[orderId]/route.ts, src/app/api/customer/credit-notes/[orderId]/resend/route.ts, src/app/api/customer/orders/route.ts
+
+---
+Task ID: github-upload
+Agent: Z.ai Code (main)
+Task: Upload the code to GitHub (https://github.com/realdigital-developer/realcart.git) using the provided personal access token.
+
+Work Log:
+- Checked git status: working tree clean, on branch main, remote `origin` already pointed to https://github.com/realdigital-developer/realcart.git
+- Verified local main was 13 commits ahead of origin/main, 0 behind (clean fast-forward, no diverged history)
+- Reviewed all 13 unpushed commits — all legitimate project work (invoice PDF fixes, brand logo, brand-settings helper, etc.)
+- Security audit before push:
+  • .gitignore present and properly excludes .env
+  • Only .env.example (placeholders) tracked — real .env NOT tracked
+  • Scanned unpushed diff for secrets (ghp_, password, api_key, mongodb connection strings) — none found
+- Pushed using the PAT inline in the push URL (https://<token>@github.com/...) so the token authenticates this push WITHOUT being permanently written to .git/config — more secure than storing it in the remote URL
+- Push result: b551dc8..7c6f613 main -> main (all 13 commits uploaded successfully)
+- Post-push verification:
+  • git fetch origin → confirmed origin/main updated to 7c6f613
+  • Sync status: 0 0 (local and origin perfectly in sync)
+  • git remote -v → clean URL, no token embedded
+  • grep -c "ghp_" .git/config → 0 (token NOT stored in config — secure)
+  • HEAD match: local main (7c6f613) == origin/main (7c6f613)
+
+Stage Summary:
+- All code successfully uploaded to https://github.com/realdigital-developer/realcart.git on the main branch
+- 13 commits pushed, including the latest brand-settings / dynamic-brand-name / logo-background-removal work (commit 7c6f613)
+- Local and remote are fully in sync (0 commits difference either way)
+- No existing UI or code damaged — push was additive only (fast-forward)
+- PAT was used inline for authentication and was NOT persisted in git config (security best practice)
