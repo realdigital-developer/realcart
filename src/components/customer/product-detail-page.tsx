@@ -1166,30 +1166,23 @@ function MagnifierImage({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Loading skeleton */}
-      {!isLoaded && (
-        <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 animate-pulse flex items-center justify-center">
-          <Loader2 className="h-8 w-8 text-gray-400 animate-spin" />
-        </div>
-      )}
-
-      {/* Main image with crossfade transition */}
-      <AnimatePresence mode="wait">
-        <motion.img
-          key={index}
-          src={src}
-          alt={alt}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="w-full h-full object-contain p-4 pointer-events-none"
-          onLoad={onLoad}
-          onError={onError}
-          draggable={false}
-          fetchPriority="high"
-        />
-      </AnimatePresence>
+      {/* Main image — renders immediately. For cached images (back navigation),
+          the browser shows the image instantly from HTTP cache with no skeleton.
+          For uncached images, the bg-white container is shown briefly until
+          the image loads — cleaner than a spinner overlay. */}
+      <motion.img
+        key={index}
+        src={src}
+        alt={alt}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+        className="w-full h-full object-contain p-4 pointer-events-none"
+        onLoad={onLoad}
+        onError={onError}
+        draggable={false}
+        fetchPriority="high"
+      />
 
       {/* Zoomed view overlay (desktop, on hover) — shows zoomed area filling the container.
           NOTE: No visible lens circle indicator is drawn; the zoom itself is the feedback.
