@@ -6025,3 +6025,44 @@ Stage Summary:
 - **Highlights**: Already not shown on the product detail page (confirmed via VLM).
 - **Brand beside Quantity**: Brand and Qty are now in the same row with a vertical divider, proper spacing, and flex-shrink-0 to prevent wrapping. Brand displayed as "Brand : {name}" format.
 - **No damage**: Only 1 file modified (11 insertions, 12 deletions). All existing functionality preserved. Lint: 0 errors.
+
+---
+Task ID: move-brand-below-qty
+Agent: main-orchestrator
+Task: Move brand display section to just below the quantity section and above the sold-by section in customer panel product details page.
+
+Work Log:
+- **Code study**: Read the product detail page layout (lines 2572-2614). Found:
+  * Brand was inside the quantity selector row (sharing the same row with Qty and a vertical divider)
+  * A separate brand display existed for out-of-stock items
+  * Seller info ("Sold by") was the next section below
+- **Fix applied** (1 file, 3 insertions, 10 deletions):
+  * Removed brand from inside the quantity selector row
+  * Removed the separate out-of-stock brand display (no longer needed)
+  * Added brand as its own dedicated section between quantity and seller info:
+    ```
+    {/* 7. Quantity selector */}
+    ... quantity selector ...
+    
+    {/* Brand display (below quantity, above sold-by) */}
+    {product.brand && (
+      <div className="mt-4 border-t ... pt-4 flex items-center gap-1.5">
+        <span>Brand :</span>
+        <span>{product.brand}</span>
+      </div>
+    )}
+    
+    {/* 8. Seller Info Row */}
+    ...
+    ```
+  * Brand now shows regardless of stock status (simpler, more robust)
+- **Verification** (Agent Browser + VLM):
+  * Text order confirmed: Qty (line 13) → Brand (line 15) → Sold by (line 18) ✓
+  * VLM confirmed: "Brand is below Qty and above Sold by" ✓
+  * No browser/console errors ✓
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `6abcef3` — 1 file changed, 3 insertions(+), 10 deletions(-).
+
+Stage Summary:
+- **Brand moved**: Brand section is now its own dedicated row below the quantity selector and above the sold-by section. Simplified by removing the duplicate out-of-stock brand display.
+- **No damage**: Only 1 file modified (3 insertions, 10 deletions). All existing functionality preserved. Lint: 0 errors.
