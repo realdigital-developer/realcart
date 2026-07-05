@@ -27,16 +27,17 @@ import type { Order, OrderItem } from './order-types'
 /*  We embed DejaVu Sans (regular + bold) for proper ₹ rendering.      */
 /* ------------------------------------------------------------------ */
 
-let fontsRegistered = false
-
+/**
+ * Register DejaVu Sans fonts on a PDFKit document instance.
+ * Must be called on EVERY new PDFDocument — registerFont is per-instance,
+ * not global. A shared flag would cause the second PDF to fail with ENOENT.
+ */
 function registerFonts(doc: InstanceType<typeof PDFDocument>) {
-  if (fontsRegistered) return
   try {
     const regularPath = join(process.cwd(), 'public', 'fonts', 'DejaVuSans.ttf')
     const boldPath = join(process.cwd(), 'public', 'fonts', 'DejaVuSans-Bold.ttf')
     doc.registerFont('DejaVuSans', regularPath)
     doc.registerFont('DejaVuSans-Bold', boldPath)
-    fontsRegistered = true
   } catch {
     // Fonts not available — fall back to Helvetica (₹ won't render)
   }
