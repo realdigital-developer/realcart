@@ -6097,3 +6097,32 @@ Work Log:
 Stage Summary:
 - **Quantity selector removed**: The Qty label and +/- buttons are no longer shown on the product details page. The quantity state (defaults to 1) is kept intact so cart/buy-now functionality works correctly.
 - **No damage**: Only 1 file modified (31 deletions, 0 insertions). All other UI and code preserved. Lint: 0 errors.
+
+---
+Task ID: github-upload-12
+Agent: main-orchestrator
+Task: Upload the latest code to GitHub (https://github.com/realdigital-developer/realcart.git) using classic PAT.
+
+Work Log:
+- **Pre-push verification** (all passed):
+  * Git status: working tree clean.
+  * Lint: 0 errors, 24 warnings (all pre-existing).
+  * Sensitive files: ZERO tracked.
+  * Dev server: HTTP 200.
+  * Divergence: local 10+ commits ahead, 0 behind — clean fast-forward.
+- **GitHub Push** (successful):
+  * Used `GIT_ASKPASS` helper (one-time, deleted after push).
+  * Push succeeded: `80d168a..0491451  main -> main`.
+  * Token NOT persisted in git config.
+- **Sync verification**:
+  * Local HEAD: `0491451f1b6e0a622eede7796bf4658660099c17`
+  * Remote main HEAD: `0491451f1b6e0a622eede7796bf4658660099c17`
+  * Divergence: `0  0`
+  * STATUS: IN SYNC ✓
+
+Stage Summary:
+- **All code uploaded to GitHub**: https://github.com/realdigital-developer/realcart (main branch)
+- **Clean fast-forward push** — 10+ commits (image optimization, brand/qty layout, highlights removal, quantity selector removal, JSON error fix, etc.)
+- **No damage**: No UI or code modified during upload.
+- **IN SYNC**: `0491451f1b6e0a622eede7796bf4658660099c17`
+- PAT used via GIT_ASKPASS (one-time, not persisted).
