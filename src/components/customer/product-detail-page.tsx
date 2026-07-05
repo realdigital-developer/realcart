@@ -31,8 +31,6 @@ import {
   Play,
   Shield,
   CreditCard,
-  Minus,
-  Plus,
   Eye,
   UserCheck,
   UserPlus,
@@ -2565,35 +2563,6 @@ export function ProductDetailPage() {
                 {/* Stock status */}
                 {!currentInStock && Object.keys(selectedVariantAttrs).length > 0 && (
                   <p className="text-xs text-red-500 font-medium mt-2">{t('productDetail.variantOutOfStock')}</p>
-                )}
-              </div>
-            )}
-
-            {/* 7. Quantity selector */}
-            {currentInStock && (
-              <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-4">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-shrink-0">{t('productDetail.qty')}</span>
-                <div className="flex items-center gap-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden flex-shrink-0">
-                  <button
-                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    disabled={quantity <= 1}
-                    className="h-8 w-8 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
-                  >
-                    <Minus className="h-3.5 w-3.5" />
-                  </button>
-                  <span className="h-8 w-10 flex items-center justify-center text-sm font-semibold text-gray-900 dark:text-gray-100 border-x border-gray-200 dark:border-gray-700">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => setQuantity(q => Math.min(currentStock, q + 1))}
-                    disabled={quantity >= currentStock}
-                    className="h-8 w-8 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                {currentStock <= 5 && currentStock > 0 && (
-                  <span className="text-xs text-red-500 font-medium">{t('productDetail.onlyLeft', { count: currentStock })}</span>
                 )}
               </div>
             )}
