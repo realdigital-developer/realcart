@@ -541,7 +541,7 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
           const descY = y
           doc.fillColor('#1f2937')
           doc.font(FONT_BOLD)
-          doc.text(item.description, colX.desc + 4, descY, { width: contentWidth * 0.38 })
+          doc.text(item.description, colX.desc + 4, descY, { width: contentWidth * 0.38, lineBreak: false, ellipsis: true })
           if (item.variant) {
             doc.font(FONT_REGULAR)
             doc.fontSize(8.5)
@@ -599,19 +599,22 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
       doc.fontSize(8.5)
       doc.fillColor('#4b5563')
       let taxY = summaryY + 24
+      // Tax summary amounts: X=48 (left padding), width=leftColWidth-16 (right-aligned within left column)
+      // Previous bug: X was 40+leftColWidth-8 which caused the text box to overflow into the right column
+      const taxAmtWidth = leftColWidth - 16
       doc.text('Total Taxable Value', 48, taxY)
-      doc.text(formatCurrency(data.totalTaxableValue), 40 + leftColWidth - 8, taxY, { width: leftColWidth - 16, align: 'right' })
+      doc.text(formatCurrency(data.totalTaxableValue), 48, taxY, { width: taxAmtWidth, align: 'right' })
       taxY += 14
       if (data.isIntraState) {
         doc.text('CGST', 48, taxY)
-        doc.text(formatCurrency(data.totalCgst), 40 + leftColWidth - 8, taxY, { width: leftColWidth - 16, align: 'right' })
+        doc.text(formatCurrency(data.totalCgst), 48, taxY, { width: taxAmtWidth, align: 'right' })
         taxY += 14
         doc.text('SGST', 48, taxY)
-        doc.text(formatCurrency(data.totalSgst), 40 + leftColWidth - 8, taxY, { width: leftColWidth - 16, align: 'right' })
+        doc.text(formatCurrency(data.totalSgst), 48, taxY, { width: taxAmtWidth, align: 'right' })
         taxY += 14
       } else {
         doc.text('IGST', 48, taxY)
-        doc.text(formatCurrency(data.totalIgst), 40 + leftColWidth - 8, taxY, { width: leftColWidth - 16, align: 'right' })
+        doc.text(formatCurrency(data.totalIgst), 48, taxY, { width: taxAmtWidth, align: 'right' })
         taxY += 14
       }
       doc.moveTo(48, taxY).lineTo(40 + leftColWidth - 8, taxY).strokeColor('#d1d5db').lineWidth(0.5).stroke()
@@ -619,7 +622,7 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
       doc.font(FONT_BOLD)
       doc.fillColor('#1f2937')
       doc.text('Total GST', 48, taxY)
-      doc.text(formatCurrency(data.totalGst), 40 + leftColWidth - 8, taxY, { width: leftColWidth - 16, align: 'right' })
+      doc.text(formatCurrency(data.totalGst), 48, taxY, { width: taxAmtWidth, align: 'right' })
 
       // Amount Summary box (right)
       const rightColWidth = contentWidth * 0.48
@@ -1745,7 +1748,7 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
           const descY = y
           doc.fillColor('#1f2937')
           doc.font(FONT_BOLD)
-          doc.text(item.description, colX.desc + 4, descY, { width: contentWidth * 0.38 })
+          doc.text(item.description, colX.desc + 4, descY, { width: contentWidth * 0.38, lineBreak: false, ellipsis: true })
           if (item.variant) {
             doc.font(FONT_REGULAR)
             doc.fontSize(8.5)
@@ -1802,19 +1805,21 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
       doc.fontSize(8.5)
       doc.fillColor('#92400e')
       let taxY = summaryY + 24
+      // Tax summary amounts: X=48, width=leftColWidth-16 (right-aligned within left column)
+      const taxAmtWidth = leftColWidth - 16
       doc.text('Taxable Value (Reversed)', 48, taxY)
-      doc.text(formatCurrency(data.totalTaxableValue), 40 + leftColWidth - 8, taxY, { width: leftColWidth - 16, align: 'right' })
+      doc.text(formatCurrency(data.totalTaxableValue), 48, taxY, { width: taxAmtWidth, align: 'right' })
       taxY += 14
       if (data.isIntraState) {
         doc.text('CGST (Reversed)', 48, taxY)
-        doc.text(formatCurrency(data.totalCgst), 40 + leftColWidth - 8, taxY, { width: leftColWidth - 16, align: 'right' })
+        doc.text(formatCurrency(data.totalCgst), 48, taxY, { width: taxAmtWidth, align: 'right' })
         taxY += 14
         doc.text('SGST (Reversed)', 48, taxY)
-        doc.text(formatCurrency(data.totalSgst), 40 + leftColWidth - 8, taxY, { width: leftColWidth - 16, align: 'right' })
+        doc.text(formatCurrency(data.totalSgst), 48, taxY, { width: taxAmtWidth, align: 'right' })
         taxY += 14
       } else {
         doc.text('IGST (Reversed)', 48, taxY)
-        doc.text(formatCurrency(data.totalIgst), 40 + leftColWidth - 8, taxY, { width: leftColWidth - 16, align: 'right' })
+        doc.text(formatCurrency(data.totalIgst), 48, taxY, { width: taxAmtWidth, align: 'right' })
         taxY += 14
       }
       doc.moveTo(48, taxY).lineTo(40 + leftColWidth - 8, taxY).strokeColor('#fcd34d').lineWidth(0.5).stroke()
@@ -1822,7 +1827,7 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
       doc.font(FONT_BOLD)
       doc.fillColor('#1f2937')
       doc.text('Total GST (Reversed)', 48, taxY)
-      doc.text(formatCurrency(data.totalGst), 40 + leftColWidth - 8, taxY, { width: leftColWidth - 16, align: 'right' })
+      doc.text(formatCurrency(data.totalGst), 48, taxY, { width: taxAmtWidth, align: 'right' })
 
       // Refund Summary box (right) — replaces the invoice's "Amount Summary"
       const rightColWidth = contentWidth * 0.48
