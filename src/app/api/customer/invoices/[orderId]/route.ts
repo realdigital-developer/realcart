@@ -19,6 +19,7 @@ async function getPlatformInfo() {
   let platformName = 'ShopHub'
   let platformGstin = ''
   let platformAddress: string | undefined
+  let logoUrl: string | undefined
   try {
     const { db } = await connectToDatabase()
     const [siteSettings, taxSettings] = await Promise.all([
@@ -26,10 +27,11 @@ async function getPlatformInfo() {
       db.collection('settings').findOne({ key: 'tax' }),
     ])
     if (siteSettings?.siteName) platformName = siteSettings.siteName
+    if (siteSettings?.logo?.url) logoUrl = siteSettings.logo.url
     if (taxSettings?.platformGstin) platformGstin = taxSettings.platformGstin
     if (taxSettings?.platformAddress) platformAddress = taxSettings.platformAddress
   } catch { /* use defaults */ }
-  return { platformName, platformGstin, platformAddress }
+  return { platformName, platformGstin, platformAddress, logoUrl }
 }
 
 export async function GET(

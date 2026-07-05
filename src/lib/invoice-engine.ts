@@ -106,6 +106,7 @@ export interface InvoiceData {
   platformName: string
   platformGstin: string
   platformAddress?: string
+  logoUrl?: string  // Brand logo URL (from settings.site.logo.url)
 
   // Seller groups
   sellers: InvoiceSellerGroup[]
@@ -187,6 +188,7 @@ export async function buildInvoiceData(
     platformName?: string
     platformGstin?: string
     platformAddress?: string
+    logoUrl?: string
   },
 ): Promise<InvoiceData> {
   // Group items by seller (like Flipkart — each seller gets a section)
@@ -291,6 +293,7 @@ export async function buildInvoiceData(
     platformName: options?.platformName || 'ShopHub',
     platformGstin: options?.platformGstin || '',
     platformAddress: options?.platformAddress,
+    logoUrl: options?.logoUrl,
 
     sellers: Array.from(sellerMap.values()),
 
@@ -332,8 +335,8 @@ export async function buildInvoiceData(
  * Generate a PDF invoice buffer using pdfkit.
  * Produces a professional, GST-compliant invoice document.
  */
-export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
+export async function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
+  return new Promise(async (resolve, reject) => {
     try {
       const doc = new PDFDocument({
         size: 'A4',
@@ -358,20 +361,38 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
       const contentWidth = pageWidth - 80 // 40px margins both sides
 
       // ===== HEADER =====
-      // Platform name (left)
+      // Logo (left) — dynamically fetch and embed the brand logo
+      let logoEmbedded = false
+      if (data.logoUrl) {
+        try {
+          const logoRes = await fetch(data.logoUrl)
+          if (logoRes.ok) {
+            const logoBuffer = Buffer.from(await logoRes.arrayBuffer())
+            // Embed logo at top-left, max height 40px, auto-scale width
+            doc.image(logoBuffer, 40, 35, { fit: [140, 40] })
+            logoEmbedded = true
+          }
+        } catch {
+          // Logo fetch failed — fall back to text
+        }
+      }
+
+      // Platform name (left) — below logo or at top if no logo
+      const nameY = logoEmbedded ? 80 : 40
       doc.font(FONT_BOLD)
-      doc.fontSize(20)
+      doc.fontSize(logoEmbedded ? 14 : 20)
       doc.fillColor('#059669')
-      doc.text(data.platformName, 40, 40, { width: 300 })
+      doc.text(data.platformName, 40, nameY, { width: 300 })
 
       doc.font(FONT_REGULAR)
       doc.fontSize(9)
       doc.fillColor('#666666')
+      const addrY = logoEmbedded ? 98 : 68
       if (data.platformAddress) {
-        doc.text(data.platformAddress, 40, 68, { width: 300 })
+        doc.text(data.platformAddress, 40, addrY, { width: 300 })
       }
       if (data.platformGstin) {
-        doc.text(`GSTIN: ${data.platformGstin}`, 40, data.platformAddress ? 83 : 68, { width: 300 })
+        doc.text(`GSTIN: ${data.platformGstin}`, 40, data.platformAddress ? addrY + 15 : addrY, { width: 300 })
       }
 
       // "TAX INVOICE" (right)
@@ -846,6 +867,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid #059669;margin-bottom:20px;flex-wrap:wrap;gap:16px;">
       <div>
+        ${data.logoUrl ? `<img src="${escapeHtml(data.logoUrl)}" alt="${escapeHtml(data.platformName)}" style="max-height:48px;max-width:180px;margin-bottom:8px;" />` : ''}
         <h1 style="font-size:24px;color:#059669;margin:0 0 4px 0;font-weight:700;">${escapeHtml(data.platformName)}</h1>
         ${data.platformAddress ? `<p style="font-size:11px;color:#6b7280;margin:0;">${escapeHtml(data.platformAddress)}</p>` : ''}
         ${data.platformGstin ? `<p style="font-size:11px;color:#6b7280;margin:4px 0 0 0;">GSTIN: <strong>${escapeHtml(data.platformGstin)}</strong></p>` : ''}
@@ -1136,6 +1158,7 @@ export interface CreditNoteData {
   platformName: string
   platformGstin: string
   platformAddress?: string
+  logoUrl?: string  // Brand logo URL (from settings.site.logo.url)
 
   // Seller groups (only the cancelled items — amounts are NEGATIVE)
   sellers: InvoiceSellerGroup[]
@@ -1207,6 +1230,7 @@ export async function buildCreditNoteData(
     platformName?: string
     platformGstin?: string
     platformAddress?: string
+    logoUrl?: string
     /** Specific item IDs to include in the credit note. If omitted, all
      *  items with status 'Cancelled' are included. */
     itemIds?: string[]
@@ -1454,6 +1478,7 @@ export async function buildCreditNoteData(
     platformName: options?.platformName || 'ShopHub',
     platformGstin: options?.platformGstin || '',
     platformAddress: options?.platformAddress,
+    logoUrl: options?.logoUrl,
 
     sellers,
 
@@ -1524,8 +1549,8 @@ function paymentMethodLabelFor(detail: string): string {
  * Produces a professional, GST-compliant credit note document with an amber
  * theme to visually distinguish it from the green tax invoice.
  */
-export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
+export async function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
+  return new Promise(async (resolve, reject) => {
     try {
       const doc = new PDFDocument({
         size: 'A4',
@@ -1550,19 +1575,36 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
       const contentWidth = pageWidth - 80
 
       // ===== HEADER =====
+      // Logo (left) — dynamically fetch and embed the brand logo
+      let logoEmbedded = false
+      if (data.logoUrl) {
+        try {
+          const logoRes = await fetch(data.logoUrl)
+          if (logoRes.ok) {
+            const logoBuffer = Buffer.from(await logoRes.arrayBuffer())
+            doc.image(logoBuffer, 40, 35, { fit: [140, 40] })
+            logoEmbedded = true
+          }
+        } catch {
+          // Logo fetch failed — fall back to text
+        }
+      }
+
+      const cnNameY = logoEmbedded ? 80 : 40
       doc.font(FONT_BOLD)
-      doc.fontSize(20)
+      doc.fontSize(logoEmbedded ? 14 : 20)
       doc.fillColor('#d97706')
-      doc.text(data.platformName, 40, 40, { width: 300 })
+      doc.text(data.platformName, 40, cnNameY, { width: 300 })
 
       doc.font(FONT_REGULAR)
       doc.fontSize(9)
       doc.fillColor('#666666')
+      const cnAddrY = logoEmbedded ? 98 : 68
       if (data.platformAddress) {
-        doc.text(data.platformAddress, 40, 68, { width: 300 })
+        doc.text(data.platformAddress, 40, cnAddrY, { width: 300 })
       }
       if (data.platformGstin) {
-        doc.text(`GSTIN: ${data.platformGstin}`, 40, data.platformAddress ? 83 : 68, { width: 300 })
+        doc.text(`GSTIN: ${data.platformGstin}`, 40, data.platformAddress ? cnAddrY + 15 : cnAddrY, { width: 300 })
       }
 
       // "CREDIT NOTE" (right) — amber theme
@@ -2054,6 +2096,7 @@ export function generateCreditNoteHTML(data: CreditNoteData): string {
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid #d97706;margin-bottom:20px;flex-wrap:wrap;gap:16px;">
       <div>
+        ${data.logoUrl ? `<img src="${escapeHtml(data.logoUrl)}" alt="${escapeHtml(data.platformName)}" style="max-height:48px;max-width:180px;margin-bottom:8px;" />` : ''}
         <h1 style="font-size:24px;color:#d97706;margin:0 0 4px 0;font-weight:700;">${escapeHtml(data.platformName)}</h1>
         ${data.platformAddress ? `<p style="font-size:11px;color:#6b7280;margin:0;">${escapeHtml(data.platformAddress)}</p>` : ''}
         ${data.platformGstin ? `<p style="font-size:11px;color:#6b7280;margin:4px 0 0 0;">GSTIN: <strong>${escapeHtml(data.platformGstin)}</strong></p>` : ''}

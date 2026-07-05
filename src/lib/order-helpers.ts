@@ -1939,10 +1939,11 @@ function buildItemsSummary(order: Order, filterItemIds?: Set<string>): string {
  * Fetch platform settings (name, GSTIN, address) for email/credit-note branding.
  * Returns sensible defaults if settings are missing or DB is unavailable.
  */
-async function getPlatformInfoForEmail(): Promise<{ platformName: string; platformGstin: string; platformAddress?: string }> {
+async function getPlatformInfoForEmail(): Promise<{ platformName: string; platformGstin: string; platformAddress?: string; logoUrl?: string }> {
   let platformName = 'ShopHub'
   let platformGstin = ''
   let platformAddress: string | undefined
+  let logoUrl: string | undefined
   try {
     const { db } = await connectToDatabase()
     const [siteSettings, taxSettings] = await Promise.all([
@@ -1950,10 +1951,11 @@ async function getPlatformInfoForEmail(): Promise<{ platformName: string; platfo
       db.collection('settings').findOne({ key: 'tax' }),
     ])
     if (siteSettings?.siteName) platformName = siteSettings.siteName
+    if (siteSettings?.logo?.url) logoUrl = siteSettings.logo.url
     if (taxSettings?.platformGstin) platformGstin = taxSettings.platformGstin
     if (taxSettings?.platformAddress) platformAddress = taxSettings.platformAddress
   } catch { /* use defaults */ }
-  return { platformName, platformGstin, platformAddress }
+  return { platformName, platformGstin, platformAddress, logoUrl }
 }
 
 /**
@@ -1997,7 +1999,7 @@ async function generateAndSendReturnCreditNote(
     const customerEmail = await resolveCustomerEmail(order)
 
     // 2. Fetch platform settings
-    const { platformName, platformGstin, platformAddress } = await getPlatformInfoForEmail()
+    const { platformName, platformGstin, platformAddress, logoUrl } = await getPlatformInfoForEmail()
 
     // 3. Generate a unique credit note number
     const creditNoteNumber = generateCreditNoteNumber()
@@ -2010,6 +2012,7 @@ async function generateAndSendReturnCreditNote(
       platformName,
       platformGstin,
       platformAddress,
+      logoUrl,
       itemIds: itemIds.length > 0 ? itemIds : undefined,
       reason,
       cancelledBy: 'system',
