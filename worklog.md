@@ -6126,3 +6126,25 @@ Stage Summary:
 - **No damage**: No UI or code modified during upload.
 - **IN SYNC**: `0491451f1b6e0a622eede7796bf4658660099c17`
 - PAT used via GIT_ASKPASS (one-time, not persisted).
+
+---
+Task ID: fix-back-nav-image-delay
+Agent: main-orchestrator
+Task: Fix why product images take too much time to show when customer goes back to product details page.
+
+Work Log:
+- **Root cause identified**: The main product image in `MagnifierImage` component used `animate={{ opacity: isLoaded ? 1 : 0 }}` — meaning the image was invisible (opacity 0) until the `onLoad` callback fired and set `loadedImages`. When navigating back, even though the browser had the image in its HTTP cache, the loading skeleton (spinner) showed until `onLoad` fired — causing the perceived "too much time" delay.
+- **Fix applied** (1 file, 3 insertions, 2 deletions):
+  1. Changed `animate={{ opacity: isLoaded ? 1 : 0 }}` to `animate={{ opacity: 1 }}` — the image now shows immediately from cache without waiting for `onLoad`. The loading skeleton still shows for non-cached images because the `<img>` element hasn't rendered yet (the skeleton is positioned `absolute inset-0` on top).
+  2. Reduced crossfade transition from `0.25s` to `0.15s` for snappier feel.
+  3. Added `fetchPriority="high"` to the main image for faster initial network fetch.
+- **Verification** (Agent Browser):
+  * **First visit**: Image loads normally (skeleton briefly shows, then image appears).
+  * **Back navigation**: `skeletonVisible: false`, `imgComplete: true`, `imgOpacity: 1` — image displays instantly from cache.
+  * **No errors**: Confirmed no "Maximum update depth" errors (tested with git stash to compare pre-existing state). No browser/console errors.
+- **Lint**: 0 errors, 24 warnings (all pre-existing, none new).
+- **Git**: Committed as `9a2dec2` — 1 file changed, 3 insertions(+), 2 deletions(-).
+
+Stage Summary:
+- **Root cause fixed**: Product images now display instantly on back navigation. The image opacity is no longer gated behind `isLoaded` — it shows immediately (from browser cache) without the loading skeleton delay.
+- **No damage**: Only 1 file modified (3 insertions, 2 deletions). All existing functionality (zoom, lightbox, thumbnails, crossfade) preserved. Lint: 0 errors.
