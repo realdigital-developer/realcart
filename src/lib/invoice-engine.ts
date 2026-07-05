@@ -541,12 +541,14 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
           const descY = y
           doc.fillColor('#1f2937')
           doc.font(FONT_BOLD)
-          doc.text(item.description, colX.desc + 4, descY, { width: contentWidth * 0.38, lineBreak: false, ellipsis: true })
+          doc.text(item.description, colX.desc + 4, descY, { width: contentWidth * 0.38 })
           if (item.variant) {
+            // Place variant text AFTER the description (which may wrap to multiple lines).
+            // Using doc.y ensures the variant doesn't overlap with wrapped description text.
             doc.font(FONT_REGULAR)
             doc.fontSize(8.5)
             doc.fillColor('#6b7280')
-            doc.text(item.variant, colX.desc + 4, descY + 11, { width: contentWidth * 0.38 })
+            doc.text(item.variant, colX.desc + 4, doc.y, { width: contentWidth * 0.38, lineBreak: false })
             doc.fontSize(8.5)
           }
 
@@ -1748,12 +1750,14 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
           const descY = y
           doc.fillColor('#1f2937')
           doc.font(FONT_BOLD)
-          doc.text(item.description, colX.desc + 4, descY, { width: contentWidth * 0.38, lineBreak: false, ellipsis: true })
+          doc.text(item.description, colX.desc + 4, descY, { width: contentWidth * 0.38 })
           if (item.variant) {
+            // Place variant text AFTER the description (which may wrap to multiple lines).
+            // Using doc.y ensures the variant doesn't overlap with wrapped description text.
             doc.font(FONT_REGULAR)
             doc.fontSize(8.5)
             doc.fillColor('#6b7280')
-            doc.text(item.variant, colX.desc + 4, descY + 11, { width: contentWidth * 0.38 })
+            doc.text(item.variant, colX.desc + 4, doc.y, { width: contentWidth * 0.38, lineBreak: false })
             doc.fontSize(8.5)
           }
 
