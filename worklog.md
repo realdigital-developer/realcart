@@ -6175,3 +6175,32 @@ Work Log:
 Stage Summary:
 - **Root cause fixed**: Product images now display instantly on back navigation. The loading skeleton overlay and AnimatePresence wait delay have been removed. Cached images appear immediately; uncached images show a clean white background briefly (no spinner).
 - **No damage**: Only 1 file modified (17 insertions, 24 deletions = net -7 lines). All existing functionality (zoom, lightbox, thumbnails, crossfade, swipe) preserved. Lint: 0 errors.
+
+---
+Task ID: github-upload-13
+Agent: main-orchestrator
+Task: Upload the latest code to GitHub (https://github.com/realdigital-developer/realcart.git) using classic PAT.
+
+Work Log:
+- **Pre-push verification** (all passed):
+  * Git status: working tree clean.
+  * Lint: 0 errors, 24 warnings (all pre-existing).
+  * Sensitive files: ZERO tracked.
+  * Dev server: HTTP 200.
+  * Divergence: local 4 commits ahead, 0 behind — clean fast-forward.
+- **GitHub Push** (successful):
+  * Used `GIT_ASKPASS` helper (one-time, deleted after push).
+  * Push succeeded: `d21d024..48dde4e  main -> main`.
+  * Token NOT persisted in git config.
+- **Sync verification**:
+  * Local HEAD: `48dde4e2adbc25e9596bfc5847ccf4dc2ad81475`
+  * Remote main HEAD: `48dde4e2adbc25e9596bfc5847ccf4dc2ad81475`
+  * Divergence: `0  0`
+  * STATUS: IN SYNC ✓
+
+Stage Summary:
+- **All code uploaded to GitHub**: https://github.com/realdigital-developer/realcart (main branch)
+- **Clean fast-forward push** — 4 commits (instant image display on back navigation).
+- **No damage**: No UI or code modified during upload.
+- **IN SYNC**: `48dde4e2adbc25e9596bfc5847ccf4dc2ad81475`
+- PAT used via GIT_ASKPASS (one-time, not persisted).
