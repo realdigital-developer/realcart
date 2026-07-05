@@ -1180,13 +1180,14 @@ function MagnifierImage({
           src={src}
           alt={alt}
           initial={{ opacity: 0 }}
-          animate={{ opacity: isLoaded ? 1 : 0 }}
+          animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: 0.15 }}
           className="w-full h-full object-contain p-4 pointer-events-none"
           onLoad={onLoad}
           onError={onError}
           draggable={false}
+          fetchPriority="high"
         />
       </AnimatePresence>
 
