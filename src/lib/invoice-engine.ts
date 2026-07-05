@@ -121,12 +121,12 @@ export interface InvoiceData {
 
 function formatCurrency(amount: number): string {
   const rounded = Math.round((amount + Number.EPSILON) * 100) / 100
-  return `₹${rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `Rs. ${rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function formatCurrencyShort(amount: number): string {
   const rounded = Math.round(amount)
-  return `₹${rounded.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+  return `Rs. ${rounded.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
 function safe(value: unknown): string {
@@ -462,11 +462,14 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
           y = 40
         }
 
-        // Seller header
+        // Seller header — use border + dark text instead of filled background
+        // (filled backgrounds don't print by default in most PDF viewers)
         doc.font('Helvetica-Bold')
         doc.fontSize(9)
-        doc.fillColor('#ffffff')
-        doc.rect(40, y, contentWidth, 18).fill('#059669')
+        doc.fillColor('#1f2937')
+        doc.rect(40, y, contentWidth, 18).fillColor('#f0fdf4').fill()
+        doc.strokeColor('#059669').lineWidth(1).rect(40, y, contentWidth, 18).stroke()
+        doc.fillColor('#065f46')
         doc.text(`Seller: ${seller.sellerStoreName}${seller.sellerGstin ? `  |  GSTIN: ${seller.sellerGstin}` : ''}`, 45, y + 4, { width: contentWidth - 10 })
         y += 18
 
@@ -482,7 +485,7 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
         }
 
         doc.font('Helvetica-Bold')
-        doc.fontSize(7)
+        doc.fontSize(8)
         doc.fillColor('#6b7280')
         doc.rect(40, y, contentWidth, 16).fill('#f9fafb')
         doc.text('DESCRIPTION', colX.desc + 4, y + 5)
@@ -496,7 +499,7 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
 
         // Items
         doc.font('Helvetica')
-        doc.fontSize(7.5)
+        doc.fontSize(8.5)
         doc.fillColor('#1f2937')
         for (const item of seller.items) {
           if (y > doc.page.height - 60) {
@@ -510,10 +513,10 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
           doc.text(item.description, colX.desc + 4, descY, { width: contentWidth * 0.38 })
           if (item.variant) {
             doc.font('Helvetica')
-            doc.fontSize(6.5)
+            doc.fontSize(8.5)
             doc.fillColor('#6b7280')
             doc.text(item.variant, colX.desc + 4, descY + 11, { width: contentWidth * 0.38 })
-            doc.fontSize(7.5)
+            doc.fontSize(8.5)
           }
 
           doc.font('Helvetica')
@@ -562,7 +565,7 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
       doc.text('TAX SUMMARY', 48, summaryY + 8)
 
       doc.font('Helvetica')
-      doc.fontSize(7.5)
+      doc.fontSize(8.5)
       doc.fillColor('#4b5563')
       let taxY = summaryY + 24
       doc.text('Total Taxable Value', 48, taxY)
@@ -598,7 +601,7 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
       doc.text('AMOUNT SUMMARY', rightColX + 8, summaryY + 8)
 
       doc.font('Helvetica')
-      doc.fontSize(7.5)
+      doc.fontSize(8.5)
       doc.fillColor('#4b5563')
       let amtY = summaryY + 24
       doc.text('Subtotal (MRP)', rightColX + 8, amtY)
@@ -658,12 +661,13 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
       // is rounded to the nearest rupee for payment processing, but the small
       // paise adjustment is absorbed and not displayed as a separate line.
 
-      // Total Payable
+      // Total Payable — use border + dark text instead of white-on-green fill
       y = summaryY + 110 + 10
-      doc.rect(40, y, contentWidth, 24).fill('#059669')
+      doc.rect(40, y, contentWidth, 24).fillColor('#f0fdf4').fill()
+      doc.strokeColor('#059669').lineWidth(1.5).rect(40, y, contentWidth, 24).stroke()
       doc.font('Helvetica-Bold')
       doc.fontSize(11)
-      doc.fillColor('#ffffff')
+      doc.fillColor('#065f46')
       doc.text('TOTAL PAYABLE', 48, y + 7)
       doc.text(formatCurrencyShort(data.totalAmount), 40, y + 7, { width: contentWidth - 16, align: 'right' })
       y += 30
@@ -684,7 +688,7 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
       }
 
       doc.font('Helvetica')
-      doc.fontSize(7)
+      doc.fontSize(8)
       doc.fillColor('#9ca3af')
       doc.text('All prices are inclusive of applicable taxes.', 40, y, { width: contentWidth, align: 'center' })
       y += 14
@@ -702,18 +706,26 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
       y += 20
 
       // ===== FOOTER =====
-      const footerY = doc.page.height - 60
-      doc.moveTo(40, footerY).lineTo(pageWidth - 40, footerY).strokeColor('#e5e7eb').lineWidth(0.5).stroke()
+      // Dynamic footer position — placed after content, not at fixed page bottom
+      // This prevents overlap with content on multi-page invoices
+      y += 10
+      if (y > doc.page.height - 50) {
+        doc.addPage()
+        y = 40
+      }
+      doc.moveTo(40, y).lineTo(pageWidth - 40, y).strokeColor('#e5e7eb').lineWidth(0.5).stroke()
+      y += 8
       doc.font('Helvetica')
-      doc.fontSize(7)
+      doc.fontSize(8)
       doc.fillColor('#9ca3af')
       doc.text(
         `This is a computer-generated invoice and does not require a physical signature. For queries, contact support at ${data.platformName}.`,
         40,
-        footerY + 8,
+        y,
         { width: contentWidth, align: 'center' },
       )
-      doc.text(`Thank you for shopping with ${data.platformName}!`, 40, footerY + 18, { width: contentWidth, align: 'center' })
+      y += 12
+      doc.text(`Thank you for shopping with ${data.platformName}!`, 40, y, { width: contentWidth, align: 'center' })
 
       doc.end()
     } catch (err) {
@@ -1633,7 +1645,7 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
       doc.text(data.reasonType === 'return' ? 'RETURN DETAILS' : 'CANCELLATION DETAILS', 48, y + 8)
 
       doc.font('Helvetica')
-      doc.fontSize(7.5)
+      doc.fontSize(8.5)
       doc.fillColor('#92400e')
       const cancelDateStr = new Date(data.cancelledAt).toLocaleDateString('en-IN', {
         day: '2-digit', month: 'short', year: 'numeric',
@@ -1656,8 +1668,10 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
 
         doc.font('Helvetica-Bold')
         doc.fontSize(9)
-        doc.fillColor('#ffffff')
-        doc.rect(40, y, contentWidth, 18).fill('#d97706')
+        doc.fillColor('#1f2937')
+        doc.rect(40, y, contentWidth, 18).fillColor('#fffbeb').fill()
+        doc.strokeColor('#d97706').lineWidth(1).rect(40, y, contentWidth, 18).stroke()
+        doc.fillColor('#92400e')
         doc.text(`Seller: ${seller.sellerStoreName}${seller.sellerGstin ? `  |  GSTIN: ${seller.sellerGstin}` : ''}`, 45, y + 4, { width: contentWidth - 10 })
         y += 18
 
@@ -1672,7 +1686,7 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
         }
 
         doc.font('Helvetica-Bold')
-        doc.fontSize(7)
+        doc.fontSize(8)
         doc.fillColor('#6b7280')
         doc.rect(40, y, contentWidth, 16).fill('#fffbeb')
         doc.text('DESCRIPTION', colX.desc + 4, y + 5)
@@ -1685,7 +1699,7 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
         y += 16
 
         doc.font('Helvetica')
-        doc.fontSize(7.5)
+        doc.fontSize(8.5)
         doc.fillColor('#1f2937')
         for (const item of seller.items) {
           if (y > doc.page.height - 60) {
@@ -1699,10 +1713,10 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
           doc.text(item.description, colX.desc + 4, descY, { width: contentWidth * 0.38 })
           if (item.variant) {
             doc.font('Helvetica')
-            doc.fontSize(6.5)
+            doc.fontSize(8.5)
             doc.fillColor('#6b7280')
             doc.text(item.variant, colX.desc + 4, descY + 11, { width: contentWidth * 0.38 })
-            doc.fontSize(7.5)
+            doc.fontSize(8.5)
           }
 
           doc.font('Helvetica')
@@ -1750,7 +1764,7 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
       doc.text('TAX REVERSAL SUMMARY', 48, summaryY + 8)
 
       doc.font('Helvetica')
-      doc.fontSize(7.5)
+      doc.fontSize(8.5)
       doc.fillColor('#92400e')
       let taxY = summaryY + 24
       doc.text('Taxable Value (Reversed)', 48, taxY)
@@ -1786,7 +1800,7 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
       doc.text('REFUND SUMMARY', rightColX + 8, summaryY + 8)
 
       doc.font('Helvetica')
-      doc.fontSize(7.5)
+      doc.fontSize(8.5)
       doc.fillColor('#92400e')
       let amtY = summaryY + 24
       doc.text('Subtotal (Reversed)', rightColX + 8, amtY)
@@ -1836,12 +1850,13 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
       )
       amtY += 13
 
-      // Total Reversed (negative)
+      // Total Reversed — use border + dark text instead of white-on-orange fill
       y = summaryY + 110 + 10
-      doc.rect(40, y, contentWidth, 24).fill('#d97706')
+      doc.rect(40, y, contentWidth, 24).fillColor('#fffbeb').fill()
+      doc.strokeColor('#d97706').lineWidth(1.5).rect(40, y, contentWidth, 24).stroke()
       doc.font('Helvetica-Bold')
       doc.fontSize(11)
-      doc.fillColor('#ffffff')
+      doc.fillColor('#92400e')
       doc.text('TOTAL REVERSED', 48, y + 7)
       doc.text(formatCurrencyShort(data.totalAmount), 40, y + 7, { width: contentWidth - 16, align: 'right' })
       y += 30
@@ -1876,7 +1891,7 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
 
       // GST note
       doc.font('Helvetica')
-      doc.fontSize(7)
+      doc.fontSize(8)
       doc.fillColor('#9ca3af')
       const gstNoteText = data.reasonType === 'return'
         ? 'This credit note reverses the tax invoice issued for the returned supply, as per GST Rule 16 (CGST Rules 2017).'
@@ -1888,16 +1903,23 @@ export function generateCreditNotePDF(data: CreditNoteData): Promise<Buffer> {
       y += 14
 
       // ===== FOOTER =====
-      const footerY = doc.page.height - 60
-      doc.moveTo(40, footerY).lineTo(pageWidth - 40, footerY).strokeColor('#fcd34d').lineWidth(0.5).stroke()
+      // Dynamic footer position — placed after content, not at fixed page bottom
+      y += 10
+      if (y > doc.page.height - 50) {
+        doc.addPage()
+        y = 40
+      }
+      doc.moveTo(40, y).lineTo(pageWidth - 40, y).strokeColor('#fcd34d').lineWidth(0.5).stroke()
+      y += 8
       doc.font('Helvetica')
-      doc.fontSize(7)
+      doc.fontSize(8)
       doc.fillColor('#9ca3af')
       doc.text(
         `This is a computer-generated credit note and does not require a physical signature. For queries, contact support at ${data.platformName}.`,
-        40, footerY + 8, { width: contentWidth, align: 'center' },
+        40, y, { width: contentWidth, align: 'center' },
       )
-      doc.text(`Original Invoice: ${data.originalInvoiceNumber}  |  Order: ${data.orderId}`, 40, footerY + 18, { width: contentWidth, align: 'center' })
+      y += 12
+      doc.text(`Original Invoice: ${data.originalInvoiceNumber}  |  Order: ${data.orderId}`, 40, y, { width: contentWidth, align: 'center' })
 
       doc.end()
     } catch (err) {
