@@ -1559,7 +1559,7 @@ export function CheckoutPage({
       setPaymentProcessing(false)
       setError(err instanceof Error ? err.message : t('checkout.paymentFailed'))
     }
-  }, [finalTotal, items, user, upiId, cardNumber, cardName, cardExpiry, cardCvv, selectedBank, selectedWallet, paymentSubMethod, isCod, couponApplied, couponCode, couponDiscount, totalSavings, clearCart, detectCardBrand, selectedDeliveryOption, deliveryCharge, selectedSavedCard, savedCardCvv, selectedSavedMethodId, useWalletBalance, walletCoversFull, amountPayable, walletAppliedAmount, t])
+  }, [finalTotal, items, user, upiId, cardNumber, cardName, cardExpiry, cardCvv, selectedBank, selectedWallet, paymentSubMethod, isCod, couponApplied, couponCode, couponDiscount, totalSavings, clearCart, detectCardBrand, selectedDeliveryOption, deliveryCharge, selectedSavedCard, savedCardCvv, selectedSavedMethodId, useWalletBalance, walletCoversFull, amountPayable, walletAppliedAmount, savePaymentMethod, t])
 
   // Apply RealCart Balance partially to an already-created order (Meesho-style
   // split payment). Called after the online payment succeeds + order is created.

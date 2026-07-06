@@ -7257,3 +7257,24 @@ Stage Summary:
 - All catch blocks that might receive AbortError now silently ignore it (it's expected behavior when a timeout fires or a component unmounts).
 - Files modified: src/lib/utils.ts, src/components/customer/home-content-wrapper.tsx, src/components/customer/product-detail-page.tsx, src/hooks/use-site-logo.ts
 - No UI or existing code damaged — all routes work, 0 lint errors, clean console.
+
+---
+Task ID: fix-payment-save-stale-closure
+Agent: Z.ai Code (main)
+Task: Fix payment methods still not being saved after checking the "save this payment method" checkbox during checkout.
+
+Work Log:
+- Root cause found: The `handleServerPayment` function in checkout-page.tsx is a `useCallback` with a dependency array. The `savePaymentMethod` state variable was NOT in the dependency array. This means the `useCallback` captured the INITIAL value of `savePaymentMethod` (which is `false`) and never updated when the user checked the "save this payment method" checkbox.
+- Every `if (savePaymentMethod && !selectedSavedMethodId)` check inside `handleServerPayment` was evaluating to `false` because the captured `savePaymentMethod` was always `false` (the stale closure value). So `savePaymentMethodToBackend()` was NEVER called, and no payment method was ever saved.
+- FIX: Added `savePaymentMethod` to the dependency array of `handleServerPayment` (line 1562). Now when the user checks the box, `savePaymentMethod` changes from `false` to `true`, the `useCallback` is re-created with the new value, and the save call actually fires.
+- Verified the bank-upi POST API works correctly for all 4 payment types (UPI, Card, Net Banking, Wallet) — all returned success when tested directly via curl.
+- Verified the `savePaymentMethodToBackend` function itself is correct — it's a regular function (not useCallback), so it always gets the latest state values for `upiId`, `cardNumber`, `selectedBank`, `selectedWallet`, `user`.
+- Ran `bun run lint` → 0 errors.
+- All routes return HTTP 200, zero dev log errors.
+
+Stage Summary:
+- ROOT CAUSE: Stale closure bug — `savePaymentMethod` was missing from the `handleServerPayment` useCallback dependency array, so the checkbox state was never propagated to the save logic.
+- FIX: Added `savePaymentMethod` to the dependency array (one-line fix).
+- The bank-upi API, the bank-upi page display, and the savePaymentMethodToBackend function were all already correct — the only issue was the stale closure preventing the save from being called.
+- Files modified: src/components/customer/checkout-page.tsx (added `savePaymentMethod` to dependency array)
+- No UI or existing code damaged — all routes work, 0 lint errors.
