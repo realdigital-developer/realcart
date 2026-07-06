@@ -104,25 +104,36 @@ function toE164(mobile: string): string {
  * `customMessage` field. The `{{otp}}` placeholder is replaced by Twilio
  * with the actual OTP code at send time (we never see the code).
  *
- * Example output (customer registration):
- *   "RealCart: 317229 is your verification code for customer registration.
- *    Do not share this code with anyone. Valid for 5 minutes."
+ * Message formats (exactly as specified):
+ *
+ *   Customer:
+ *     "Welcome! {{otp}} is your login OTP for RealCart Account.
+ *      Valid for 5 minutes. Please do not share this code with anyone."
+ *
+ *   Seller:
+ *     "Welcome! {{otp}} is your login OTP for RealCart Seller Account.
+ *      Valid for 5 minutes. Please do not share this code with anyone."
+ *
+ *   Delivery Partner:
+ *     "Welcome! {{otp}} is your login OTP for RealCart Delivery Partner account.
+ *      Valid for 5 minutes. Please do not share this code with anyone."
  *
  * @param brandName - The platform brand name (e.g. "RealCart")
  * @param type - The user type (customer / delivery_boy / seller)
  * @returns The SMS message string with {{otp}} placeholder
  */
 function buildOtpMessage(brandName: string, type: 'customer' | 'delivery_boy' | 'seller'): string {
-  const purpose =
+  // Account label per user type — matches the exact formats requested.
+  const accountLabel =
     type === 'customer'
-      ? 'customer registration'
+      ? 'Account'
       : type === 'delivery_boy'
-        ? 'delivery partner registration'
-        : 'seller registration'
+        ? 'Delivery Partner account'
+        : 'Seller Account'
 
   return (
-    `${brandName}: {{otp}} is your verification code for ${purpose}. ` +
-    `Do not share this code with anyone. Valid for 5 minutes.`
+    `Welcome! {{otp}} is your login OTP for ${brandName} ${accountLabel}. ` +
+    `Valid for 5 minutes. Please do not share this code with anyone.`
   )
 }
 
