@@ -473,7 +473,10 @@ function ReviewFormModal({
       const existingVideoMedia = (editingReview.media || [])
         .filter((m) => m.mediaType === 'video')
         .map((m) => ({
-          url: m.mediaUrl || m.thumbnailUrl || '',
+          // For videos, DON'T fall back to thumbnailUrl — it's a .jpg poster
+          // image, not the actual video URL. If mediaUrl is empty, the video
+          // URL is lost and the media should be dropped on re-save.
+          url: m.mediaUrl || '',
           publicId: '',
           _id: m._id,
         }))
@@ -498,6 +501,14 @@ function ReviewFormModal({
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
+    // Validate image file sizes (5MB max, matching the backend limit)
+    for (const f of files) {
+      if (f.size > 5 * 1024 * 1024) {
+        setError('Image too large. Maximum size: 5 MB per image.')
+        e.target.value = ''
+        return
+      }
+    }
     if (totalImageCount + files.length > 10) {
       setError(t('reviews.maxPhotos'))
       return
@@ -1907,9 +1918,21 @@ export function ProductDetailPage() {
             const uploadData = await uploadRes.json()
             if (uploadData.images) uploadedImages.push(...uploadData.images)
             if (uploadData.videos) uploadedVideos.push(...uploadData.videos)
+          } else {
+            // Upload failed — surface the error to the user so they know
+            // their images/videos were NOT attached to the review.
+            const errData = await uploadRes.json().catch(() => ({}))
+            const errMsg = errData.error || `Upload failed (HTTP ${uploadRes.status})`
+            console.warn('[Review Media Upload] Failed:', errMsg)
+            // Show error but still submit the review (text-only) — the user
+            // can re-edit to add media later. This is better than silently
+            // losing the media.
+            setError(`Media upload failed: ${errMsg}. Your review will be submitted without images/videos.`)
           }
-        } catch {
-          // Continue even if upload fails
+        } catch (uploadErr) {
+          // Network error during upload — surface it
+          console.warn('[Review Media Upload] Network error:', uploadErr)
+          setError('Media upload failed due to a network error. Your review will be submitted without images/videos.')
         }
       }
 
