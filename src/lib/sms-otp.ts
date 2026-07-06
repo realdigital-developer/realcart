@@ -1,16 +1,23 @@
 /**
- * SMS OTP Module — Server-Side OTP via Twilio Verify (replaces Firebase Phone Auth)
+ * SMS OTP Module — Server-Side OTP via Twilio Programmable SMS API
  *
- * Architecture (server-side OTP — simpler than Firebase):
- *   - sendOtp(mobile) → calls Twilio Verify to send a real SMS OTP
- *   - verifyOtp(mobile, otp) → calls Twilio VerificationCheck to verify the OTP
- *   - Twilio generates and verifies the OTP (we never touch the code)
+ * Architecture:
+ *   - sendOtp(mobile) → generates a 6-digit OTP, builds a fully custom branded
+ *     SMS message, sends it via Twilio's Messages API, stores the OTP hash in
+ *     MongoDB's otp_sessions collection.
+ *   - verifyOtp(mobile, otp) → compares the entered OTP against the stored
+ *     hashed OTP. On success, marks otp_sessions.verified = true.
+ *
+ * Why Programmable SMS (not Twilio Verify)?
+ *   Twilio Verify uses its own OTP template ("Your <code> verification code is:
+ *   <otp>") and the customMessage parameter only works with specific service
+ *   configurations. With Programmable SMS, we have 100% control over the
+ *   message body — the OTP code is embedded directly in our custom template.
  *
  * Dev-mode fallback (free tier / no Twilio creds):
  *   If Twilio credentials are NOT configured, the module enters "dev mode".
- *   In dev mode, sendOtp() stores a test OTP (123456) in MongoDB's otp_sessions
- *   collection, and verifyOtp() checks against it. This keeps the app fully
- *   functional in the sandbox without any SMS provider.
+ *   In dev mode, sendOtp() stores the test OTP (123456) in MongoDB's otp_sessions
+ *   collection, and verifyOtp() checks against it. No SMS is sent.
  *
  * Free tier: Twilio offers a free trial with $15 credit (≈ hundreds of OTP SMS).
  *   Sign up at https://www.twilio.com/ — no credit card needed for trial.
@@ -21,6 +28,7 @@
 
 import { connectToDatabase } from '@/lib/mongodb'
 import { getBrandSettings, DEFAULT_BRAND_NAME } from '@/lib/brand-settings'
+import { createHash, randomInt } from 'crypto'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -29,7 +37,7 @@ import { getBrandSettings, DEFAULT_BRAND_NAME } from '@/lib/brand-settings'
 export interface SendOtpResult {
   /** Whether the OTP was sent successfully. */
   success: boolean
-  /** Twilio verification SID (or 'dev-session' in dev mode). */
+  /** Twilio message SID (or 'dev-session' in dev mode). */
   sid: string
   /** Status: 'pending' (sent, awaiting verification) or 'cancelled'. */
   status: string
@@ -49,20 +57,26 @@ export interface VerifyOtpResult {
 /**
  * Resolve Twilio credentials from environment variables.
  * Returns null if any required value is missing → triggers dev mode.
+ *
+ * Required env vars:
+ *   TWILIO_ACCOUNT_SID      — Account SID (starts with AC)
+ *   TWILIO_AUTH_TOKEN       — Auth token
+ *   TWILIO_PHONE_NUMBER     — The Twilio phone number to send FROM (E.164, e.g. +1234567890)
+ *                             OR a Messaging Service SID (starts with MG)
  */
 function getTwilioConfig(): {
   accountSid: string
   authToken: string
-  verifyServiceSid: string
+  fromNumber: string
 } | null {
   const accountSid = process.env.TWILIO_ACCOUNT_SID
   const authToken = process.env.TWILIO_AUTH_TOKEN
-  const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID
+  const fromNumber = process.env.TWILIO_PHONE_NUMBER // phone number OR messaging service SID
 
-  if (!accountSid || !authToken || !verifyServiceSid) {
+  if (!accountSid || !authToken || !fromNumber) {
     return null
   }
-  return { accountSid, authToken, verifyServiceSid }
+  return { accountSid, authToken, fromNumber }
 }
 
 /** Whether Twilio is properly configured (false = dev mode). */
@@ -71,7 +85,7 @@ export function isSmsConfigured(): boolean {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Dev-mode constants                                                  */
+/*  Constants                                                           */
 /* ------------------------------------------------------------------ */
 
 /** Test OTP used in dev mode (no Twilio configured). */
@@ -79,6 +93,9 @@ const DEV_TEST_OTP = '123456'
 
 /** OTP session TTL: 5 minutes. */
 const OTP_TTL_MS = 5 * 60 * 1000
+
+/** Max OTP verification attempts before the session is invalidated. */
+const MAX_OTP_ATTEMPTS = 5
 
 /* ------------------------------------------------------------------ */
 /*  Phone formatting                                                    */
@@ -94,35 +111,59 @@ function toE164(mobile: string): string {
 }
 
 /* ------------------------------------------------------------------ */
+/*  OTP Generation & Hashing                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Generate a cryptographically random 6-digit OTP code.
+ * Uses Node's crypto.randomInt for security (not Math.random).
+ */
+function generateOtpCode(): string {
+  return String(randomInt(100000, 999999))
+}
+
+/**
+ * Hash an OTP code for secure storage.
+ * We store the hash (not the plain code) so that even if the database is
+ * compromised, the OTP codes cannot be reused. Uses SHA-256 with the
+ * NEXTAUTH_SECRET as a salt.
+ */
+function hashOtp(code: string): string {
+  const secret = process.env.NEXTAUTH_SECRET || 'realcart-otp-hash-secret-2024'
+  return createHash('sha256').update(`${secret}:${code}`).digest('hex')
+}
+
+/* ------------------------------------------------------------------ */
 /*  Professional OTP Message Template                                   */
 /* ------------------------------------------------------------------ */
 
 /**
- * Build a professional, branded OTP SMS message.
- *
- * Twilio Verify supports a `ChannelConfiguration` parameter with a
- * `customMessage` field. The `{{otp}}` placeholder is replaced by Twilio
- * with the actual OTP code at send time (we never see the code).
+ * Build a professional, branded OTP SMS message with the actual code embedded.
  *
  * Message formats (exactly as specified):
  *
  *   Customer:
- *     "Welcome! {{otp}} is your login OTP for RealCart Account.
+ *     "Welcome! 317229 is your login OTP for RealCart Account.
  *      Valid for 5 minutes. Please do not share this code with anyone."
  *
  *   Seller:
- *     "Welcome! {{otp}} is your login OTP for RealCart Seller Account.
+ *     "Welcome! 482915 is your login OTP for RealCart Seller Account.
  *      Valid for 5 minutes. Please do not share this code with anyone."
  *
  *   Delivery Partner:
- *     "Welcome! {{otp}} is your login OTP for RealCart Delivery Partner account.
+ *     "Welcome! 730618 is your login OTP for RealCart Delivery Partner account.
  *      Valid for 5 minutes. Please do not share this code with anyone."
  *
  * @param brandName - The platform brand name (e.g. "RealCart")
+ * @param code - The actual 6-digit OTP code (e.g. "317229")
  * @param type - The user type (customer / delivery_boy / seller)
- * @returns The SMS message string with {{otp}} placeholder
+ * @returns The complete SMS message string
  */
-function buildOtpMessage(brandName: string, type: 'customer' | 'delivery_boy' | 'seller'): string {
+function buildOtpMessage(
+  brandName: string,
+  code: string,
+  type: 'customer' | 'delivery_boy' | 'seller',
+): string {
   // Account label per user type — matches the exact formats requested.
   const accountLabel =
     type === 'customer'
@@ -132,20 +173,23 @@ function buildOtpMessage(brandName: string, type: 'customer' | 'delivery_boy' | 
         : 'Seller Account'
 
   return (
-    `Welcome! {{otp}} is your login OTP for ${brandName} ${accountLabel}. ` +
+    `Welcome! ${code} is your login OTP for ${brandName} ${accountLabel}. ` +
     `Valid for 5 minutes. Please do not share this code with anyone.`
   )
 }
 
 /* ------------------------------------------------------------------ */
-/*  sendOtp — send an OTP via Twilio Verify (or store dev OTP)          */
+/*  sendOtp — send an OTP via Twilio Programmable SMS (or store dev OTP) */
 /* ------------------------------------------------------------------ */
 
 /**
  * Send an OTP to the given mobile number.
  *
- * Production (Twilio configured): calls Twilio Verify to send a real SMS.
- * Dev mode (no Twilio): stores the test OTP (123456) in otp_sessions.
+ * Production (Twilio configured): generates a 6-digit OTP, builds a custom
+ * branded SMS message, sends it via Twilio's Messages API, stores the OTP
+ * hash in otp_sessions.
+ *
+ * Dev mode (no Twilio): stores the test OTP (123456) hash in otp_sessions.
  *
  * @param mobile - 10-digit Indian mobile number
  * @param type - 'customer' | 'delivery_boy' | 'seller' (for otp_sessions scoping)
@@ -172,7 +216,8 @@ export async function sendOtp(
           mobile: cleanMobile,
           type,
           sessionId: 'dev-session',
-          otpCode: DEV_TEST_OTP, // stored in dev mode only (production never stores the code)
+          otpHash: hashOtp(DEV_TEST_OTP), // hashed test OTP for dev mode
+          attempts: 0,
           verified: false,
           createdAt: new Date(),
           expiresAt: new Date(Date.now() + OTP_TTL_MS),
@@ -183,10 +228,8 @@ export async function sendOtp(
     return { success: true, sid: 'dev-session', status: 'pending' }
   }
 
-  // ── Production: call Twilio Verify ──
-  const phone = toE164(cleanMobile)
-  const url = `https://verify.twilio.com/v2/Services/${config.verifyServiceSid}/Verifications`
-  const authHeader = 'Basic ' + Buffer.from(`${config.accountSid}:${config.authToken}`).toString('base64')
+  // ── Production: generate OTP, send via Twilio Messages API ──
+  const otpCode = generateOtpCode()
 
   // Fetch the brand name from DB (falls back to "RealCart" if unset)
   let brandName = DEFAULT_BRAND_NAME
@@ -198,12 +241,13 @@ export async function sendOtp(
     // DB unavailable — use default brand name
   }
 
-  // Build the professional branded OTP message with {{otp}} placeholder.
-  // Twilio replaces {{otp}} with the actual OTP code at send time.
-  const customMessage = buildOtpMessage(brandName, type)
+  // Build the professional branded OTP message with the actual code
+  const messageBody = buildOtpMessage(brandName, otpCode, type)
 
-  // ChannelConfiguration must be a JSON-encoded string per Twilio Verify API.
-  const channelConfig = JSON.stringify({ customMessage })
+  // Send via Twilio Messages API (Programmable SMS)
+  const phone = toE164(cleanMobile)
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Messages.json`
+  const authHeader = 'Basic ' + Buffer.from(`${config.accountSid}:${config.authToken}`).toString('base64')
 
   const response = await fetch(url, {
     method: 'POST',
@@ -213,19 +257,19 @@ export async function sendOtp(
     },
     body: new URLSearchParams({
       To: phone,
-      Channel: 'sms',
-      ChannelConfiguration: channelConfig,
+      From: config.fromNumber,
+      Body: messageBody,
     }),
   })
 
   const data = await response.json()
 
-  if (!response.ok || data.status === 'failed') {
+  if (!response.ok) {
     const msg = data.message || data.error_message || 'Failed to send OTP via SMS'
     throw new Error(msg)
   }
 
-  // Store the verification SID in otp_sessions (for traceability + rate-limiting)
+  // Store the OTP HASH (not the plain code) in otp_sessions for verification
   const { db } = await connectToDatabase()
   await db.collection('otp_sessions').updateOne(
     { mobile: cleanMobile, type },
@@ -233,7 +277,9 @@ export async function sendOtp(
       $set: {
         mobile: cleanMobile,
         type,
-        sessionId: data.sid, // Twilio verification SID
+        sessionId: data.sid, // Twilio message SID
+        otpHash: hashOtp(otpCode), // store the HASH, not the plain code
+        attempts: 0,
         verified: false,
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + OTP_TTL_MS),
@@ -242,18 +288,19 @@ export async function sendOtp(
     { upsert: true },
   )
 
-  return { success: true, sid: data.sid, status: data.status || 'pending' }
+  return { success: true, sid: data.sid, status: 'pending' }
 }
 
 /* ------------------------------------------------------------------ */
-/*  verifyOtp — verify an OTP via Twilio Verify (or check dev OTP)      */
+/*  verifyOtp — verify an OTP against the stored hash                   */
 /* ------------------------------------------------------------------ */
 
 /**
  * Verify an OTP entered by the user.
  *
- * Production (Twilio configured): calls Twilio VerificationCheck.
- * Dev mode (no Twilio): checks the stored test OTP (123456) in otp_sessions.
+ * Compares the entered OTP against the stored hash in otp_sessions.
+ * On success, marks the session as verified. Tracks attempts to prevent
+ * brute-force guessing (max 5 attempts, then the session is invalidated).
  *
  * @param mobile - 10-digit Indian mobile number
  * @param otp - 4–6 digit OTP entered by the user
@@ -288,58 +335,37 @@ export async function verifyOtp(
     throw new Error('OTP session expired. Please request a new OTP.')
   }
 
-  const config = getTwilioConfig()
-
-  // ── Dev mode: check stored test OTP ──
-  if (!config) {
-    const isValid = cleanOtp === DEV_TEST_OTP
-    if (isValid) {
-      await db.collection('otp_sessions').updateOne(
-        { _id: session._id },
-        { $set: { verified: true, verifiedAt: new Date() } },
-      )
-    }
-    return { valid: isValid, status: isValid ? 'approved' : 'pending' }
-  }
-
-  // ── Production: call Twilio VerificationCheck ──
-  const phone = toE164(cleanMobile)
-  const url = `https://verify.twilio.com/v2/Services/${config.verifyServiceSid}/VerificationCheck`
-  const authHeader = 'Basic ' + Buffer.from(`${config.accountSid}:${config.authToken}`).toString('base64')
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      To: phone,
-      Code: cleanOtp,
-    }),
-  })
-
-  const data = await response.json()
-
-  // Twilio returns status: 'approved' for valid, 'pending' for invalid
-  const isValid = data.status === 'approved'
-
-  if (isValid) {
+  // Check max attempts (prevent brute-force)
+  const attempts = (session.attempts as number) || 0
+  if (attempts >= MAX_OTP_ATTEMPTS) {
+    // Invalidate the session
     await db.collection('otp_sessions').updateOne(
       { _id: session._id },
-      { $set: { verified: true, verifiedAt: new Date() } },
+      { $set: { verified: false, invalidated: true } },
+    )
+    throw new Error('Too many incorrect attempts. Please request a new OTP.')
+  }
+
+  // Compare the entered OTP against the stored hash
+  const enteredHash = hashOtp(cleanOtp)
+  const storedHash = session.otpHash as string
+  const isValid = !!(storedHash && enteredHash === storedHash)
+
+  if (isValid) {
+    // Mark as verified + reset attempts
+    await db.collection('otp_sessions').updateOne(
+      { _id: session._id },
+      { $set: { verified: true, verifiedAt: new Date(), attempts: attempts + 1 } },
+    )
+  } else {
+    // Increment attempts
+    await db.collection('otp_sessions').updateOne(
+      { _id: session._id },
+      { $set: { attempts: attempts + 1 } },
     )
   }
 
-  // If Twilio returns a specific error, surface it
-  if (!response.ok && !isValid) {
-    // Common errors: 'invalid param', 'max check attempts reached', etc.
-    if (data.code === 60202) {
-      throw new Error('Too many incorrect attempts. Please request a new OTP.')
-    }
-  }
-
-  return { valid: isValid, status: data.status || 'pending' }
+  return { valid: isValid, status: isValid ? 'approved' : 'pending' }
 }
 
 /* ------------------------------------------------------------------ */

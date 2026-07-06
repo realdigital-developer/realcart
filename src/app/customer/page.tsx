@@ -144,17 +144,22 @@ function CustomerHomeInner() {
   // don't override intentional navigation like ?tab=orders). Once they save
   // their profile (email gets set), profileComplete becomes true and this
   // redirect no longer triggers.
+  //
+  // We use a HARD navigation (window.location.href) instead of replaceState
+  // because HomeContentWrapper initializes its navHistory state from initialTab
+  // only ONCE on mount. A soft URL change wouldn't remount it, so the customer
+  // would stay on the home tab. A hard navigation forces a full remount with
+  // the correct initialTab='profile'.
   useEffect(() => {
     if (!mounted || !authenticated || !isNewCustomer) return
     // Don't redirect if the user is already on a specific tab (intentional nav)
     const currentTab = searchParams.get('tab')
     if (currentTab && currentTab !== 'home') return
-    // Redirect to the profile tab
+    // Hard redirect to the profile tab — forces a full page remount so
+    // HomeContentWrapper picks up initialTab='profile' from the URL.
     const url = new URL(window.location.href)
     url.searchParams.set('tab', 'profile')
-    window.history.replaceState(null, '', url.toString())
-    // Trigger a popstate so the page picks up the new tab
-    window.dispatchEvent(new PopStateEvent('popstate'))
+    window.location.href = url.toString()
   }, [mounted, authenticated, isNewCustomer, searchParams])
 
   // Show loading until client-side hydration is complete
@@ -170,8 +175,11 @@ function CustomerHomeInner() {
     )
   }
 
-  // Pass URL search params to HomeContentWrapper
-  const tab = isNewCustomer && !searchParams.get('tab') ? 'profile' : searchParams.get('tab')
+  // Pass URL search params to HomeContentWrapper.
+  // For new customers, force the profile tab so they complete their profile.
+  const tab = isNewCustomer && (!searchParams.get('tab') || searchParams.get('tab') === 'home')
+    ? 'profile'
+    : searchParams.get('tab')
   const search = searchParams.get('search')
   const category = searchParams.get('category')
   const subcategory = searchParams.get('subcategory')
