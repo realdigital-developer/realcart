@@ -1,37 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
+import { sendOtp } from '@/lib/sms-otp'
+
+const SELLERS_COLLECTION = 'sellers'
 
 /**
  * POST /api/auth/seller/send-otp
- * Compatibility endpoint — kept for backward compatibility with the frontend
- * send-OTP button. With Firebase Phone Auth, OTP sending happens client-side
- * via Firebase's signInWithPhoneNumber(). This endpoint:
- *   1. Validates the mobile number
- *   2. Confirms the seller doesn't already exist (checks `sellers.phone`)
- *   3. Returns success — the client handles the actual send via Firebase
- *
- * The client's send handler should call Firebase signInWithPhoneNumber()
- * directly (via the usePhoneOtp hook), NOT rely on this endpoint to send the OTP.
+ * Send an OTP to a mobile number for new seller registration (or resend).
+ * Uses server-side SMS OTP (Twilio Verify) with dev-mode fallback (test OTP 123456).
  *
  * Body: { mobile: string }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const mobile = (body.mobile || '').trim()
+    const mobile = (body.mobile || '').replace(/\D/g, '').slice(-10)
 
-    if (!mobile || mobile.replace(/\D/g, '').length < 10) {
-      return NextResponse.json(
-        { error: 'Valid 10-digit mobile number is required' },
-        { status: 400 },
-      )
+    if (!mobile || mobile.length !== 10) {
+      return NextResponse.json({ error: 'Valid 10-digit mobile number is required' }, { status: 400 })
     }
 
-    const cleanMobile = mobile.replace(/\D/g, '').slice(-10)
+    const { db } = await connectToDatabase()
 
     // Check if mobile is already registered
-    const { db } = await connectToDatabase()
-    const existing = await db.collection('sellers').findOne({ phone: cleanMobile })
+    const existing = await db.collection(SELLERS_COLLECTION).findOne({ phone: mobile })
     if (existing) {
       return NextResponse.json(
         { error: 'This mobile number is already registered. Please login instead.' },
@@ -39,15 +31,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // With Firebase Phone Auth, the client sends the OTP directly via Firebase.
+    // Send OTP via SMS gateway (Twilio Verify or dev mode)
+    await sendOtp(mobile, 'seller')
+
     return NextResponse.json({
       success: true,
-      message: 'Please use the send OTP button to get a new OTP via Firebase.',
+      message: 'OTP sent successfully',
     })
   } catch (error) {
     console.error('[Seller Send OTP Error]', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to process request' },
+      { error: error instanceof Error ? error.message : 'Failed to send OTP' },
       { status: 500 },
     )
   }

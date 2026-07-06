@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useDeliveryBoyAuth } from '@/hooks/use-delivery-boy-auth'
-import { usePhoneOtp } from '@/hooks/use-phone-otp'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Truck,
@@ -155,9 +154,6 @@ export function DeliveryBoyAuthGate() {
   const { login, register } = useDeliveryBoyAuth()
   const { logo } = useSiteLogo()
 
-  // Firebase Phone Auth hook — handles OTP send/verify (with dev-mode fallback)
-  const phoneOtp = usePhoneOtp()
-
   const [step, setStep] = useState<AuthStep>('mobile')
   const [direction, setDirection] = useState(1)
   const [mobile, setMobile] = useState('')
@@ -172,11 +168,6 @@ export function DeliveryBoyAuthGate() {
   const [error, setError] = useState('')
   const [loadingAction, setLoadingAction] = useState(false)
   const [resendTimer, setResendTimer] = useState(0)
-
-  // Surface errors from the Firebase phone OTP hook into the UI's error state
-  useEffect(() => {
-    if (phoneOtp.error) setError(phoneOtp.error)
-  }, [phoneOtp.error])
 
   useEffect(() => {
     if (resendTimer <= 0) return
@@ -219,9 +210,8 @@ export function DeliveryBoyAuthGate() {
         setIsNewDeliveryBoy(false)
         goToStep('enter-passcode')
       } else {
-        // New delivery boy — send OTP via Firebase Phone Auth (client-side).
+        // New delivery boy — OTP was sent by the backend via SMS gateway.
         setIsNewDeliveryBoy(true)
-        await phoneOtp.sendOtp(cleanMobile)
         setResendTimer(60)
         goToStep('otp')
       }
@@ -230,7 +220,7 @@ export function DeliveryBoyAuthGate() {
     } finally {
       setLoadingAction(false)
     }
-  }, [mobile, goToStep, phoneOtp])
+  }, [mobile, goToStep])
 
   const handleVerifyOTP = useCallback(async () => {
     const cleanOtp = otp.replace(/\D/g, '')
@@ -241,14 +231,12 @@ export function DeliveryBoyAuthGate() {
     setLoadingAction(true)
     setError('')
     try {
-      // Step 1: Verify OTP via Firebase Phone Auth → get Firebase ID token
-      const { idToken } = await phoneOtp.verifyOtp(cleanOtp)
-      // Step 2: Send the ID token to backend for server-side verification
+      // Send { mobile, otp } to backend — server verifies via SMS gateway
       const cleanMobile = mobile.replace(/\D/g, '').slice(-10)
       const res = await fetch('/api/auth/delivery-boy/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: cleanMobile, idToken }),
+        body: JSON.stringify({ mobile: cleanMobile, otp: cleanOtp }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Invalid OTP')
@@ -258,7 +246,7 @@ export function DeliveryBoyAuthGate() {
     } finally {
       setLoadingAction(false)
     }
-  }, [otp, mobile, goToStep, phoneOtp])
+  }, [otp, mobile, goToStep])
 
   const handleResendOTP = useCallback(async () => {
     if (resendTimer > 0) return
@@ -266,8 +254,14 @@ export function DeliveryBoyAuthGate() {
     setError('')
     try {
       const cleanMobile = mobile.replace(/\D/g, '').slice(-10)
-      // Resend OTP via Firebase Phone Auth (client-side)
-      await phoneOtp.sendOtp(cleanMobile)
+      // Resend OTP via the backend SMS gateway
+      const res = await fetch('/api/auth/delivery-boy/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile: cleanMobile }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to resend OTP')
       setResendTimer(60)
       setOtp('')
     } catch (err) {
@@ -275,7 +269,7 @@ export function DeliveryBoyAuthGate() {
     } finally {
       setLoadingAction(false)
     }
-  }, [mobile, resendTimer, phoneOtp])
+  }, [mobile, resendTimer])
 
   const handleCreatePasscode = useCallback(() => {
     const cleanPasscode = passcode.replace(/\D/g, '')
@@ -365,8 +359,6 @@ export function DeliveryBoyAuthGate() {
 
   return (
     <div className="min-h-dvh flex relative overflow-hidden">
-      {/* reCAPTCHA container for Firebase Phone Auth (invisible — no visual impact) */}
-      <div id="recaptcha-container" style={{ position: 'fixed', bottom: 0, right: 0, zIndex: -1 }} />
       {/* Left Panel - Branding & Visual */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-orange-600 via-amber-600 to-yellow-600">
         {/* Animated background shapes */}

@@ -1,23 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
+import { sendOtp } from '@/lib/sms-otp'
 
 const CUSTOMERS_COLLECTION = 'customers'
 
 /**
  * POST /api/auth/customer/check-mobile
- * Check if a mobile number exists in the database.
- *
- * Firebase Phone Auth change: This endpoint NO LONGER sends the OTP.
- * Previously (2Factor) it sent the OTP server-side. Now the client sends
- * the OTP directly via Firebase after receiving `exists: false` from here.
- * This split is necessary because Firebase Phone Auth requires client-side
- * reCAPTCHA + signInWithPhoneNumber — it cannot be done server-side.
+ * Check if a mobile number exists in the database. If new, send an OTP.
  *
  * Body: { mobile: string }
  * Response:
  *   - { exists: true, message } — existing customer, login with passcode
- *   - { exists: false, otpSent: false, message } — new customer, client should
- *      call Firebase signInWithPhoneNumber() to send the OTP
+ *   - { exists: false, otpSent: true, message } — new customer, OTP sent via SMS
  */
 export async function POST(request: NextRequest) {
   try {
@@ -39,12 +33,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // New customer — the client will send the OTP via Firebase Phone Auth.
-    // We no longer send the OTP server-side (Firebase requires client-side reCAPTCHA).
+    // New customer — send OTP via SMS gateway (Twilio Verify or dev mode)
+    await sendOtp(mobile, 'customer')
+
     return NextResponse.json({
       exists: false,
-      otpSent: false,
-      message: 'New mobile number. Please verify with OTP to continue registration.',
+      otpSent: true,
+      message: 'OTP sent to your mobile number. Please verify to continue registration.',
     })
   } catch (error) {
     console.error('[Check Mobile Error]', error)

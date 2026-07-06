@@ -30,7 +30,9 @@ export async function POST(request: NextRequest) {
     // Verify that OTP was verified for this mobile number
     const otpSession = await db.collection('otp_sessions').findOne({
       mobile,
+      type: 'delivery_boy',
       verified: true,
+      expiresAt: { $gt: new Date() },
     })
 
     if (!otpSession) {
@@ -143,7 +145,7 @@ export async function POST(request: NextRequest) {
 
     // Clean up OTP session
     try {
-      await db.collection('otp_sessions').deleteOne({ mobile })
+      await db.collection('otp_sessions').deleteOne({ mobile, type: 'delivery_boy' })
     } catch {
       // Non-critical — don't fail registration
     }

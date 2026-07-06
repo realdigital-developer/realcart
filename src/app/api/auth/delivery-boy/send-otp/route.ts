@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
+import { sendOtp } from '@/lib/sms-otp'
 
 const DELIVERY_BOYS_COLLECTION = 'delivery_boys'
 
 /**
  * POST /api/auth/delivery-boy/send-otp
- * Compatibility endpoint — kept for backward compatibility with the frontend
- * resend-OTP button. With Firebase Phone Auth, OTP sending happens client-side
- * via Firebase's signInWithPhoneNumber(). This endpoint:
- *   1. Validates the mobile number
- *   2. Confirms the delivery boy doesn't already exist (new users only)
- *   3. Returns success — the client handles the actual resend via Firebase
- *
- * The client's resend handler should call Firebase signInWithPhoneNumber()
- * directly (NOT rely on this endpoint to send the OTP).
+ * Send an OTP to a mobile number for new delivery boy registration (or resend).
+ * Uses server-side SMS OTP (Twilio Verify) with dev-mode fallback (test OTP 123456).
  *
  * Body: { mobile: string }
  */
@@ -37,15 +31,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // With Firebase Phone Auth, the client sends the OTP directly via Firebase.
+    // Send OTP via SMS gateway (Twilio Verify or dev mode)
+    await sendOtp(mobile, 'delivery_boy')
+
     return NextResponse.json({
       success: true,
-      message: 'Please use the resend button to get a new OTP via Firebase.',
+      message: 'OTP sent successfully',
     })
   } catch (error) {
     console.error('[Delivery Boy Send OTP Error]', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to process request' },
+      { error: error instanceof Error ? error.message : 'Failed to send OTP' },
       { status: 500 },
     )
   }

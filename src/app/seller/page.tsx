@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useSellerAuth } from '@/hooks/use-seller-auth'
-import { usePhoneOtp } from '@/hooks/use-phone-otp'
 import { useSiteLogo } from '@/hooks/use-site-logo'
 import {
   Eye, EyeOff, LogIn, Loader2, ShieldCheck, Fingerprint,
@@ -302,19 +301,11 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
   onRegister: (data: any) => Promise<void>
   onSwitchToLogin: () => void
 }) {
-  // Firebase Phone Auth hook — handles OTP send/verify (with dev-mode fallback)
-  const phoneOtp = usePhoneOtp()
-
   const [step, setStep] = useState(1)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
   const [otpVerified, setOtpVerified] = useState(false)
-
-  // Surface errors from the Firebase phone OTP hook into the UI's error state
-  useEffect(() => {
-    if (phoneOtp.error) setError(phoneOtp.error)
-  }, [phoneOtp.error])
 
   // Step 1: Mobile
   const [phone, setPhone] = useState('')
@@ -364,7 +355,7 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
   const [agreedTerms, setAgreedTerms] = useState(false)
 
   /* ---------------------------------------------------------------- */
-  /*  OTP Handling — Firebase Phone Auth (replaces 2Factor)             */
+  /*  OTP Handling — Server-side SMS OTP (replaces Firebase Phone Auth) */
   /* ---------------------------------------------------------------- */
 
   const handleSendOtp = async () => {
@@ -375,22 +366,17 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
       return
     }
     try {
-      // Step 1: Check mobile availability via backend (prevents OTP-bombing
-      // arbitrary numbers + confirms the number isn't already registered)
-      const checkRes = await fetch('/api/auth/seller/send-otp', {
+      // Send OTP via the backend SMS gateway (Twilio Verify or dev mode)
+      const res = await fetch('/api/auth/seller/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mobile: cleanMobile }),
       })
-      if (!checkRes.ok) {
-        const data = await checkRes.json().catch(() => ({}))
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
         setError(data.error || 'Failed to send OTP')
         return
       }
-
-      // Step 2: Send OTP via Firebase Phone Auth (client-side).
-      // The backend no longer sends the OTP (Firebase requires client-side reCAPTCHA).
-      await phoneOtp.sendOtp(cleanMobile)
       setOtpSent(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP')
@@ -405,17 +391,12 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
       return
     }
     try {
-      // Step 1: Verify OTP via Firebase Phone Auth → get Firebase ID token
-      // (In dev mode without Firebase, this returns a synthetic dev token.)
-      const { idToken } = await phoneOtp.verifyOtp(cleanOtp)
-
-      // Step 2: Send the ID token to backend for server-side verification
-      // The backend verifies the token with Firebase Admin + marks otp_sessions.verified = true
+      // Send { mobile, otp } to backend — server verifies via SMS gateway
       const cleanMobile = phone.replace(/\D/g, '').slice(-10)
       const res = await fetch('/api/auth/seller/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: cleanMobile, idToken }),
+        body: JSON.stringify({ mobile: cleanMobile, otp: cleanOtp }),
       })
       if (res.ok) {
         setOtpVerified(true)
@@ -1665,9 +1646,6 @@ export default function SellerPage() {
 
   return (
     <div className="min-h-dvh flex items-center justify-center relative overflow-hidden p-4 sm:p-6">
-      {/* reCAPTCHA container for Firebase Phone Auth (invisible — no visual impact) */}
-      <div id="recaptcha-container" style={{ position: 'fixed', bottom: 0, right: 0, zIndex: -1 }} />
-
       {/* Gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-emerald-500/5 to-background" />
 

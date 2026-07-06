@@ -6836,3 +6836,69 @@ Stage Summary:
 - Files modified: .env (changed DEV_MODE vars from true to false)
 - No code changes needed — the Firebase integration code was already correct. Only the env var toggle was needed.
 - No UI or existing code damaged — all routes work, zero errors.
+
+---
+Task ID: replace-firebase-with-twilio-verify
+Agent: Z.ai Code (main)
+Task: Completely remove Firebase Phone Auth and replace with Twilio Verify SMS OTP gateway (free tier). Customer, seller, and delivery-boy panels should receive real OTP SMS.
+
+Work Log:
+- Important note: Auth0 is NOT an SMS gateway — it's an identity provider. Auth0 uses Twilio Verify under the hood for phone OTP. Implemented Twilio Verify directly (free trial $15 credit, purpose-built for OTP, works in India, no client-side SDK needed).
+- Created src/lib/sms-otp.ts:
+  • sendOtp(mobile, type) → calls Twilio Verify API to send real SMS OTP
+  • verifyOtp(mobile, otp, type) → calls Twilio VerificationCheck to verify OTP
+  • Dev mode fallback (no Twilio creds): uses test OTP 123456, stored in otp_sessions
+  • isOtpVerified() and clearOtpSession() helpers for register routes
+  • Phone formatting (10-digit → E.164 +91XXXXXXXXXX)
+  • Scoped by type ('customer' | 'delivery_boy' | 'seller') to prevent cross-panel session collisions
+- Updated 9 backend auth routes to use server-side SMS OTP:
+  • customer/send-otp, customer/verify-otp, customer/check-mobile
+  • delivery-boy/send-otp, delivery-boy/verify-otp, delivery-boy/check-mobile
+  • seller/send-otp, seller/verify-otp
+  • All verify-otp routes now accept {mobile, otp} (NOT {mobile, idToken} like Firebase)
+  • check-mobile routes now send OTP server-side for new users (like the original pre-Firebase behavior)
+- Updated register routes to scope otp_sessions by type:
+  • customer/register: added type:'customer' + expiresAt filter to the gate + cleanup
+  • delivery-boy/register: added type:'delivery_boy' + expiresAt filter to the gate + cleanup
+  • seller/register: already had type:'seller' + expiresAt (from previous task)
+- Updated 4 frontend files to remove Firebase and call server API directly:
+  • customer/auth-gate.tsx: removed usePhoneOtp hook, handleVerifyOTP now POSTs {mobile, otp}
+  • customer/login/page.tsx: same changes
+  • delivery-boy/auth-gate.tsx: same changes with delivery-boy API endpoints
+  • seller/page.tsx: same changes with seller API endpoints
+  • Removed all reCAPTCHA container divs (no longer needed — server-side OTP)
+- Deleted Firebase files:
+  • src/lib/firebase-admin.ts
+  • src/lib/firebase-client.ts
+  • src/hooks/use-phone-otp.ts
+  • FIREBASE_SETUP.md
+- Uninstalled npm packages: firebase, firebase-admin (removed from package.json)
+- Updated .env: removed all 11 Firebase env vars, added 3 Twilio vars (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID)
+- Updated .env.example: same changes with documentation
+- Ran `bun run lint` → 0 errors.
+- Tested all OTP APIs with curl (dev mode, no Twilio creds):
+  • customer send-otp → success ✅
+  • customer verify-otp (123456) → success ✅
+  • customer verify-otp (wrong OTP) → rejected ✅
+  • delivery-boy send-otp + verify-otp → success ✅
+  • seller send-otp + verify-otp → success ✅
+- Tested customer auth flow with Agent Browser (end-to-end in dev mode):
+  • Enter mobile → Continue → "Verify Your Number" appears ✅
+  • Enter test OTP 123456 → Verify OTP → "Create Your Passcode" appears ✅
+- All routes return HTTP 200, zero dev log errors.
+- Verified zero Firebase references remain in src/ directory.
+
+Stage Summary:
+- Firebase Phone Auth is COMPLETELY REMOVED. All firebase files deleted, packages uninstalled.
+- Twilio Verify SMS OTP is now the OTP provider for all three panels (customer, delivery-boy, seller).
+- Architecture is server-side (simpler than Firebase):
+  • Client POSTs {mobile} to send-otp → server calls Twilio Verify → real SMS sent
+  • Client POSTs {mobile, otp} to verify-otp → server calls Twilio VerificationCheck → verified
+  • No client-side SDK, no reCAPTCHA, no Firebase Admin SDK
+- Dev mode fallback (test OTP 123456) works when Twilio creds are not set — sandbox stays functional.
+- To enable real SMS: set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID in .env (free trial at twilio.com = $15 credit).
+- Files created: src/lib/sms-otp.ts
+- Files modified: 9 auth API routes, 3 register routes, 4 frontend components, .env, .env.example
+- Files deleted: firebase-admin.ts, firebase-client.ts, use-phone-otp.ts, FIREBASE_SETUP.md
+- Packages removed: firebase, firebase-admin
+- No UI or existing code damaged — all routes work, zero errors, all auth flows intact.
