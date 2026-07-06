@@ -5074,7 +5074,7 @@ Work Log:
 - **Sync verification**:
   * Local HEAD: `e96f6d07410016f628adb6065dbae9000383edb9`
   * Remote main HEAD: `e96f6d07410016f628adb6065dbae9000383edb9`
-  * Divergence: `0	0` (zero ahead, zero behind)
+  * Divergence: `0      0` (zero ahead, zero behind)
   * STATUS: IN SYNC ✓
 
 Stage Summary:
@@ -6909,20 +6909,20 @@ Agent: Z.ai Code (main)
 Task: Update Twilio credentials in .env with the user-provided values.
 
 Work Log:
-- Read the user-provided Twilio credentials:
-  • TWILIO_ACCOUNT_SID=ACREDACTED
-  • TWILIO_AUTH_TOKEN=REDACTED
-  • TWILIO_VERIFY_SERVICE_SID=MGREDACTED
+- Read the user-provided Twilio credentials (redacted for security):
+  • TWILIO_ACCOUNT_SID=ACxxxxxx... (redacted — stored in .env, not committed)
+  • TWILIO_AUTH_TOKEN=xxxxxx... (redacted — stored in .env, not committed)
+  • TWILIO_VERIFY_SERVICE_SID=MGxxxxxx... (redacted)
 - Wrote all three to .env (replacing the empty placeholders).
 - Restarted dev server and tested the send-otp API.
-- ISSUE FOUND: The user provided TWILIO_VERIFY_SERVICE_SID=MGREDACTED, but `MG`-prefixed SIDs are Messaging Service SIDs, NOT Verify Service SIDs. The Twilio Verify API expects a `VA`-prefixed SID. The API returned error code 60200 "Invalid parameter".
-- FIX: Queried the user's Twilio account for existing Verify Services via GET https://verify.twilio.com/v2/Services. Found one Verify Service: "My New Verify Service" with SID VAREDACTED. Updated .env with the correct VA-prefixed SID.
+- ISSUE FOUND: The user provided TWILIO_VERIFY_SERVICE_SID=MGxxxxxx... (redacted), but `MG`-prefixed SIDs are Messaging Service SIDs, NOT Verify Service SIDs. The Twilio Verify API expects a `VA`-prefixed SID. The API returned error code 60200 "Invalid parameter".
+- FIX: Queried the user's Twilio account for existing Verify Services via GET https://verify.twilio.com/v2/Services. Found one Verify Service: "My New Verify Service" with the correct VA-prefixed SID (redacted). Updated .env with the correct VA-prefixed SID.
 - Retested: The Twilio API now connects successfully (no more "Invalid parameter"). The response is now "The phone number is unverified. Trial accounts cannot send messages to unverified numbers" — this is a Twilio trial account limitation (not a code issue). Trial accounts can only send SMS to phone numbers that have been verified in the Twilio console.
 - Verified all routes return HTTP 200, lint passes (0 errors), no code errors in dev log.
-- The .env now has:
-  • TWILIO_ACCOUNT_SID=ACREDACTED
-  • TWILIO_AUTH_TOKEN=REDACTED
-  • TWILIO_VERIFY_SERVICE_SID=VAREDACTED (corrected from the MG-prefixed SID)
+- The .env now has (values redacted for security):
+  • TWILIO_ACCOUNT_SID=ACxxxxxx... (redacted)
+  • TWILIO_AUTH_TOKEN=xxxxxx... (redacted)
+  • TWILIO_VERIFY_SERVICE_SID=VAxxxxxx... (corrected from the MG-prefixed SID, redacted)
 
 Stage Summary:
 - Twilio credentials are now configured in .env with the CORRECT Verify Service SID (VA-prefixed, found on the user's account).
@@ -7051,7 +7051,7 @@ Work Log:
     • Rewrote sendOtp() to: generate OTP → build custom message → send via Twilio Messages API → store OTP hash in otp_sessions
     • Rewrote verifyOtp() to: compare entered OTP hash against stored hash → track attempts (max 5) → mark verified on success
     • Added brute-force protection (MAX_OTP_ATTEMPTS=5)
-  - Updated .env: added TWILIO_PHONE_NUMBER=+1REDACTED (found on the user's Twilio account)
+  - Updated .env: added TWILIO_PHONE_NUMBER=+1xxxxxxxxxx (found on the user's Twilio account, redacted)
   - The OTP messages now have the EXACT formats requested:
     • Customer: "Welcome! 317229 is your login OTP for RealCart Account. Valid for 5 minutes. Please do not share this code with anyone."
     • Seller: "Welcome! 482915 is your login OTP for RealCart Seller Account. Valid for 5 minutes. Please do not share this code with anyone."
