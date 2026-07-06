@@ -6995,3 +6995,41 @@ Stage Summary:
 - Brand name is dynamic (from admin Settings).
 - Files modified: src/lib/sms-otp.ts (buildOtpMessage function updated).
 - No UI or existing code damaged — all routes work, 0 lint errors.
+
+---
+Task ID: new-customer-profile-redirect
+Agent: Z.ai Code (main)
+Task: Redirect new customers to the profile page to complete their profile after registration.
+
+Work Log:
+- Updated customer session API (src/app/api/auth/customer/session/route.ts):
+  • Added profileComplete flag to the response: true if the customer has an email set, false if they're new (no email yet)
+  • A customer is considered "new" (profile incomplete) when they have no email — they just registered with mobile + passcode only
+- Updated customer-auth-provider (src/components/providers/customer-auth-provider.tsx):
+  • Added profileComplete field to CustomerUser interface
+  • Added isNewCustomer derived flag to the context: true when authenticated AND profileComplete === false
+  • Exposed isNewCustomer in the context type + default value + provider value
+  • Updated register() to set profileComplete: false immediately after registration (so the redirect triggers without waiting for a session refresh)
+- Updated customer page (src/app/customer/page.tsx) CustomerHomeInner:
+  • Added a useEffect that redirects new customers to the profile tab (?tab=profile) when:
+    - The customer is authenticated
+    - isNewCustomer is true (profileComplete === false)
+    - There's no explicit tab in the URL (so we don't override intentional navigation like ?tab=orders)
+  • Also passes 'profile' as the initialTab for HomeContentWrapper when the customer is new and there's no explicit tab
+  • The redirect uses window.history.replaceState + a popstate event so the tab-based navigation system picks it up
+  • Once the customer saves their profile (email gets set), profileComplete becomes true and the redirect no longer triggers
+- Ran `bun run lint` → 0 errors.
+- Tested end-to-end:
+  • Created a test customer with NO email → session API returned profileComplete: false ✅
+  • Added an email to the test customer → session API returned profileComplete: true ✅
+  • Cleaned up the test customer
+- All routes return HTTP 200, zero dev log errors.
+
+Stage Summary:
+- New customers (just registered with mobile + passcode) are now automatically redirected to the profile page to complete their profile (name, email, profile image).
+- The redirect is smart: it only triggers when there's no explicit tab in the URL (doesn't override intentional navigation).
+- The profileComplete flag is based on whether the customer has an email set — once they add an email in the profile page, the flag becomes true and the redirect stops.
+- The flag is server-side (from the session API) so it's consistent across page reloads.
+- The register() function sets profileComplete: false immediately (without waiting for a session refresh) so the redirect triggers instantly after registration.
+- Files modified: src/app/api/auth/customer/session/route.ts, src/components/providers/customer-auth-provider.tsx, src/app/customer/page.tsx
+- No UI or existing code damaged — all routes work, 0 lint errors.

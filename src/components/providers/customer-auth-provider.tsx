@@ -9,12 +9,19 @@ interface CustomerUser {
   email?: string | null
   role: 'customer'
   profileImage?: string | null
+  /** Whether the customer has completed their profile (email set).
+   *  New customers (just registered with mobile + passcode) have this as
+   *  false, so the UI can redirect them to the profile page. */
+  profileComplete?: boolean
 }
 
 export interface CustomerAuthContextType {
   user: CustomerUser | null
   authenticated: boolean
   loading: boolean
+  /** Whether the logged-in customer is new (profile not yet completed).
+   *  True when authenticated AND profileComplete is false. */
+  isNewCustomer: boolean
   login: (mobile: string, passcode: string) => Promise<void>
   register: (mobile: string, passcode: string, name?: string) => Promise<void>
   logout: () => Promise<void>
@@ -40,6 +47,7 @@ const CustomerAuthContext = createContext<CustomerAuthContextType>({
   user: null,
   authenticated: false,
   loading: false,
+  isNewCustomer: false,
   login: async () => {},
   register: async () => {},
   logout: async () => {},
@@ -56,6 +64,9 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   // Start with loading=true only when the provider is actually mounted
   const [loading, setLoading] = useState(true)
   const mountedRef = useRef(false)
+
+  // Derived flag: a customer is "new" when authenticated but profile not complete.
+  const isNewCustomer = authenticated && user != null && user.profileComplete === false
 
   // Check session on mount — single effect with proper cleanup.
   // The fetch + setState happens inside async .then() callbacks (NOT
@@ -151,7 +162,9 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     })
     const data = await res.json().catch(() => ({})).catch(() => ({}))
     if (!res.ok) throw new Error(data.error || 'Registration failed')
-    setUser(data.user)
+    // New customers have NOT completed their profile (no email yet).
+    // Set profileComplete: false so the UI redirects them to the profile page.
+    setUser({ ...data.user, profileComplete: false })
     setAuthenticated(true)
   }, [])
 
@@ -167,7 +180,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <CustomerAuthContext.Provider
-      value={{ user, authenticated, loading, login, register, logout, refreshUser }}
+      value={{ user, authenticated, loading, isNewCustomer, login, register, logout, refreshUser }}
     >
       {children}
     </CustomerAuthContext.Provider>

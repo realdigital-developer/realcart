@@ -110,6 +110,14 @@ export async function GET(request: NextRequest) {
       return deletedResponse
     }
 
+    // ── Profile completion flag ──────────────────────────────────────────
+    // A customer is considered "new" (profile incomplete) if they have no
+    // email set. New customers just registered with mobile + passcode only,
+    // so they're redirected to the profile page to complete their details
+    // (name, email, profile image). Once they set an email, profileComplete
+    // becomes true and the redirect no longer triggers.
+    const profileComplete = !!(freshEmail && freshEmail.trim().length > 0)
+
     return NextResponse.json({
       authenticated: true,
       user: {
@@ -119,6 +127,7 @@ export async function GET(request: NextRequest) {
         email: freshEmail,
         role: customer.role,
         profileImage: profileImageUrl,
+        profileComplete,
       },
     })
   } catch (error) {
