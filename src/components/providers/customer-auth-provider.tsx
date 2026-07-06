@@ -150,8 +150,25 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     })
     const data = await res.json().catch(() => ({})).catch(() => ({}))
     if (!res.ok) throw new Error(data.error || 'Login failed')
+    // Set the user from the login response first (so the UI transitions
+    // from the auth gate to the main app immediately).
     setUser(data.user)
     setAuthenticated(true)
+    // Then fetch the FULL session (which includes profileComplete) so the
+    // new-customer redirect can trigger for customers who haven't completed
+    // their profile yet. The login API response doesn't include
+    // profileComplete, but the session API does.
+    try {
+      const sessionRes = await fetch('/api/auth/customer/session')
+      if (sessionRes.ok) {
+        const sessionData = await sessionRes.json().catch(() => ({}))
+        if (sessionData.authenticated && sessionData.user) {
+          setUser(sessionData.user)
+        }
+      }
+    } catch {
+      // Non-critical — the initial user from login is still valid
+    }
   }, [])
 
   const register = useCallback(async (mobile: string, passcode: string, name?: string) => {

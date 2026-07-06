@@ -7140,3 +7140,35 @@ Stage Summary:
 - The back button is now integrated into the profile page's gradient header (modern, smart approach matching Meesho/Amazon style) instead of a separate white bar.
 - Files modified: profile-page.tsx, home-content-wrapper.tsx, all 10 locale files (en, hi, bn, ta, te, mr, kn, ml, pa, gu)
 - No UI or existing code damaged — all routes work, 0 lint errors, all auth flows intact.
+
+---
+Task ID: fix-new-customer-redirect-after-login
+Agent: Z.ai Code (main)
+Task: Fix the issue where new customers are not redirected to the profile page after login (passcode entry).
+
+Work Log:
+- Root cause: The login() function in customer-auth-provider.tsx set the user from the login API response, which does NOT include the profileComplete flag. The login API returns { id, mobile, name, role } — no profileComplete. So user.profileComplete was undefined, and isNewCustomer (which checks user.profileComplete === false) evaluated to false. The redirect useEffect never fired.
+- The register() function was already correct — it explicitly sets profileComplete: false. But the login() function was not.
+- Fix: Updated the login() function in customer-auth-provider.tsx to fetch the session API AFTER the login succeeds. The session API (/api/auth/customer/session) already returns profileComplete (added in a previous task). So the flow is now:
+  1. POST /api/auth/customer/login → sets user + authenticated (immediate UI transition)
+  2. GET /api/auth/customer/session → fetches the FULL user object including profileComplete
+  3. setUser(sessionData.user) → updates the user with profileComplete
+  4. isNewCustomer evaluates to true (profileComplete === false)
+  5. The redirect useEffect fires → window.location.href = /customer?tab=profile
+  6. Page reloads → HomeContentWrapper mounts with initialTab='profile' → profile page shown
+- The session fetch is wrapped in try/catch so it's non-critical — if it fails, the initial user from login is still valid and the customer can use the app (just won't get the redirect).
+- Ran `bun run lint` → 0 errors.
+- Tested end-to-end with Agent Browser:
+  • Created a test customer with NO email (profileComplete: false)
+  • Logged in with mobile + passcode
+  • After login: URL changed to /customer?tab=profile ✅
+  • Profile page displayed with back button, avatar, name, "Personal Information" card, and EDIT button ✅
+  • The redirect worked correctly
+- Cleaned up the test customer.
+- All routes return HTTP 200, zero dev log errors.
+
+Stage Summary:
+- BUG FIXED: New customers (profile not complete) are now redirected to the profile page after LOGIN (not just after registration). The login() function now fetches the session API after successful login to get the profileComplete flag, which triggers the new-customer redirect.
+- The fix is robust: the session fetch is non-blocking (try/catch), so if it fails the customer still logs in normally — they just won't get the redirect.
+- Files modified: src/components/providers/customer-auth-provider.tsx (login function updated)
+- No UI or existing code damaged — all routes work, 0 lint errors.
