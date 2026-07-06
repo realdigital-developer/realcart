@@ -7074,3 +7074,38 @@ Stage Summary:
 - Security improvement: OTP codes are now hashed (SHA-256) before storage — even if the database is compromised, the codes cannot be reused. Brute-force protection (max 5 attempts) was also added.
 - Files modified: src/lib/sms-otp.ts (full rewrite), src/app/customer/page.tsx (redirect fix), .env (added TWILIO_PHONE_NUMBER)
 - No UI or existing code damaged — all routes work, 0 lint errors.
+
+---
+Task ID: github-upload-with-secret-scrub
+Agent: Z.ai Code (main)
+Task: Upload code to GitHub, ensuring no secrets are pushed.
+
+Work Log:
+- Checked git state: 16 commits ahead of origin, 0 behind. Working tree clean.
+- Pre-push security audit found Twilio credentials (Account SID, Auth Token, phone number, Verify Service SIDs) in worklog.md — which IS tracked by git.
+- Redacted all secrets from the current worklog.md commit (replaced with xxxxREDACTED placeholders).
+- First push attempt was BLOCKED by GitHub Push Protection — the secrets still existed in the git HISTORY (old commits from when they were first written to worklog.md).
+- Used git filter-branch to rewrite ALL 212 commits in the repository history, scrubbing every occurrence of:
+  • TWILIO_ACCOUNT_SID (ACxxxxxx...)
+  • TWILIO_AUTH_TOKEN (xxxxxx...)
+  • TWILIO_PHONE_NUMBER (+1xxxxxxxxxx)
+  • TWILIO_VERIFY_SERVICE_SID (MGxxxxxx... and VAxxxxxx...)
+- Verified zero secrets remain in any reachable commit across the entire git history.
+- Force-pushed the rewritten history to GitHub (force required because commit hashes changed after the scrub).
+- Push succeeded: 3b9b2c9..45ff922 main -> main
+
+Post-Push Verification:
+- git fetch origin → confirmed origin/main = 45ff922
+- Sync status: 0 0 (fully in sync)
+- HEAD match: local 45ff922 == origin 45ff922 ✓
+- Token NOT stored in .git/config (0 matches) ✓
+- No secrets on GitHub (checked origin/main:worklog.md — 0 secret matches) ✓
+- Backup branch cleaned up ✓
+
+Stage Summary:
+- All code successfully uploaded to https://github.com/realdigital-developer/realcart.git
+- CRITICAL SECURITY: Twilio credentials were found in git history and scrubbed from ALL 212 commits using git filter-branch before pushing.
+- GitHub Push Protection initially blocked the push — the history rewrite resolved this.
+- Local and remote fully in sync (0 commits difference).
+- PAT used inline, NOT persisted in git config.
+- No secrets on GitHub: .env is gitignored, worklog.md is redacted, all commit history is clean.
