@@ -6645,3 +6645,37 @@ Stage Summary:
 - Files modified: seller verify-otp/route.ts, seller send-otp/route.ts, seller register/route.ts, seller/page.tsx, .env.example
 - Files deleted: src/lib/2factor.ts
 - No existing UI or code damaged — all changes are additive/replacement of the OTP provider only. Login flows, session management, UI layouts all intact.
+
+---
+Task ID: firebase-setup-guide
+Agent: Z.ai Code (main)
+Task: Create a comprehensive guide on how to create and find all required Firebase credentials for this project.
+
+Work Log:
+- Studied the Firebase integration code (firebase-client.ts, firebase-admin.ts) to identify exactly which env vars are needed:
+  • Client-side (6): NEXT_PUBLIC_FIREBASE_API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID
+  • Server-side (1 recommended or 3 alternative): FIREBASE_SERVICE_ACCOUNT_JSON (recommended) OR FIREBASE_ADMIN_PROJECT_ID + FIREBASE_ADMIN_CLIENT_EMAIL + FIREBASE_ADMIN_PRIVATE_KEY
+- Verified .env.example is accurate and matches the code's expectations.
+- Created /home/z/my-project/FIREBASE_SETUP.md — a comprehensive 385-line guide covering:
+  • Quick reference table of all 9 env vars and where to find each
+  • Step 1: Create a Firebase project
+  • Step 2: Register a Web App (get the 6 client-side credentials with exact mapping to .env)
+  • Step 3: Enable Phone Authentication (critical — OTP won't work without this)
+  • Step 4: Add authorized domains (required for reCAPTCHA to work)
+  • Step 5: Get the service account JSON (server-side credentials) with Option A (full JSON, recommended) and Option B (3 individual vars)
+  • Step 6: Add test phone numbers (for development without real SMS)
+  • Step 7: Upgrade to Blaze plan (production only, for real SMS)
+  • Step 8: Complete .env example with all values filled in
+  • Step 9: Verification steps (check console output, test UI flow, test API directly)
+  • Dev mode explanation (app works without Firebase config using test OTP 123456)
+  • Troubleshooting section (8 common problems + solutions)
+  • Final production checklist (12 items)
+- Ran `bun run lint` → 0 errors (no code changes, just documentation).
+- Verified dev server still running (PID 4255, port 3000, HTTP 200, zero errors).
+
+Stage Summary:
+- Created FIREBASE_SETUP.md — a complete, step-by-step guide for obtaining all Firebase credentials.
+- No code changes — purely documentation. Nothing could break.
+- The guide covers the entire flow from creating a Firebase project to verifying the setup works, including troubleshooting common issues.
+- Dev server remains functional (HTTP 200, zero errors).
+- The guide is accurate: all 9 env vars in the guide match the code in firebase-client.ts and firebase-admin.ts exactly.
