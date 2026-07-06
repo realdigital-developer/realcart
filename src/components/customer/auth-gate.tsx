@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
+import { usePhoneOtp } from '@/hooks/use-phone-otp'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShoppingCart,
@@ -186,6 +187,9 @@ export function AuthGate() {
   const { login, register } = useCustomerAuth()
   const { logo } = useSiteLogo()
 
+  // Firebase Phone Auth hook — handles OTP send/verify (with dev-mode fallback)
+  const phoneOtp = usePhoneOtp()
+
   const [step, setStep] = useState<AuthStep>('mobile')
   const [direction, setDirection] = useState(1)
   const [mobile, setMobile] = useState('')
@@ -200,6 +204,11 @@ export function AuthGate() {
   const [error, setError] = useState('')
   const [loadingAction, setLoadingAction] = useState(false)
   const [resendTimer, setResendTimer] = useState(0)
+
+  // Surface errors from the Firebase phone OTP hook into the UI's error state
+  useEffect(() => {
+    if (phoneOtp.error) setError(phoneOtp.error)
+  }, [phoneOtp.error])
 
   useEffect(() => {
     if (resendTimer <= 0) return
@@ -242,7 +251,10 @@ export function AuthGate() {
         setIsNewCustomer(false)
         goToStep('enter-passcode')
       } else {
+        // New customer — send OTP via Firebase Phone Auth (client-side).
+        // The backend no longer sends the OTP (Firebase requires client-side reCAPTCHA).
         setIsNewCustomer(true)
+        await phoneOtp.sendOtp(cleanMobile)
         setResendTimer(60)
         goToStep('otp')
       }
@@ -251,7 +263,7 @@ export function AuthGate() {
     } finally {
       setLoadingAction(false)
     }
-  }, [mobile, goToStep])
+  }, [mobile, goToStep, phoneOtp])
 
   const handleVerifyOTP = useCallback(async () => {
     const cleanOtp = otp.replace(/\D/g, '')
@@ -262,10 +274,17 @@ export function AuthGate() {
     setLoadingAction(true)
     setError('')
     try {
+      // Step 1: Verify OTP via Firebase Phone Auth → get Firebase ID token
+      // (In dev mode without Firebase, this returns a synthetic dev token.)
+      const { idToken } = await phoneOtp.verifyOtp(cleanOtp)
+
+      // Step 2: Send the Firebase ID token to our backend for server-side verification
+      // The backend verifies the token with Firebase Admin + marks otp_sessions.verified = true
+      const cleanMobile = mobile.replace(/\D/g, '').slice(-10)
       const res = await fetch('/api/auth/customer/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: mobile.replace(/\D/g, '').slice(-10), otp: cleanOtp }),
+        body: JSON.stringify({ mobile: cleanMobile, idToken }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Invalid OTP')
@@ -275,7 +294,7 @@ export function AuthGate() {
     } finally {
       setLoadingAction(false)
     }
-  }, [otp, mobile, goToStep])
+  }, [otp, mobile, goToStep, phoneOtp])
 
   const handleResendOTP = useCallback(async () => {
     if (resendTimer > 0) return
@@ -283,13 +302,9 @@ export function AuthGate() {
     setError('')
     try {
       const cleanMobile = mobile.replace(/\D/g, '').slice(-10)
-      const res = await fetch('/api/auth/customer/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: cleanMobile }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Failed to resend OTP')
+      // Resend OTP via Firebase Phone Auth (client-side).
+      // The backend send-otp endpoint is now a compatibility stub.
+      await phoneOtp.sendOtp(cleanMobile)
       setResendTimer(60)
       setOtp('')
     } catch (err) {
@@ -297,7 +312,7 @@ export function AuthGate() {
     } finally {
       setLoadingAction(false)
     }
-  }, [mobile, resendTimer])
+  }, [mobile, resendTimer, phoneOtp])
 
   const handleCreatePasscode = useCallback(() => {
     const cleanPasscode = passcode.replace(/\D/g, '')
@@ -387,6 +402,9 @@ export function AuthGate() {
 
   return (
     <div className="min-h-dvh flex relative overflow-hidden">
+      {/* reCAPTCHA container for Firebase Phone Auth (invisible — no visual impact) */}
+      <div id="recaptcha-container" style={{ position: 'fixed', bottom: 0, right: 0, zIndex: -1 }} />
+
       {/* Left Panel - Branding & Visual */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
         {/* Animated background shapes */}

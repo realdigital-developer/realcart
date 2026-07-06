@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
+import { usePhoneOtp } from '@/hooks/use-phone-otp'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -149,6 +150,8 @@ function PasscodeInput({
 
 export default function CustomerLoginPage() {
   const { authenticated, loading, login, register } = useCustomerAuth()
+  // Firebase Phone Auth hook — handles OTP send/verify (with dev-mode fallback)
+  const phoneOtp = usePhoneOtp()
   const router = useRouter()
 
   const [step, setStep] = useState<AuthStep>('mobile')
@@ -166,6 +169,11 @@ export default function CustomerLoginPage() {
   const [loadingAction, setLoadingAction] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
   const [resendTimer, setResendTimer] = useState(0)
+
+  // Surface errors from the Firebase phone OTP hook into the UI's error state
+  useEffect(() => {
+    if (phoneOtp.error) setError(phoneOtp.error)
+  }, [phoneOtp.error])
 
   // Redirect if authenticated
   useEffect(() => {
@@ -215,7 +223,9 @@ export default function CustomerLoginPage() {
         setIsNewCustomer(false)
         goToStep('enter-passcode')
       } else {
+        // New customer — send OTP via Firebase Phone Auth (client-side).
         setIsNewCustomer(true)
+        await phoneOtp.sendOtp(cleanMobile)
         setOtpSent(true)
         setResendTimer(60)
         goToStep('otp')
@@ -225,7 +235,7 @@ export default function CustomerLoginPage() {
     } finally {
       setLoadingAction(false)
     }
-  }, [mobile, goToStep])
+  }, [mobile, goToStep, phoneOtp])
 
   const handleVerifyOTP = useCallback(async () => {
     const cleanOtp = otp.replace(/\D/g, '')
@@ -236,10 +246,14 @@ export default function CustomerLoginPage() {
     setLoadingAction(true)
     setError('')
     try {
+      // Step 1: Verify OTP via Firebase Phone Auth → get Firebase ID token
+      const { idToken } = await phoneOtp.verifyOtp(cleanOtp)
+      // Step 2: Send the ID token to backend for server-side verification
+      const cleanMobile = mobile.replace(/\D/g, '').slice(-10)
       const res = await fetch('/api/auth/customer/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: mobile.replace(/\D/g, '').slice(-10), otp: cleanOtp }),
+        body: JSON.stringify({ mobile: cleanMobile, idToken }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Invalid OTP')
@@ -249,7 +263,7 @@ export default function CustomerLoginPage() {
     } finally {
       setLoadingAction(false)
     }
-  }, [otp, mobile, goToStep])
+  }, [otp, mobile, goToStep, phoneOtp])
 
   const handleResendOTP = useCallback(async () => {
     if (resendTimer > 0) return
@@ -257,13 +271,8 @@ export default function CustomerLoginPage() {
     setError('')
     try {
       const cleanMobile = mobile.replace(/\D/g, '').slice(-10)
-      const res = await fetch('/api/auth/customer/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: cleanMobile }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Failed to resend OTP')
+      // Resend OTP via Firebase Phone Auth (client-side)
+      await phoneOtp.sendOtp(cleanMobile)
       setResendTimer(60)
       setOtp('')
     } catch (err) {
@@ -271,7 +280,7 @@ export default function CustomerLoginPage() {
     } finally {
       setLoadingAction(false)
     }
-  }, [mobile, resendTimer])
+  }, [mobile, resendTimer, phoneOtp])
 
   const handleCreatePasscode = useCallback(() => {
     const cleanPasscode = passcode.replace(/\D/g, '')
@@ -369,6 +378,8 @@ export default function CustomerLoginPage() {
 
   return (
     <div className="min-h-dvh flex items-center justify-center relative overflow-hidden p-4 sm:p-6">
+      {/* reCAPTCHA container for Firebase Phone Auth (invisible — no visual impact) */}
+      <div id="recaptcha-container" style={{ position: 'fixed', bottom: 0, right: 0, zIndex: -1 }} />
       {/* Background */}
       <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-950/30 dark:via-background dark:to-teal-950/20" />
       <div className="fixed top-0 left-1/4 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl" />

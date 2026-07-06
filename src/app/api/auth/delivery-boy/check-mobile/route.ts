@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
-import { sendOTP } from '@/lib/2factor'
 
 const DELIVERY_BOYS_COLLECTION = 'delivery_boys'
 
 /**
  * POST /api/auth/delivery-boy/check-mobile
- * Check if a mobile number exists in the delivery_boys collection and send OTP if new
+ * Check if a mobile number exists in the delivery_boys collection.
+ *
+ * Firebase Phone Auth change: This endpoint NO LONGER sends the OTP.
+ * Previously (2Factor) it sent the OTP server-side. Now the client sends
+ * the OTP directly via Firebase after receiving `exists: false` from here.
+ * This split is necessary because Firebase Phone Auth requires client-side
+ * reCAPTCHA + signInWithPhoneNumber — it cannot be done server-side.
+ *
  * Body: { mobile: string }
+ * Response:
+ *   - { exists: true, message } — existing delivery boy, login with passcode
+ *   - { exists: false, otpSent: false, message } — new delivery boy, client should
+ *      call Firebase signInWithPhoneNumber() to send the OTP
  */
 export async function POST(request: NextRequest) {
   try {
@@ -29,35 +39,17 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // New delivery boy — send OTP for verification
-    const { sessionId } = await sendOTP(mobile)
-
-    // Store the OTP session ID temporarily (5 min TTL)
-    await db.collection('otp_sessions').updateOne(
-      { mobile },
-      {
-        $set: {
-          mobile,
-          sessionId,
-          verified: false,
-          type: 'delivery_boy',
-          createdAt: new Date(),
-          expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-        },
-      },
-      { upsert: true }
-    )
-
+    // New delivery boy — the client will send the OTP via Firebase Phone Auth.
     return NextResponse.json({
       exists: false,
-      message: 'OTP sent to your mobile number. Please verify to continue registration.',
-      otpSent: true,
+      otpSent: false,
+      message: 'New mobile number. Please verify with OTP to continue registration.',
     })
   } catch (error) {
     console.error('[Delivery Boy Check Mobile Error]', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to process request' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

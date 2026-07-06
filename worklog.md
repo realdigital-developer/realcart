@@ -6540,3 +6540,63 @@ Stage Summary:
 - Server is now running stably on port 3000 (PID 1080), all routes return HTTP 200, zero errors.
 - No code or UI damaged — this was purely a process-management + file-restore fix.
 - The preview panel should now load the project correctly.
+
+---
+Task ID: firebase-phone-auth
+Agent: Z.ai Code (main)
+Task: Replace 2Factor.in SMS OTP with Firebase Phone Auth for customer + delivery-boy panels, keeping everything else intact (seller stays on 2Factor).
+
+Work Log:
+- Explored the entire auth system: 2factor.ts, all customer/delivery-boy/seller auth routes, all 3 auth-gate UI components, auth providers, env vars. Found ZERO existing Firebase setup.
+- Installed `firebase@12.15.0` (client) + `firebase-admin@14.1.0` (server) via npm.
+- Created src/lib/firebase-admin.ts:
+  • Admin SDK init from FIREBASE_SERVICE_ACCOUNT_JSON (or individual FIREBASE_ADMIN_* vars)
+  • verifyIdToken(idToken) — verifies real Firebase ID tokens in production
+  • Dev-mode fallback: accepts synthetic dev tokens `dev-otp-<mobile>-123456` when Firebase Admin not configured (mirrors old 2Factor test OTP)
+  • Phone number extraction from E.164 format (+91XXXXXXXXXX → 10-digit mobile)
+- Created src/lib/firebase-client.ts:
+  • Client SDK init from NEXT_PUBLIC_FIREBASE_* env vars
+  • isFirebaseClientConfigured() flag + getFirebaseAuth() singleton
+  • Returns null when not configured (triggers dev mode in the hook)
+- Created src/hooks/use-phone-otp.ts (shared hook):
+  • sendOtp(mobile) — calls Firebase signInWithPhoneNumber (invisible reCAPTCHA) in prod; no-op in dev mode
+  • verifyOtp(otp) — calls confirmationResult.confirm(otp) → returns { idToken } in prod; constructs dev token in dev mode
+  • reCAPTCHA verifier management (create/reuse/clear, stale-verifier retry)
+  • Friendly error message translation (Firebase error codes → user-friendly text)
+  • Error state surfaced to the UI
+- Updated backend routes (customer + delivery-boy, 6 files total):
+  • verify-otp: now accepts { mobile, idToken }, verifies via Firebase Admin, cross-checks phone number matches (security), marks otp_sessions.verified=true
+  • check-mobile: no longer sends OTP server-side (Firebase handles client-side), just returns exists: true/false
+  • send-otp: kept as compatibility stub (client handles resends via Firebase directly)
+  • register/login/session/logout routes: UNCHANGED (kept intact)
+  • otp_sessions collection: kept as the registration gate (register route requires verified=true)
+- Updated frontend (3 files):
+  • customer/auth-gate.tsx: added usePhoneOtp hook, handleCheckMobile calls phoneOtp.sendOtp after exists:false, handleVerifyOTP calls phoneOtp.verifyOtp then POSTs idToken, handleResendOTP calls phoneOtp.sendOtp. Added reCAPTCHA container div.
+  • customer/login/page.tsx: same changes as auth-gate (duplicated code, both updated)
+  • delivery-boy/auth-gate.tsx: same changes with delivery-boy API endpoints
+  • auth providers (customer-auth-provider, delivery-boy-auth-provider): UNCHANGED
+  • UI flow, steps, animations, colors, layout: ALL UNCHANGED
+- Updated .env.example with Firebase env vars (client NEXT_PUBLIC_FIREBASE_* + server FIREBASE_SERVICE_ACCOUNT_JSON / individual FIREBASE_ADMIN_* vars), noted 2Factor kept for seller.
+- Kept src/lib/2factor.ts INTACT — seller panel still uses it (out of scope per user request).
+- Ran `bun run lint` → 0 errors (24 pre-existing warnings in unrelated files).
+- Tested backend APIs with curl:
+  • check-mobile (customer + delivery-boy) → exists:false, otpSent:false ✓
+  • verify-otp with valid dev token (OTP 123456) → success ✓
+  • verify-otp with wrong OTP → rejected ✓
+  • verify-otp with phone mismatch → 403 rejected (security cross-check works) ✓
+  • seller check-mobile → still works with 2Factor (untouched) ✓
+- Tested frontend with Agent Browser (end-to-end in dev mode):
+  • Customer auth page renders → enter mobile → skip onboarding → Continue → OTP step appears ("Verify Your Number") → enter 123456 → Verify OTP → "Create Your Passcode" step appears ✓
+  • Delivery-boy auth page renders with mobile input ✓
+- Zero errors in dev log. All routes return 200.
+
+Stage Summary:
+- Firebase Phone Auth REPLACES 2Factor.in for customer + delivery-boy panels.
+- Seller panel UNTOUCHED — still uses 2factor.ts (kept intact).
+- Login process fully intact: same UI flow (mobile → OTP → create/enter passcode), same steps, same animations, same session management (JWT cookies), same otp_sessions registration gate.
+- Robust dev-mode fallback: when Firebase env vars are not set, test OTP 123456 works (same as old 2Factor dev mode) — sandbox stays fully functional.
+- Production-ready: when Firebase env vars are set, real Firebase Phone Auth is used (client SDK sends/verifies OTP, Admin SDK verifies ID tokens server-side).
+- Security: phone number cross-check prevents verifying mobile A and registering mobile B.
+- New files: src/lib/firebase-admin.ts, src/lib/firebase-client.ts, src/hooks/use-phone-otp.ts
+- Modified files: 6 backend routes (customer + delivery-boy verify-otp/check-mobile/send-otp), 3 frontend components (auth-gates + login page), .env.example
+- No existing UI or code damaged — all changes are additive/replacement of the OTP provider only.
