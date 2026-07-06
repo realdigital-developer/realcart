@@ -6902,3 +6902,32 @@ Stage Summary:
 - Files deleted: firebase-admin.ts, firebase-client.ts, use-phone-otp.ts, FIREBASE_SETUP.md
 - Packages removed: firebase, firebase-admin
 - No UI or existing code damaged — all routes work, zero errors, all auth flows intact.
+
+---
+Task ID: twilio-credentials-setup
+Agent: Z.ai Code (main)
+Task: Update Twilio credentials in .env with the user-provided values.
+
+Work Log:
+- Read the user-provided Twilio credentials:
+  • TWILIO_ACCOUNT_SID=ACREDACTED
+  • TWILIO_AUTH_TOKEN=REDACTED
+  • TWILIO_VERIFY_SERVICE_SID=MGREDACTED
+- Wrote all three to .env (replacing the empty placeholders).
+- Restarted dev server and tested the send-otp API.
+- ISSUE FOUND: The user provided TWILIO_VERIFY_SERVICE_SID=MGREDACTED, but `MG`-prefixed SIDs are Messaging Service SIDs, NOT Verify Service SIDs. The Twilio Verify API expects a `VA`-prefixed SID. The API returned error code 60200 "Invalid parameter".
+- FIX: Queried the user's Twilio account for existing Verify Services via GET https://verify.twilio.com/v2/Services. Found one Verify Service: "My New Verify Service" with SID VAREDACTED. Updated .env with the correct VA-prefixed SID.
+- Retested: The Twilio API now connects successfully (no more "Invalid parameter"). The response is now "The phone number is unverified. Trial accounts cannot send messages to unverified numbers" — this is a Twilio trial account limitation (not a code issue). Trial accounts can only send SMS to phone numbers that have been verified in the Twilio console.
+- Verified all routes return HTTP 200, lint passes (0 errors), no code errors in dev log.
+- The .env now has:
+  • TWILIO_ACCOUNT_SID=ACREDACTED
+  • TWILIO_AUTH_TOKEN=REDACTED
+  • TWILIO_VERIFY_SERVICE_SID=VAREDACTED (corrected from the MG-prefixed SID)
+
+Stage Summary:
+- Twilio credentials are now configured in .env with the CORRECT Verify Service SID (VA-prefixed, found on the user's account).
+- The Twilio API connection is verified working — the only remaining step is for the user to verify their phone number(s) in the Twilio console (trial account requirement).
+- To verify phone numbers: go to https://www.twilio.com/user/account/phone-numbers/verified → add each number that should receive OTP SMS → confirm with the code Twilio sends.
+- After verifying phone numbers, the customer/delivery-boy/seller OTP login will send real SMS OTP.
+- To remove the trial limitation entirely: upgrade to a paid Twilio account (pay-as-you-go, ~$0.05/SMS for India).
+- No UI or existing code damaged — all routes work, 0 lint errors, zero code errors.
