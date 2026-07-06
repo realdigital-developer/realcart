@@ -20,6 +20,7 @@
  */
 
 import { connectToDatabase } from '@/lib/mongodb'
+import { getBrandSettings, DEFAULT_BRAND_NAME } from '@/lib/brand-settings'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -93,6 +94,39 @@ function toE164(mobile: string): string {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Professional OTP Message Template                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Build a professional, branded OTP SMS message.
+ *
+ * Twilio Verify supports a `ChannelConfiguration` parameter with a
+ * `customMessage` field. The `{{otp}}` placeholder is replaced by Twilio
+ * with the actual OTP code at send time (we never see the code).
+ *
+ * Example output (customer registration):
+ *   "RealCart: 317229 is your verification code for customer registration.
+ *    Do not share this code with anyone. Valid for 5 minutes."
+ *
+ * @param brandName - The platform brand name (e.g. "RealCart")
+ * @param type - The user type (customer / delivery_boy / seller)
+ * @returns The SMS message string with {{otp}} placeholder
+ */
+function buildOtpMessage(brandName: string, type: 'customer' | 'delivery_boy' | 'seller'): string {
+  const purpose =
+    type === 'customer'
+      ? 'customer registration'
+      : type === 'delivery_boy'
+        ? 'delivery partner registration'
+        : 'seller registration'
+
+  return (
+    `${brandName}: {{otp}} is your verification code for ${purpose}. ` +
+    `Do not share this code with anyone. Valid for 5 minutes.`
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  sendOtp — send an OTP via Twilio Verify (or store dev OTP)          */
 /* ------------------------------------------------------------------ */
 
@@ -143,6 +177,23 @@ export async function sendOtp(
   const url = `https://verify.twilio.com/v2/Services/${config.verifyServiceSid}/Verifications`
   const authHeader = 'Basic ' + Buffer.from(`${config.accountSid}:${config.authToken}`).toString('base64')
 
+  // Fetch the brand name from DB (falls back to "RealCart" if unset)
+  let brandName = DEFAULT_BRAND_NAME
+  try {
+    const { db } = await connectToDatabase()
+    const brand = await getBrandSettings(db)
+    brandName = brand.platformName || DEFAULT_BRAND_NAME
+  } catch {
+    // DB unavailable — use default brand name
+  }
+
+  // Build the professional branded OTP message with {{otp}} placeholder.
+  // Twilio replaces {{otp}} with the actual OTP code at send time.
+  const customMessage = buildOtpMessage(brandName, type)
+
+  // ChannelConfiguration must be a JSON-encoded string per Twilio Verify API.
+  const channelConfig = JSON.stringify({ customMessage })
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -152,6 +203,7 @@ export async function sendOtp(
     body: new URLSearchParams({
       To: phone,
       Channel: 'sms',
+      ChannelConfiguration: channelConfig,
     }),
   })
 
