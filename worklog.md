@@ -6721,3 +6721,51 @@ Stage Summary:
 - To test OTP: users must go through the browser auth flow (Firebase client SDK sends real OTP). For testing without real SMS, add test phone numbers in Firebase Console → Authentication → Sign-in method → Phone numbers for testing.
 - Files modified: .env (added Firebase credentials), src/lib/firebase-admin.ts (fixed 2 bugs)
 - No UI or existing code damaged — all routes work, zero errors.
+
+---
+Task ID: firebase-billing-error-fix
+Agent: Z.ai Code (main)
+Task: Fix the "Firebase: error (auth/billing-not-enabled)" error on the login page. User is on the Firebase Spark (free) plan which doesn't support Phone Auth SMS.
+
+Work Log:
+- Root cause: Firebase Phone Auth (real SMS) requires the Blaze (pay-as-you-go) plan. The Spark (free) plan cannot send real SMS — Firebase returns "auth/billing-not-enabled" when signInWithPhoneNumber is called.
+- Solution: Added a dev mode override system using two env vars:
+  • NEXT_PUBLIC_FIREBASE_DEV_MODE=true (client-side: skips Firebase Phone Auth, uses test OTP 123456)
+  • FIREBASE_DEV_MODE=true (server-side: accepts synthetic dev tokens instead of real Firebase ID tokens)
+- Updated src/lib/firebase-client.ts:
+  • Added isDevModeForced() helper that checks NEXT_PUBLIC_FIREBASE_DEV_MODE env var
+- Updated src/hooks/use-phone-otp.ts:
+  • isDevMode now = !configured || devModeForced (was just !configured)
+  • sendOtp and verifyOtp check isDevMode instead of configured (so dev mode override works even when Firebase IS configured)
+  • Updated useCallback dependency arrays
+  • Added billing-not-enabled error to extractFriendlyError() with a clear message explaining the Spark plan limitation and how to enable dev mode
+- Updated src/lib/firebase-admin.ts:
+  • Added isServerDevModeForced() helper that checks FIREBASE_DEV_MODE env var
+  • verifyIdToken now checks isServerDevModeForced() FIRST — if true, accepts dev tokens even when Firebase Admin credentials are configured
+- Added both env vars to .env (set to true) and .env.example (with full documentation)
+- Updated FIREBASE_SETUP.md:
+  • Added "Step 7b — Spark (Free) Plan Workaround — Dev Mode" section with Option 1 (dev mode) and Option 2 (upgrade to Blaze)
+  • Added billing-not-enabled to the Troubleshooting section as the first entry
+  • Added a warning callout in Step 7 pointing to Step 7b
+- Ran `bun run lint` → 0 errors.
+- Restarted dev server (cleared .next cache).
+- Tested with curl:
+  • verify-otp with dev token (OTP 123456) → success ✅ (dev mode active)
+  • verify-otp with wrong OTP → rejected ✅
+  • No Firebase Admin initialization (dev mode forced) ✅
+- Tested with Agent Browser (end-to-end customer auth flow):
+  • Enter mobile 9999900001 → Continue → "Verify Your Number" appears (NO billing error!) ✅
+  • Enter test OTP 123456 → Verify OTP → "Create Your Passcode" appears ✅
+  • Full flow works end-to-end with no errors
+- All routes return HTTP 200, zero errors in dev log.
+
+Stage Summary:
+- The "auth/billing-not-enabled" error is FIXED. The app now works on the Firebase Spark (free) plan using dev mode (test OTP 123456).
+- Two env vars control dev mode:
+  • NEXT_PUBLIC_FIREBASE_DEV_MODE=true (client: skips Firebase Phone Auth)
+  • FIREBASE_DEV_MODE=true (server: accepts dev tokens)
+- Both are set to true in .env, so the app is fully functional now.
+- To switch to production later: upgrade to Blaze plan, set both to false, restart server.
+- The extractFriendlyError() function now detects billing errors and shows a helpful message: "Firebase billing is not enabled... set NEXT_PUBLIC_FIREBASE_DEV_MODE=true in your .env file to use the test OTP 123456."
+- Files modified: firebase-client.ts, use-phone-otp.ts, firebase-admin.ts, .env, .env.example, FIREBASE_SETUP.md
+- No UI or existing code damaged — all routes work, zero errors, full auth flow verified end-to-end.

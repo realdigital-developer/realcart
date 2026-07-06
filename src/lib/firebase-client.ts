@@ -61,6 +61,22 @@ function getConfig(): FirebaseClientConfig | null {
 /** Whether Firebase client config env vars are set. */
 export const isFirebaseClientConfigured = (): boolean => getConfig() !== null
 
+/**
+ * Whether dev mode is FORCED via env var — even when Firebase credentials
+ * are configured. This is useful when you're on the Firebase Spark (free)
+ * plan, which does NOT support Phone Auth SMS (requires Blaze plan).
+ *
+ * Set NEXT_PUBLIC_FIREBASE_DEV_MODE=true in .env to force dev mode.
+ * The app then uses the test OTP 123456 instead of real Firebase SMS.
+ *
+ * When you upgrade to the Blaze plan, set this to false (or remove it)
+ * and real Firebase Phone Auth will be used.
+ */
+export const isDevModeForced = (): boolean => {
+  const val = process.env.NEXT_PUBLIC_FIREBASE_DEV_MODE
+  return val === 'true' || val === '1' || val === 'yes'
+}
+
 /* ------------------------------------------------------------------ */
 /*  Singleton initialization                                            */
 /* ------------------------------------------------------------------ */

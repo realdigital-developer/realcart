@@ -29,6 +29,7 @@ import {
 } from 'firebase/auth'
 import {
   isFirebaseClientConfigured,
+  isDevModeForced,
   getFirebaseAuth,
 } from '@/lib/firebase-client'
 
@@ -98,7 +99,12 @@ export function usePhoneOtp(): UsePhoneOtpReturn {
   const mobileRef = useRef<string>('')
 
   const configured = isFirebaseClientConfigured()
-  const isDevMode = !configured
+  // Dev mode is active when EITHER Firebase is not configured OR the user
+  // explicitly forced dev mode via NEXT_PUBLIC_FIREBASE_DEV_MODE=true.
+  // The override is essential for the Firebase Spark (free) plan, which
+  // does NOT support Phone Auth SMS (requires Blaze plan).
+  const devModeForced = isDevModeForced()
+  const isDevMode = !configured || devModeForced
 
   // Re-check config on mount (handles HMR / env changes in dev)
   useEffect(() => {
@@ -156,7 +162,7 @@ export function usePhoneOtp(): UsePhoneOtpReturn {
       mobileRef.current = cleanMobile
 
       try {
-        if (configured) {
+        if (!isDevMode) {
           // ── Production: real Firebase Phone Auth ──
           const auth = getFirebaseAuth()
           if (!auth) {
@@ -194,7 +200,7 @@ export function usePhoneOtp(): UsePhoneOtpReturn {
         setLoading(false)
       }
     },
-    [configured, getRecaptchaVerifier],
+    [isDevMode, getRecaptchaVerifier],
   )
 
   /**
@@ -216,7 +222,7 @@ export function usePhoneOtp(): UsePhoneOtpReturn {
       }
 
       try {
-        if (configured) {
+        if (!isDevMode) {
           // ── Production: verify via Firebase ──
           if (!confirmationResultRef.current) {
             throw new Error('No OTP was sent. Please request a new OTP.')
@@ -244,7 +250,7 @@ export function usePhoneOtp(): UsePhoneOtpReturn {
         setLoading(false)
       }
     },
-    [configured],
+    [isDevMode],
   )
 
   /**
@@ -291,6 +297,11 @@ export function usePhoneOtp(): UsePhoneOtpReturn {
 function extractFriendlyError(message: string): string {
   const lower = message.toLowerCase()
 
+  // Firebase billing error — the Spark (free) plan doesn't support Phone Auth SMS.
+  // This is the most common error for users on the free plan.
+  if (lower.includes('billing-not-enabled') || lower.includes('billing')) {
+    return 'Firebase billing is not enabled. Phone Auth SMS requires the Blaze (pay-as-you-go) plan. For development on the free Spark plan, set NEXT_PUBLIC_FIREBASE_DEV_MODE=true in your .env file to use the test OTP 123456.'
+  }
   if (lower.includes('invalid-verification-code') || lower.includes('invalid otp')) {
     return 'Invalid OTP. Please try again.'
   }

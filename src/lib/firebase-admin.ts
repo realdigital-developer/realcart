@@ -151,14 +151,36 @@ const DEV_TOKEN_PREFIX = 'dev-otp-'
 /* ------------------------------------------------------------------ */
 
 /**
+ * Whether dev mode is FORCED via env var — even when Firebase Admin credentials
+ * are configured. This mirrors the client-side NEXT_PUBLIC_FIREBASE_DEV_MODE
+ * but is a SEPARATE server-side env var (FIREBASE_DEV_MODE) so the server
+ * can independently accept dev tokens without needing the client var.
+ *
+ * Set FIREBASE_DEV_MODE=true in .env to force the server into dev mode.
+ * The server then accepts synthetic dev tokens (dev-otp-<mobile>-123456)
+ * instead of verifying real Firebase ID tokens.
+ *
+ * This is essential for the Firebase Spark (free) plan, which does NOT
+ * support Phone Auth SMS (requires Blaze plan). When the client is in
+ * dev mode (NEXT_PUBLIC_FIREBASE_DEV_MODE=true), it sends dev tokens,
+ * and the server MUST also be in dev mode to accept them.
+ */
+function isServerDevModeForced(): boolean {
+  const val = process.env.FIREBASE_DEV_MODE
+  return val === 'true' || val === '1' || val === 'yes'
+}
+
+/**
  * Verify a Firebase ID token and return the verified phone number.
  *
- * In production (Firebase Admin configured): verifies the real Firebase ID token
- * using the Admin SDK, extracts `phone_number` from the decoded token.
+ * In production (Firebase Admin configured AND dev mode NOT forced):
+ * verifies the real Firebase ID token using the Admin SDK, extracts
+ * `phone_number` from the decoded token.
  *
- * In dev mode (Firebase Admin NOT configured): accepts a synthetic dev token of
- * the form `dev-otp-<mobile>-<otp>`. If the OTP is '123456', returns the mobile.
- * This mirrors the old 2Factor dev-mode test OTP so the sandbox keeps working.
+ * In dev mode (Firebase Admin NOT configured OR FIREBASE_DEV_MODE=true):
+ * accepts a synthetic dev token of the form `dev-otp-<mobile>-<otp>`.
+ * If the OTP is '123456', returns the mobile. This mirrors the old 2Factor
+ * dev-mode test OTP so the sandbox stays working on the Spark plan.
  *
  * @param idToken - Firebase ID token (real) or dev token (dev-otp-<mobile>-<otp>)
  * @returns VerifiedPhoneUser with phoneNumber, uid, and 10-digit mobile
@@ -170,6 +192,11 @@ export async function verifyIdToken(idToken: string): Promise<VerifiedPhoneUser>
   }
 
   // ── Dev mode: accept synthetic dev tokens ──
+  // Active when Firebase Admin is not configured OR dev mode is forced via env var.
+  if (isServerDevModeForced()) {
+    return verifyDevToken(idToken)
+  }
+
   const app = getAdminApp()
   if (!app) {
     return verifyDevToken(idToken)

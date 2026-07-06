@@ -206,6 +206,8 @@ For development without spending real SMS credits, you can add test phone number
 
 Firebase Phone Auth requires the **Blaze (pay-as-you-go) plan** to send real SMS messages to real phone numbers.
 
+> ⚠️ **On the Spark (free) plan?** You'll get an `auth/billing-not-enabled` error when trying to send OTP. See **Step 7b** below to use dev mode (test OTP `123456`) instead — no billing needed.
+
 1. Go to Firebase Console → ⚙️ Project Settings → **"Usage and billing"** tab
 2. Click **"Upgrade"** or "Modify plan"
 3. Select the **Blaze** plan
@@ -218,6 +220,41 @@ Firebase Phone Auth requires the **Blaze (pay-as-you-go) plan** to send real SMS
 - **Test phone numbers:** Always free (no SMS is actually sent)
 
 > 💡 For a small-to-medium e-commerce app, the free 10 SMS/month + low per-SMS cost means you'll likely spend less than $1–$5/month.
+
+---
+
+## Step 7b — Spark (Free) Plan Workaround — Dev Mode
+
+If you're on the Firebase **Spark (free) plan** and see the error `Firebase: error (auth/billing-not-enabled)`, you have two options:
+
+### Option 1: Use Dev Mode (recommended for development)
+
+The project has a built-in **dev mode** that uses the test OTP `123456` instead of real Firebase SMS. This lets you test the entire auth flow (customer, delivery-boy, seller) without upgrading to Blaze.
+
+**Set these two env vars in your `.env`:**
+
+```env
+# Client-side override (stops the browser from calling Firebase Phone Auth)
+NEXT_PUBLIC_FIREBASE_DEV_MODE=true
+
+# Server-side override (server accepts synthetic dev tokens instead of real Firebase ID tokens)
+FIREBASE_DEV_MODE=true
+```
+
+**How it works:**
+- **Client side** (`NEXT_PUBLIC_FIREBASE_DEV_MODE=true`): The `usePhoneOtp` hook skips the Firebase `signInWithPhoneNumber` call — no reCAPTCHA, no SMS, no billing. The "Send OTP" button just proceeds to the OTP input step.
+- **Server side** (`FIREBASE_DEV_MODE=true`): The `verifyIdToken` function accepts synthetic dev tokens (`dev-otp-<mobile>-123456`) instead of verifying real Firebase ID tokens.
+- **Test OTP:** Always `123456` for any mobile number.
+
+**To switch to production later:**
+1. Upgrade to the Blaze plan (Step 7 above)
+2. Set both vars to `false` (or remove them)
+3. Restart the dev server
+4. Real Firebase Phone Auth SMS will be used
+
+### Option 2: Upgrade to Blaze Plan (required for production)
+
+Follow Step 7 above to upgrade to the Blaze plan. The first 10 SMS/month are free, so you won't be charged for light testing.
 
 ---
 
@@ -298,6 +335,15 @@ To confirm you're in dev mode, the server console shows nothing about Firebase A
 ---
 
 ## 🐛 Troubleshooting
+
+### Problem: "Firebase: error (auth/billing-not-enabled)"
+**Cause:** You're on the Firebase Spark (free) plan, which does NOT support Phone Auth SMS. Real SMS requires the Blaze (pay-as-you-go) plan.
+**Fix:** Enable dev mode by setting these two env vars in `.env`:
+```env
+NEXT_PUBLIC_FIREBASE_DEV_MODE=true
+FIREBASE_DEV_MODE=true
+```
+This uses the test OTP `123456` instead of real SMS. See **Step 7b** above for full details. Restart the dev server after editing `.env`.
 
 ### Problem: "reCAPTCHA has already been rendered"
 **Cause:** React strict mode or HMR caused the reCAPTCHA verifier to be created twice.
