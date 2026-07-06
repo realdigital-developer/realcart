@@ -1774,7 +1774,12 @@ export function ProductDetailPage() {
           })
         }
       })
-      .catch(err => setError(err.message))
+      .catch(err => {
+        // AbortError is expected when the timeout fires — silently ignore it.
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        if (err instanceof Error && err.name === 'AbortError') return
+        setError(err.message)
+      })
       .finally(() => setLoading(false))
   }, [productId, addRecentlyViewed])
 

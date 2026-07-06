@@ -234,6 +234,10 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
           setCachedCategories(data.categories)
         }
       } catch (err) {
+        // AbortError is expected when the timeout fires or the component
+        // unmounts — silently ignore it, don't log to console.
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Failed to fetch categories:', err)
       } finally {
         if (!cancelled) setCategoriesLoaded(true)
@@ -263,6 +267,10 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
           setCachedHeroSlides(data.slides)
         }
       } catch (err) {
+        // AbortError is expected when the timeout fires or the component
+        // unmounts — silently ignore it, don't log to console.
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Failed to fetch hero slides:', err)
       } finally {
         if (!cancelled) setHeroSlidesLoaded(true)

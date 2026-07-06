@@ -7,23 +7,23 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Create an AbortSignal that times out after the specified milliseconds.
- * Uses AbortController + setTimeout instead of AbortSignal.timeout() to
- * avoid unhandled TimeoutError in the console. The fetch rejects with
- * a DOMException (AbortError) which is caught by .catch() / Promise.allSettled().
  *
- * The abort reason is set to a DOMException with name 'AbortError' so that
- * it does NOT surface as an unhandled console error.
+ * Uses AbortController + setTimeout. When the timeout fires, calls
+ * controller.abort() WITHOUT a custom DOMException — this prevents
+ * "Request timed out" from appearing in the browser console as an
+ * unhandled error. The native AbortError ("The user aborted a request.")
+ * is caught by .catch() / Promise.allSettled() and is silent in the console.
+ *
+ * The timeout is auto-cleaned when the signal is aborted (either by the
+ * timeout or by an external controller.abort() call), preventing dangling
+ * timers that could fire after the fetch has already completed.
  */
 export function createTimeoutSignal(ms: number): AbortSignal {
   const controller = new AbortController()
-  let timedOut = false
-  const id = setTimeout(() => {
-    timedOut = true
-    controller.abort(new DOMException('Request timed out', 'AbortError'))
-  }, ms)
-  // Clean up the timeout if the request finishes or is aborted before the timeout
-  controller.signal.addEventListener('abort', () => {
-    if (!timedOut) clearTimeout(id)
-  })
+  const id = setTimeout(() => controller.abort(), ms)
+  // Clean up the timeout if the signal is aborted externally (e.g., component
+  // unmount cleanup). If the timeout itself triggered the abort, the timer
+  // has already fired so clearTimeout is a safe no-op.
+  controller.signal.addEventListener('abort', () => clearTimeout(id), { once: true })
   return controller.signal
 }

@@ -76,7 +76,11 @@ export function useSiteLogo(): UseSiteLogoReturn {
         setLogo(null)
       }
     } catch (err) {
-      // Silently handle errors — logo is non-critical
+      // AbortError is expected when the timeout fires or the component
+      // unmounts — silently ignore it, don't log or set error state.
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (err instanceof Error && err.name === 'AbortError') return
+      // Silently handle other errors — logo is non-critical
       // Only log in development
       if (process.env.NODE_ENV === 'development') {
         console.warn('[useSiteLogo] Failed to fetch:', err instanceof Error ? err.message : 'Unknown error')
