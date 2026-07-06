@@ -68,6 +68,7 @@
   "language.changedToast": "Language changed to {language}",
   "language.english": "English",
   "account.title": "My Account",
+  "account.profileTitle": "Profile",
   "account.customer": "Customer",
   "account.tapToViewProfile": "Tap to view profile",
   "account.addresses": "Addresses",

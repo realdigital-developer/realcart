@@ -567,8 +567,8 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
         </div>
       )}
 
-      {/* Sub-tab header with back button (for profile only). Products, Search, Wishlist, Addresses, Notifications and new blank-page tabs have their own headers. */}
-      {isSubTab && activeTab !== 'addresses' && activeTab !== 'notifications' && activeTab !== 'wishlist' && activeTab !== 'products' && activeTab !== 'search' && activeTab !== 'payment-refund' && activeTab !== 'bank-upi' && activeTab !== 'language' && activeTab !== 'shared-products' && activeTab !== 'followed-shop' && activeTab !== 'wallet' && activeTab !== 'referral' && activeTab !== 'help' && activeTab !== 'shared-products' && (
+      {/* Sub-tab header with back button. Products, Search, Wishlist, Addresses, Notifications, Profile, and new blank-page tabs have their own headers. */}
+      {isSubTab && activeTab !== 'addresses' && activeTab !== 'notifications' && activeTab !== 'wishlist' && activeTab !== 'products' && activeTab !== 'search' && activeTab !== 'payment-refund' && activeTab !== 'bank-upi' && activeTab !== 'language' && activeTab !== 'shared-products' && activeTab !== 'followed-shop' && activeTab !== 'wallet' && activeTab !== 'referral' && activeTab !== 'help' && activeTab !== 'shared-products' && activeTab !== 'profile' && (
         <div className="sticky top-0 z-40 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-3 px-3 h-12">
             <button
@@ -578,7 +578,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
               <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
             </button>
             <h1 className="text-base font-bold text-gray-800 dark:text-gray-200">
-              {activeTab === 'notifications' ? t('common.notifications') : activeTab === 'profile' ? t('account.title') : activeTab === 'addresses' ? 'My Addresses' : 'Products'}
+              {activeTab === 'notifications' ? t('common.notifications') : activeTab === 'profile' ? t('account.profileTitle') : activeTab === 'addresses' ? 'My Addresses' : 'Products'}
             </h1>
           </div>
         </div>
@@ -793,7 +793,7 @@ export function HomeContentWrapper({ initialTab, initialSearch, initialCategory,
             exit="exit"
             className="flex-1 overflow-y-auto"
           >
-            <ProfilePage />
+            <ProfilePage onBack={pageOnBack} />
           </motion.div>
         )}
 

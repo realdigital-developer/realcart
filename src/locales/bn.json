@@ -68,6 +68,7 @@
   "language.changedToast": "ভাষা পরিবর্তন করে {language} করা হয়েছে",
   "language.english": "ইংরেজি",
   "account.title": "আমার অ্যাকাউন্ট",
+  "account.profileTitle": "প্রোফাইল",
   "account.customer": "গ্রাহক",
   "account.tapToViewProfile": "প্রোফাইল দেখতে ট্যাপ করুন",
   "account.addresses": "ঠিকানা",

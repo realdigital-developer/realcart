@@ -68,6 +68,7 @@
   "language.changedToast": "भाषा बदलकर {language} कर दी गई",
   "language.english": "अंग्रेज़ी",
   "account.title": "मेरा खाता",
+  "account.profileTitle": "प्रोफ़ाइल",
   "account.customer": "ग्राहक",
   "account.tapToViewProfile": "प्रोफ़ाइल देखने के लिए टैप करें",
   "account.addresses": "पते",

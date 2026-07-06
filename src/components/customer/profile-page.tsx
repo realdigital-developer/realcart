@@ -13,12 +13,13 @@ import {
   Calendar,
   ShieldCheck,
   Camera,
+  ArrowLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCustomerAuth } from '@/hooks/use-customer-auth'
 import { CustomerProfile } from './types'
 
-export function ProfilePage() {
+export function ProfilePage({ onBack }: { onBack?: () => void } = {}) {
   const { user, refreshUser } = useCustomerAuth()
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -183,7 +184,20 @@ export function ProfilePage() {
   return (
     <div className="min-h-dvh bg-gray-50 dark:bg-gray-950 pb-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 dark:from-emerald-700 dark:via-emerald-600 dark:to-teal-600 px-4 pt-6 pb-16">
+      <div className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 dark:from-emerald-700 dark:via-emerald-600 dark:to-teal-600 px-4 pt-3 pb-16">
+        {/* Back button row — shown when onBack is provided (replaces the
+            old sub-tab header that was rendered by home-content-wrapper) */}
+        {onBack && (
+          <div className="flex items-center h-9 mb-1">
+            <button
+              onClick={onBack}
+              className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </button>
+          </div>
+        )}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
