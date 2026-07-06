@@ -164,6 +164,61 @@ async function handleCallback(request: NextRequest) {
       }
     }
 
+    // ── Save payment method to customer_payment_methods ────────────────
+    // If the customer checked "save this payment method for faster checkout
+    // next time" during checkout, the savePaymentMethod flag was stored on
+    // the payment_orders document by the /process endpoint. We honour it
+    // here because the callback runs AFTER the redirect (the client-side
+    // save call in checkout-page.tsx may have been lost due to navigation).
+    if (paymentOrder.savePaymentMethod === true) {
+      try {
+        const method = paymentDetails.method || (paymentOrder.method as string) || ''
+        const customerId = paymentOrder.customerId as string
+        const saveDoc: Record<string, unknown> = {
+          customerId,
+          isDefault: false,
+          createdAt: new Date(),
+        }
+
+        if (method === 'upi' && paymentDetails.vpa) {
+          saveDoc.type = 'upi'
+          saveDoc.upiId = paymentDetails.vpa
+          saveDoc.upiName = ''
+        } else if (method === 'card' && paymentDetails.cardLast4) {
+          saveDoc.type = 'card'
+          saveDoc.cardLast4 = paymentDetails.cardLast4
+          saveDoc.cardNetwork = (paymentDetails.cardNetwork || '').toLowerCase()
+          saveDoc.cardType = 'debit'
+          saveDoc.nickname = `${saveDoc.cardNetwork} debit ****${saveDoc.cardLast4}`
+        } else if (method === 'netbanking' && (paymentDetails.bank || paymentOrder.bank)) {
+          saveDoc.type = 'netbanking'
+          saveDoc.bankName = String(paymentDetails.bank || paymentOrder.bank || '')
+          saveDoc.bankCode = String(paymentOrder.bank || paymentDetails.bank || '')
+        } else if (method === 'wallet' && (paymentDetails.wallet || paymentOrder.wallet)) {
+          saveDoc.type = 'wallet'
+          saveDoc.walletProvider = String(paymentDetails.wallet || paymentOrder.wallet || '')
+        }
+
+        if (saveDoc.type) {
+          // Check for duplicates before inserting
+          let dupQuery: Record<string, unknown> = { customerId }
+          if (saveDoc.type === 'upi') dupQuery = { customerId, type: 'upi', upiId: saveDoc.upiId }
+          else if (saveDoc.type === 'card') dupQuery = { customerId, type: 'card', cardLast4: saveDoc.cardLast4 }
+          else if (saveDoc.type === 'netbanking') dupQuery = { customerId, type: 'netbanking', bankCode: saveDoc.bankCode }
+          else if (saveDoc.type === 'wallet') dupQuery = { customerId, type: 'wallet', walletProvider: saveDoc.walletProvider }
+
+          const existing = await db.collection('customer_payment_methods').findOne(dupQuery)
+          if (!existing) {
+            await db.collection('customer_payment_methods').insertOne(saveDoc)
+            console.log(`[Payment Callback] Saved ${saveDoc.type} payment method for customer ${customerId}`)
+          }
+        }
+      } catch (saveErr) {
+        // Non-critical — payment + order already succeeded
+        console.warn('[Payment Callback] Failed to save payment method:', saveErr instanceof Error ? saveErr.message : saveErr)
+      }
+    }
+
     // Redirect to customer page with success params
     return NextResponse.redirect(
       new URL(`/customer?payment_success=true&order_number=${encodeURIComponent(createdOrderNumber)}`, request.url)

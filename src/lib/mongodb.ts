@@ -939,6 +939,37 @@ async function initializeCollections(db: Db): Promise<void> {
     console.warn('[MongoDB] Could not create inventory_alerts product index (non-fatal):', (indexError as Error).message)
   }
 
+  // ── Customer Payment Methods Collection ──
+  // Stores saved payment methods (UPI, Card, Net Banking, Wallet) for
+  // faster checkout. RBI-compliant — only last 4 digits of cards are stored.
+  try {
+    await db.collection('customer_payment_methods').createIndex(
+      { customerId: 1, createdAt: -1 },
+      { background: true, name: 'cpm_customer_date' }
+    )
+    console.log('[MongoDB] Customer payment methods customer index ensured')
+  } catch (indexError) {
+    console.warn('[MongoDB] Could not create customer_payment_methods index (non-fatal):', (indexError as Error).message)
+  }
+  try {
+    await db.collection('customer_payment_methods').createIndex(
+      { customerId: 1, type: 1, upiId: 1 },
+      { background: true, name: 'cpm_dup_upi', sparse: true }
+    )
+    console.log('[MongoDB] Customer payment methods UPI dup index ensured')
+  } catch (indexError) {
+    console.warn('[MongoDB] Could not create customer_payment_methods UPI index (non-fatal):', (indexError as Error).message)
+  }
+  try {
+    await db.collection('customer_payment_methods').createIndex(
+      { customerId: 1, type: 1, cardLast4: 1 },
+      { background: true, name: 'cpm_dup_card', sparse: true }
+    )
+    console.log('[MongoDB] Customer payment methods card dup index ensured')
+  } catch (indexError) {
+    console.warn('[MongoDB] Could not create customer_payment_methods card index (non-fatal):', (indexError as Error).message)
+  }
+
   console.log('[MongoDB] Initialization complete')
 }
 

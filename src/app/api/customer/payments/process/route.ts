@@ -180,6 +180,10 @@ export async function POST(request: NextRequest) {
       method,
       status: paymentResult?.success ? (paymentResult.status === 'captured' ? 'paid' : 'collect_initiated') : 'failed',
       ...(checkoutContext ? { checkoutContext } : {}),
+      // Store the customer's "save payment method" preference so the
+      // callback route (which runs after redirect-mode payments) can
+      // honour it by saving to customer_payment_methods.
+      savePaymentMethod: body.savePaymentMethod === true,
       createdAt: new Date().toISOString(),
     }
 

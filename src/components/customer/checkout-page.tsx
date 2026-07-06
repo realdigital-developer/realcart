@@ -1237,6 +1237,11 @@ export function CheckoutPage({
         customerEmail: user?.email || '',
         customerPhone: selectedAddress.mobile || '',
         checkoutContext,
+        // Pass the save flag to the server so it can honour the customer's
+        // "save for next time" preference even for redirect-mode payments
+        // (Net Banking / Wallet) where the client-side save call would be
+        // lost due to page navigation.
+        savePaymentMethod: savePaymentMethod && !selectedSavedMethodId,
       }
 
       // Add method-specific parameters
@@ -1368,6 +1373,44 @@ export function CheckoutPage({
       if (data.mode === 'redirect') {
         // Net Banking / Wallet — redirect to bank/wallet page directly (no Razorpay UI)
         if (data.redirectUrl) {
+          // ── Save payment method BEFORE redirecting ──────────────────────
+          // The redirect navigates away from this SPA, so the save call
+          // that normally happens after payment success would never run.
+          // We fire it as a keepalive fetch (survives navigation) so the
+          // customer's "save for next time" preference is honoured.
+          if (savePaymentMethod && !selectedSavedMethodId) {
+            const saveBody: Record<string, unknown> = {}
+            if (method === 'upi') {
+              saveBody.type = 'upi'
+              saveBody.upiId = upiId
+              saveBody.upiName = user?.name || ''
+            } else if (method === 'netbanking') {
+              saveBody.type = 'netbanking'
+              saveBody.bankName = getBankFullName(selectedBank)
+              saveBody.bankCode = selectedBank
+            } else if (method === 'wallet') {
+              saveBody.type = 'wallet'
+              saveBody.walletProvider = getWalletDisplayName(selectedWallet)
+            } else if (method === 'card') {
+              saveBody.type = 'card'
+              saveBody.cardLast4 = cardNumber.replace(/\s/g, '').slice(-4)
+              saveBody.cardNetwork = (detectCardBrand(cardNumber) || '').toLowerCase()
+              saveBody.cardType = 'debit'
+              saveBody.nickname = `${saveBody.cardNetwork} ${saveBody.cardType} ****${saveBody.cardLast4}`
+            }
+            if (Object.keys(saveBody).length > 0) {
+              try {
+                fetch('/api/customer/bank-upi', {
+                  method: 'POST',
+                  keepalive: true, // survives navigation away from the page
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(saveBody),
+                }).catch(() => {})
+              } catch {
+                // Non-critical — payment redirect proceeds regardless
+              }
+            }
+          }
           window.location.href = data.redirectUrl
           return
         }
