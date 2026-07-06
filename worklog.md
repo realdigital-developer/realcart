@@ -6805,3 +6805,34 @@ Stage Summary:
 - The seller session route was already correct — no changes needed.
 - Files modified: src/app/api/auth/customer/session/route.ts, src/app/api/auth/delivery-boy/session/route.ts
 - No UI or existing code damaged — all routes work, zero errors, all auth flows intact.
+
+---
+Task ID: fix-real-otp-not-received
+Agent: Z.ai Code (main)
+Task: Fix the issue where customers are not receiving real OTP on their mobile number.
+
+Work Log:
+- Root cause: Dev mode was ON (NEXT_PUBLIC_FIREBASE_DEV_MODE=true and FIREBASE_DEV_MODE=true in .env). When dev mode is ON, the usePhoneOtp hook SKIPS the Firebase signInWithPhoneNumber() call entirely — no reCAPTCHA, no SMS, no Firebase call. The "Send OTP" button just proceeds to the OTP input step without actually sending anything. Customers never receive a real OTP because the app wasn't even calling Firebase.
+- Dev mode was turned ON in a previous task to work around the "auth/billing-not-enabled" error (Firebase Spark/free plan doesn't support Phone Auth SMS). The user was on the Spark plan at that time.
+- Fix: Turned OFF dev mode by setting both env vars to false:
+  • NEXT_PUBLIC_FIREBASE_DEV_MODE=false (client: use real Firebase Phone Auth)
+  • FIREBASE_DEV_MODE=false (server: verify real Firebase ID tokens)
+- Verified Firebase Admin SDK initializes: "[Firebase Admin] Initialized — project: realcart-b2c57" appears in dev.log. Tested with a fake Firebase ID token → correctly rejected with "Invalid ID token" (proving real Admin verification is active, not dev mode).
+- Verified all 6 Firebase client-side env vars are set (API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID).
+- Verified reCAPTCHA container divs exist in all 4 auth pages (customer auth-gate.tsx, customer login/page.tsx, delivery-boy auth-gate.tsx, seller page.tsx).
+- Tested with Agent Browser: entered mobile 9999900001, clicked Continue → reCAPTCHA challenge appeared (proving real Firebase Phone Auth is being called, not dev mode). Console showed "Failed to initialize reCAPTCHA Enterprise config. Triggering the reCAPTCHA v2 verification" — this is NORMAL Firebase behavior (falls back to reCAPTCHA v2 when Enterprise isn't configured).
+- Ran `bun run lint` → 0 errors.
+- All routes return HTTP 200, zero dev log errors.
+
+Stage Summary:
+- The root cause was simple: dev mode was ON, which completely skipped the Firebase Phone Auth call. No SMS was ever sent.
+- Dev mode is now OFF. Real Firebase Phone Auth is active:
+  • Client: usePhoneOtp hook calls signInWithPhoneNumber() → Firebase sends real SMS OTP
+  • Server: verifyIdToken() verifies real Firebase ID tokens with Firebase Admin SDK
+- Firebase Admin SDK initializes correctly with project realcart-b2c57.
+- The reCAPTCHA challenge appears when sending OTP (normal Firebase fraud prevention).
+- IMPORTANT for the user: Real SMS OTP requires the Firebase Blaze (pay-as-you-go) plan. If still on the Spark (free) plan, the user will see a clear billing error message: "Firebase billing is not enabled. Phone Auth SMS requires the Blaze (pay-as-you-go) plan." To fix: upgrade to Blaze in Firebase Console → Billing. The first 10 SMS/month are free on Blaze.
+- Also requires in Firebase Console: Phone Authentication enabled (Authentication → Sign-in method → Phone → Enable), and domain authorized (Authentication → Settings → Authorized domains — localhost is there by default).
+- Files modified: .env (changed DEV_MODE vars from true to false)
+- No code changes needed — the Firebase integration code was already correct. Only the env var toggle was needed.
+- No UI or existing code damaged — all routes work, zero errors.
