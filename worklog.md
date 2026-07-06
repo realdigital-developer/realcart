@@ -6679,3 +6679,45 @@ Stage Summary:
 - The guide covers the entire flow from creating a Firebase project to verifying the setup works, including troubleshooting common issues.
 - Dev server remains functional (HTTP 200, zero errors).
 - The guide is accurate: all 9 env vars in the guide match the code in firebase-client.ts and firebase-admin.ts exactly.
+
+---
+Task ID: firebase-credentials-setup
+Agent: Z.ai Code (main)
+Task: Configure the Firebase client config and service account JSON credentials in .env for the project.
+
+Work Log:
+- Read the uploaded service account JSON file (upload/realcart-b2c57-59e2b263e78c.json) — verified it's a valid Firebase service account with project_id "realcart-b2c57" matching the user's client config.
+- Verified the .env file only had DATABASE_URL (1 line). No Firebase credentials were configured.
+- Generated a minified one-line JSON from the uploaded service account file using Node.js (required for .env format — multi-line JSON breaks .env parsing).
+- Appended all 8 Firebase env vars to .env:
+  • 6 client-side: NEXT_PUBLIC_FIREBASE_API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID (from user's provided config)
+  • 1 server-side: FIREBASE_SERVICE_ACCOUNT_JSON (minified JSON from uploaded file)
+- BUG FIX #1 (snake_case keys): The getServiceAccount() function in firebase-admin.ts was checking for camelCase keys (projectId, clientEmail, privateKey) but the Firebase JSON file uses snake_case (project_id, client_email, private_key). Fixed to accept BOTH formats: `parsed.projectId || parsed.project_id`, etc.
+- BUG FIX #2 (ESM import): The `import admin from 'firebase-admin'` default import does NOT work in Next.js/ESM (firebase-admin v14). The error was "Cannot read properties of undefined (reading 'initializeApp')". Fixed by switching to modular named imports:
+  • `import { initializeApp, getApps, cert, type App } from 'firebase-admin/app'`
+  • `import { getAuth } from 'firebase-admin/auth'`
+  • Changed `admin.initializeApp()` → `initializeApp()`, `admin.credential.cert()` → `cert()`, `admin.auth(app)` → `getAuth(app)`
+  • Defined a local ServiceAccount interface (instead of using admin.ServiceAccount)
+  • Added HMR safety: check getApps() for existing named app before initializing
+- Ran `bun run lint` → 0 errors.
+- Restarted dev server (cleared .next cache for clean state).
+- VERIFIED Firebase Admin initialization:
+  • Dev log shows: "[Firebase Admin] Initialized — project: realcart-b2c57" ✅
+  • Dev token (dev-otp-...-123456) now correctly REJECTED with "Invalid ID token" — proves Firebase Admin is active and using real credential verification (not dev mode fallback)
+- All routes return HTTP 200: /, /customer, /admin, /seller, /delivery, /api/health, /api/admin/logo
+- Zero errors in dev log.
+- Customer and seller auth pages render correctly (verified with Agent Browser).
+- Security verified: .env is gitignored (not tracked), upload/ is gitignored (not tracked). No credentials will be committed to git.
+
+Stage Summary:
+- Firebase credentials are now fully configured in .env:
+  • Client-side (browser): 6 NEXT_PUBLIC_FIREBASE_* vars for the Firebase client SDK
+  • Server-side (Admin SDK): FIREBASE_SERVICE_ACCOUNT_JSON with the full service account
+- Firebase Admin SDK initializes correctly: "[Firebase Admin] Initialized — project: realcart-b2c57"
+- Two bugs fixed in firebase-admin.ts:
+  1. snake_case key support (project_id, client_email, private_key) for the service account JSON
+  2. Modular named imports (firebase-admin/app, firebase-admin/auth) instead of broken default import
+- Dev mode fallback is now DISABLED (because Firebase is configured) — real Firebase Phone Auth is active.
+- To test OTP: users must go through the browser auth flow (Firebase client SDK sends real OTP). For testing without real SMS, add test phone numbers in Firebase Console → Authentication → Sign-in method → Phone numbers for testing.
+- Files modified: .env (added Firebase credentials), src/lib/firebase-admin.ts (fixed 2 bugs)
+- No UI or existing code damaged — all routes work, zero errors.

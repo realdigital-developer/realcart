@@ -21,7 +21,18 @@
  * Server-side only. Never import from client components.
  */
 
-import admin from 'firebase-admin'
+// Modular imports (firebase-admin v14 in Next.js/ESM requires named imports
+// from specific submodules — the default `import admin from 'firebase-admin'`
+// pattern does NOT resolve correctly under webpack/turbopack).
+import { initializeApp, getApps, cert, type App } from 'firebase-admin/app'
+import { getAuth } from 'firebase-admin/auth'
+
+/** Local ServiceAccount type (matches the firebase-admin interface). */
+interface ServiceAccount {
+  projectId: string
+  clientEmail: string
+  privateKey: string
+}
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -47,14 +58,21 @@ export interface VerifiedPhoneUser {
  *   2. Individual vars: FIREBASE_ADMIN_PROJECT_ID + FIREBASE_ADMIN_CLIENT_EMAIL
  *      + FIREBASE_ADMIN_PRIVATE_KEY
  */
-function getServiceAccount(): admin.ServiceAccount | null {
+function getServiceAccount(): ServiceAccount | null {
   // Option 1: Full JSON blob
   const jsonStr = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
   if (jsonStr && jsonStr.trim().length > 0) {
     try {
       const parsed = JSON.parse(jsonStr)
-      if (parsed.projectId && parsed.clientEmail && parsed.privateKey) {
-        return parsed as admin.ServiceAccount
+      // Firebase service-account JSON files use SNAKE_CASE keys
+      // (project_id, client_email, private_key), but our internal type uses
+      // camelCase (projectId, clientEmail, privateKey).
+      // Accept EITHER format for maximum compatibility.
+      const projectId = parsed.projectId || parsed.project_id
+      const clientEmail = parsed.clientEmail || parsed.client_email
+      const privateKey = parsed.privateKey || parsed.private_key
+      if (projectId && clientEmail && privateKey) {
+        return { projectId, clientEmail, privateKey }
       }
     } catch {
       // Invalid JSON — fall through to individual vars
@@ -84,26 +102,32 @@ export const isFirebaseAdminConfigured = (): boolean => getServiceAccount() !== 
 /*  Initialization (lazy singleton)                                     */
 /* ------------------------------------------------------------------ */
 
-let _app: admin.app.App | null = null
+let _app: App | null = null
 
 /**
  * Initialize the Firebase Admin SDK (once, lazily).
  * Returns the app instance, or null if not configured.
  */
-function getAdminApp(): admin.app.App | null {
+function getAdminApp(): App | null {
   if (_app) return _app
 
   const serviceAccount = getServiceAccount()
   if (!serviceAccount) return null
 
   try {
-    _app = admin.initializeApp(
-      {
-        credential: admin.credential.cert(serviceAccount),
-        projectId: serviceAccount.projectId,
-      },
-      'realcart-auth', // named app to avoid conflicts
-    )
+    // HMR safety: check if a named app already exists before initializing
+    const existing = getApps().find(a => a.name === 'realcart-auth')
+    if (existing) {
+      _app = existing
+    } else {
+      _app = initializeApp(
+        {
+          credential: cert(serviceAccount),
+          projectId: serviceAccount.projectId,
+        },
+        'realcart-auth', // named app to avoid conflicts
+      )
+    }
     console.log('[Firebase Admin] Initialized — project:', serviceAccount.projectId)
     return _app
   } catch (err) {
@@ -153,7 +177,8 @@ export async function verifyIdToken(idToken: string): Promise<VerifiedPhoneUser>
 
   // ── Production mode: verify real Firebase ID token ──
   try {
-    const decoded = await admin.auth(app).verifyIdToken(idToken)
+    const auth = getAuth(app)
+    const decoded = await auth.verifyIdToken(idToken)
     const phoneNumber = decoded.phone_number || decoded.firebase?.identities?.phone?.[0]
 
     if (!phoneNumber) {
