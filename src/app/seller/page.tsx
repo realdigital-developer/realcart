@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSellerAuth } from '@/hooks/use-seller-auth'
+import { usePhoneOtp } from '@/hooks/use-phone-otp'
 import { useSiteLogo } from '@/hooks/use-site-logo'
 import {
   Eye, EyeOff, LogIn, Loader2, ShieldCheck, Fingerprint,
@@ -301,11 +302,19 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
   onRegister: (data: any) => Promise<void>
   onSwitchToLogin: () => void
 }) {
+  // Firebase Phone Auth hook — handles OTP send/verify (with dev-mode fallback)
+  const phoneOtp = usePhoneOtp()
+
   const [step, setStep] = useState(1)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
   const [otpVerified, setOtpVerified] = useState(false)
+
+  // Surface errors from the Firebase phone OTP hook into the UI's error state
+  useEffect(() => {
+    if (phoneOtp.error) setError(phoneOtp.error)
+  }, [phoneOtp.error])
 
   // Step 1: Mobile
   const [phone, setPhone] = useState('')
@@ -355,66 +364,69 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
   const [agreedTerms, setAgreedTerms] = useState(false)
 
   /* ---------------------------------------------------------------- */
-  /*  OTP Handling (simplified for demo - uses test OTP)                */
+  /*  OTP Handling — Firebase Phone Auth (replaces 2Factor)             */
   /* ---------------------------------------------------------------- */
 
   const handleSendOtp = async () => {
     setError('')
-    if (!phone || phone.length < 10) {
+    const cleanMobile = phone.replace(/\D/g, '').slice(-10)
+    if (cleanMobile.length !== 10) {
       setError('Please enter a valid 10-digit mobile number')
       return
     }
     try {
-      const res = await fetch('/api/auth/seller/send-otp', {
+      // Step 1: Check mobile availability via backend (prevents OTP-bombing
+      // arbitrary numbers + confirms the number isn't already registered)
+      const checkRes = await fetch('/api/auth/seller/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: phone }),
+        body: JSON.stringify({ mobile: cleanMobile }),
       })
-      if (res.ok) {
-        setOtpSent(true)
-      } else {
-        // Fallback: allow proceeding even if OTP service fails
-        setOtpSent(true)
+      if (!checkRes.ok) {
+        const data = await checkRes.json().catch(() => ({}))
+        setError(data.error || 'Failed to send OTP')
+        return
       }
-    } catch {
-      // Fallback: allow proceeding
+
+      // Step 2: Send OTP via Firebase Phone Auth (client-side).
+      // The backend no longer sends the OTP (Firebase requires client-side reCAPTCHA).
+      await phoneOtp.sendOtp(cleanMobile)
       setOtpSent(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send OTP')
     }
   }
 
   const handleVerifyOtp = async (otp: string) => {
     setError('')
-    if (!otp || otp.length < 4) {
+    const cleanOtp = otp.replace(/\D/g, '')
+    if (cleanOtp.length < 4) {
       setError('Please enter a valid OTP')
       return
     }
     try {
+      // Step 1: Verify OTP via Firebase Phone Auth → get Firebase ID token
+      // (In dev mode without Firebase, this returns a synthetic dev token.)
+      const { idToken } = await phoneOtp.verifyOtp(cleanOtp)
+
+      // Step 2: Send the ID token to backend for server-side verification
+      // The backend verifies the token with Firebase Admin + marks otp_sessions.verified = true
+      const cleanMobile = phone.replace(/\D/g, '').slice(-10)
       const res = await fetch('/api/auth/seller/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: phone, sessionId: `test-session-${phone}`, otp }),
+        body: JSON.stringify({ mobile: cleanMobile, idToken }),
       })
       if (res.ok) {
         setOtpVerified(true)
         // Auto-advance after short delay
         setTimeout(() => setStep(2), 600)
       } else {
-        // In development mode, accept any 4+ digit OTP
-        if (otp.length >= 4) {
-          setOtpVerified(true)
-          setTimeout(() => setStep(2), 600)
-        } else {
-          setError('Invalid OTP. Please try again.')
-        }
+        const data = await res.json().catch(() => ({}))
+        setError(data.error || 'Invalid OTP. Please try again.')
       }
-    } catch {
-      // Fallback for dev mode
-      if (otp.length >= 4) {
-        setOtpVerified(true)
-        setTimeout(() => setStep(2), 600)
-      } else {
-        setError('OTP verification failed. Please try again.')
-      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'OTP verification failed. Please try again.')
     }
   }
 
@@ -1653,6 +1665,9 @@ export default function SellerPage() {
 
   return (
     <div className="min-h-dvh flex items-center justify-center relative overflow-hidden p-4 sm:p-6">
+      {/* reCAPTCHA container for Firebase Phone Auth (invisible — no visual impact) */}
+      <div id="recaptcha-container" style={{ position: 'fixed', bottom: 0, right: 0, zIndex: -1 }} />
+
       {/* Gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-emerald-500/5 to-background" />
 

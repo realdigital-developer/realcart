@@ -193,6 +193,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ── OTP verification gate (security parity with customer/delivery-boy) ──
+    // The frontend verifies the phone via Firebase Phone Auth, then the
+    // /verify-otp endpoint upserts otp_sessions.verified = true. This gate
+    // ensures the phone was actually verified before allowing registration.
+    // Without it, anyone could POST to /register without a real OTP.
+    const cleanMobile = phone.replace(/\D/g, '').slice(-10)
+    const otpSession = await db.collection('otp_sessions').findOne({
+      mobile: cleanMobile,
+      type: 'seller',
+      verified: true,
+      expiresAt: { $gt: new Date() },
+    })
+    if (!otpSession) {
+      return NextResponse.json(
+        { error: 'Please verify your mobile number with OTP first.' },
+        { status: 400 },
+      )
+    }
+
     // Check if email already exists
     const existingSeller = await db.collection(SELLERS_COLLECTION).findOne({ email })
     if (existingSeller) {
@@ -330,6 +349,13 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
+    }
+
+    // ── Clean up the OTP session (one-time use) ──
+    try {
+      await db.collection('otp_sessions').deleteOne({ _id: otpSession._id })
+    } catch {
+      // non-fatal — the session has an expiry anyway
     }
 
     // Create session — allow login even with 'Pending' status for first-time

@@ -6600,3 +6600,48 @@ Stage Summary:
 - New files: src/lib/firebase-admin.ts, src/lib/firebase-client.ts, src/hooks/use-phone-otp.ts
 - Modified files: 6 backend routes (customer + delivery-boy verify-otp/check-mobile/send-otp), 3 frontend components (auth-gates + login page), .env.example
 - No existing UI or code damaged — all changes are additive/replacement of the OTP provider only.
+
+---
+Task ID: firebase-phone-auth-seller
+Agent: Z.ai Code (main)
+Task: Complete the Firebase Phone Auth migration by replacing 2Factor.in in the seller panel too, then delete 2factor.ts entirely. Customer + delivery-boy were already migrated in a previous task.
+
+Work Log:
+- Explored seller auth system thoroughly: seller-auth.ts, seller-api-auth.ts, all 7 seller auth API routes, seller/page.tsx (1691 lines, single-file auth UI with login + 7-step register wizard).
+- KEY FINDING: Seller login is email+password (NOT mobile+passcode like customer/delivery-boy). OTP is only used in registration Step 1 (mobile verification). So the migration scope for seller is narrower — only the OTP send/verify in the registration form.
+- Updated seller verify-otp route: replaced 2factor verifyOTP(sessionId, otp) with Firebase verifyIdToken(idToken). Changed body shape from {mobile, sessionId, otp} → {mobile, idToken}. Added otp_sessions upsert with type:'seller'. Added phone number cross-check (security).
+- Updated seller send-otp route: replaced 2factor sendOTP() with stub pattern (validate mobile + check sellers collection for duplicate phone + return success). Client handles actual OTP send via Firebase.
+- Added otp_sessions.verified gate to seller register route (security parity with customer/delivery-boy). Previously the seller register route trusted client-side otpVerified state — now it requires a server-verified otp_sessions record. Also added otp_sessions cleanup after successful registration.
+- Updated seller/page.tsx RegisterForm:
+  • Added usePhoneOtp hook import + usage
+  • Replaced handleSendOtp: now calls backend send-otp (stub) for availability check, then phoneOtp.sendOtp() via Firebase
+  • Replaced handleVerifyOtp: now calls phoneOtp.verifyOtp(otp) → gets idToken → POSTs {mobile, idToken} to verify-otp. Removed the old {mobile, sessionId, otp} body and the aggressive dev-fallbacks (accept any 4+ digit OTP) — the hook's dev mode handles this cleanly with test OTP 123456.
+  • Added reCAPTCHA container div to the main return JSX (required by Firebase invisible reCAPTCHA in production)
+  • Added useEffect to surface phoneOtp.error into the UI error state
+- Deleted src/lib/2factor.ts entirely (111 lines) — zero importers remaining after the seller migration. Verified with grep: only comment references to "2Factor" remain (explaining the architecture change for future developers).
+- Updated .env.example: removed TWOFACTOR_API_KEY section, updated Firebase section header to note it covers ALL three panels (customer + delivery-boy + seller).
+- Ran `bun run lint` → 0 errors (24 pre-existing warnings in unrelated files).
+- Tested all seller OTP API scenarios with curl:
+  • send-otp stub → success ✓
+  • verify-otp with valid dev token (OTP 123456) → success + verified:true ✓
+  • verify-otp with wrong OTP → rejected ✓
+  • verify-otp with phone mismatch → 403 rejected (security cross-check) ✓
+- Tested seller UI with Agent Browser (end-to-end in dev mode):
+  • Seller page renders → click "Register Now" → Step 1 "Verify Your Mobile Number" appears
+  • Enter mobile 9999900003 → Send OTP → OTP input appears ("Enter 6-digit OTP, use 123456 in dev")
+  • Enter 123456 → OTP verified automatically → advances to Step 2 "Create Your Account" ✓
+- Regression tested customer + delivery-boy OTP APIs: all still work (no breakage from the seller changes).
+- Zero errors in dev log. All routes return HTTP 200.
+
+Stage Summary:
+- 2Factor.in is now COMPLETELY REMOVED from the project. src/lib/2factor.ts deleted.
+- All three panels (customer, delivery-boy, seller) now use Firebase Phone Auth:
+  • Customer: mobile + OTP → create passcode → register/login
+  • Delivery-boy: mobile + OTP → create passcode → register/login
+  • Seller: mobile + OTP (Step 1 of registration) → email+password login (unchanged)
+- Security improvement: seller register route now has server-side otp_sessions.verified gate (previously trusted client-side state only).
+- Dev-mode fallback (test OTP 123456) works across all three panels when Firebase env vars are not set.
+- Production-ready: when Firebase env vars are set, real Firebase Phone Auth is used everywhere.
+- Files modified: seller verify-otp/route.ts, seller send-otp/route.ts, seller register/route.ts, seller/page.tsx, .env.example
+- Files deleted: src/lib/2factor.ts
+- No existing UI or code damaged — all changes are additive/replacement of the OTP provider only. Login flows, session management, UI layouts all intact.

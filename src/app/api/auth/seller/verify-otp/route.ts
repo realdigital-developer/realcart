@@ -1,34 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyOTP } from '@/lib/2factor'
+import { connectToDatabase } from '@/lib/mongodb'
+import { verifyIdToken } from '@/lib/firebase-admin'
 
 /**
  * POST /api/auth/seller/verify-otp
- * Verify OTP sent to seller's mobile number
- * Body: { mobile: string, sessionId: string, otp: string }
+ * Verify the Firebase ID token returned by the client-side Firebase Phone Auth flow.
+ *
+ * Architecture (Firebase Phone Auth replaces 2Factor):
+ *   1. Client calls Firebase signInWithPhoneNumber() → Firebase sends OTP to user
+ *   2. User enters OTP → client calls confirmationResult.confirm(otp) → gets ID token
+ *   3. Client POSTs { mobile, idToken } to THIS endpoint
+ *   4. Server verifies the ID token with Firebase Admin → extracts verified phone number
+ *   5. Server cross-checks the phone number matches the requested mobile (security)
+ *   6. Server upserts otp_sessions.verified = true (register endpoint gates on this)
+ *
+ * Dev-mode fallback: if Firebase Admin is not configured, a dev token
+ * `dev-otp-<mobile>-123456` is accepted (test OTP = 123456).
+ *
+ * Body: { mobile: string, idToken: string }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const mobile = (body.mobile || '').trim()
-    const sessionId = (body.sessionId || '').trim()
-    const otp = (body.otp || '').trim()
+    const mobile = (body.mobile || '').replace(/\D/g, '').slice(-10)
+    const idToken = typeof body.idToken === 'string' ? body.idToken.trim() : ''
 
-    if (!mobile || !sessionId || !otp) {
+    if (!mobile || mobile.length !== 10) {
+      return NextResponse.json({ error: 'Valid 10-digit mobile number is required' }, { status: 400 })
+    }
+
+    if (!idToken) {
       return NextResponse.json(
-        { error: 'Mobile number, session ID, and OTP are required' },
-        { status: 400 }
+        { error: 'Firebase ID token is required. Please complete the OTP verification.' },
+        { status: 400 },
       )
     }
 
-    // Verify OTP via 2factor
-    const isValid = await verifyOTP(sessionId, otp)
+    const { db } = await connectToDatabase()
 
-    if (!isValid) {
+    // ── Verify the Firebase ID token (or dev token) ──
+    let verifiedMobile: string
+    try {
+      const verifiedUser = await verifyIdToken(idToken)
+      verifiedMobile = verifiedUser.mobile
+    } catch (err) {
       return NextResponse.json(
-        { error: 'Invalid OTP. Please try again.' },
-        { status: 401 }
+        { error: err instanceof Error ? err.message : 'OTP verification failed' },
+        { status: 401 },
       )
     }
+
+    // ── Security cross-check: the verified phone must match the requested mobile ──
+    if (verifiedMobile !== mobile) {
+      return NextResponse.json(
+        { error: 'Phone number mismatch. The verified number does not match the requested mobile.' },
+        { status: 403 },
+      )
+    }
+
+    // ── Create / update the OTP session to mark it as verified ──
+    // The seller register endpoint checks `otp_sessions.verified === true` as its gate.
+    await db.collection('otp_sessions').updateOne(
+      { mobile, type: 'seller' },
+      {
+        $set: {
+          mobile,
+          verified: true,
+          verifiedAt: new Date(),
+          type: 'seller',
+          sessionId: idToken.slice(0, 50),
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10-min window to complete registration
+        },
+        $setOnInsert: {
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true },
+    )
 
     return NextResponse.json({
       success: true,
@@ -39,7 +87,7 @@ export async function POST(request: NextRequest) {
     console.error('[Seller Verify OTP Error]', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'OTP verification failed' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
