@@ -6517,3 +6517,26 @@ Stage Summary:
 - Local and remote fully in sync (0 commits difference either way).
 - PAT used inline for authentication, NOT persisted in git config (security best practice).
 - No existing UI or code damaged — the push was additive/corrective only. Preview remains functional.
+
+---
+Task ID: run-server-preview
+Agent: Z.ai Code (main)
+Task: Run the server to open the code preview in sandbox properly.
+
+Work Log:
+- Checked system state: dev server NOT running, dev.log did not exist — server had been stopped when previous session ended.
+- Started dev server using the robust double-fork daemon pattern (setsid + subshell + exec + detached file descriptors) that survives across bash tool calls.
+- Server started successfully: "✓ Ready in 1799ms", MongoDB connected, PID 1080, port 3000 listening.
+- Tested all 7 key routes — all returned HTTP 200: /, /customer, /admin, /seller, /delivery, /api/health, /api/admin/logo.
+- DISCOVERED: The seller product image upload endpoint (src/app/api/seller/products/upload/route.ts) had been deleted AGAIN from the working tree by an automated sandbox cleanup process. The file was still tracked in git HEAD (from my previous restore commit 3b9b2c9), so I ran `git restore` to bring it back.
+- Verified the restored endpoint compiles and responds correctly: POST /api/seller/products/upload → HTTP 401 (Unauthorized — the correct response for an unauthenticated request, confirming the file is present and compiles without errors).
+- Cross-tool-call survival test: server PID 1080 stayed alive across 4+ separate bash tool calls — the double-fork daemon pattern is working.
+- Verified with Agent Browser: home page renders correctly with "RealCart" title and all UI elements visible.
+- Checked dev.log for errors — zero errors (no 500s, no ⨯, no compile failures).
+
+Stage Summary:
+- Root cause was simple: the dev server was not running. Started it with the double-fork daemon pattern for persistence.
+- Also caught and fixed a recurring issue: an automated sandbox process keeps deleting src/app/api/seller/products/upload/route.ts from the working tree. Restored it via `git restore` (file is tracked in git HEAD).
+- Server is now running stably on port 3000 (PID 1080), all routes return HTTP 200, zero errors.
+- No code or UI damaged — this was purely a process-management + file-restore fix.
+- The preview panel should now load the project correctly.
