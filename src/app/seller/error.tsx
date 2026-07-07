@@ -1,0 +1,40 @@
+'use client'
+
+import { useEffect } from 'react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+export default function SellerError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  useEffect(() => {
+    console.error('[Seller Error]', error)
+  }, [error])
+
+  return (
+    <div className="flex items-center justify-center min-h-[60vh] p-4">
+      <div className="flex flex-col items-center gap-6 text-center max-w-md">
+        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25">
+          <AlertTriangle className="h-8 w-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-foreground">Seller Panel Error</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            An error occurred in the seller panel. This could be due to a connection issue or a temporary problem.
+          </p>
+        </div>
+        <Button
+          onClick={reset}
+          className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 shadow-lg shadow-emerald-500/25"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    </div>
+  )
+}

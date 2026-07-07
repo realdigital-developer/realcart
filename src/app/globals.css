@@ -1,0 +1,666 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Modern Indigo/Violet Light Theme */
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.985 0.002 270);
+  --foreground: oklch(0.17 0.02 270);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.17 0.02 270);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.17 0.02 270);
+  --primary: oklch(0.55 0.22 270);
+  --primary-foreground: oklch(0.98 0.005 270);
+  --secondary: oklch(0.95 0.02 270);
+  --secondary-foreground: oklch(0.25 0.04 270);
+  --muted: oklch(0.955 0.015 270);
+  --muted-foreground: oklch(0.50 0.03 270);
+  --accent: oklch(0.93 0.04 270);
+  --accent-foreground: oklch(0.25 0.06 270);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.91 0.02 270);
+  --input: oklch(0.91 0.02 270);
+  --ring: oklch(0.55 0.22 270);
+  --chart-1: oklch(0.55 0.22 270);
+  --chart-2: oklch(0.65 0.18 162);
+  --chart-3: oklch(0.72 0.17 48);
+  --chart-4: oklch(0.60 0.24 310);
+  --chart-5: oklch(0.65 0.20 24);
+  --sidebar: oklch(0.97 0.015 270);
+  --sidebar-foreground: oklch(0.17 0.02 270);
+  --sidebar-primary: oklch(0.55 0.22 270);
+  --sidebar-primary-foreground: oklch(0.98 0.005 270);
+  --sidebar-accent: oklch(0.93 0.04 270);
+  --sidebar-accent-foreground: oklch(0.25 0.06 270);
+  --sidebar-border: oklch(0.91 0.02 270);
+  --sidebar-ring: oklch(0.55 0.22 270);
+}
+
+/* Modern Deep Navy/Violet Dark Theme */
+.dark {
+  --background: oklch(0.15 0.02 270);
+  --foreground: oklch(0.95 0.01 270);
+  --card: oklch(0.20 0.03 270);
+  --card-foreground: oklch(0.95 0.01 270);
+  --popover: oklch(0.20 0.03 270);
+  --popover-foreground: oklch(0.95 0.01 270);
+  --primary: oklch(0.72 0.19 270);
+  --primary-foreground: oklch(0.15 0.03 270);
+  --secondary: oklch(0.25 0.04 270);
+  --secondary-foreground: oklch(0.95 0.01 270);
+  --muted: oklch(0.25 0.03 270);
+  --muted-foreground: oklch(0.65 0.03 270);
+  --accent: oklch(0.28 0.06 270);
+  --accent-foreground: oklch(0.95 0.01 270);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(0.30 0.04 270);
+  --input: oklch(0.28 0.04 270);
+  --ring: oklch(0.72 0.19 270);
+  --chart-1: oklch(0.72 0.19 270);
+  --chart-2: oklch(0.72 0.17 162);
+  --chart-3: oklch(0.78 0.16 48);
+  --chart-4: oklch(0.68 0.22 310);
+  --chart-5: oklch(0.72 0.20 24);
+  --sidebar: oklch(0.18 0.03 270);
+  --sidebar-foreground: oklch(0.95 0.01 270);
+  --sidebar-primary: oklch(0.72 0.19 270);
+  --sidebar-primary-foreground: oklch(0.15 0.03 270);
+  --sidebar-accent: oklch(0.28 0.06 270);
+  --sidebar-accent-foreground: oklch(0.95 0.01 270);
+  --sidebar-border: oklch(0.30 0.04 270);
+  --sidebar-ring: oklch(0.72 0.19 270);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* Prevent iOS bounce scroll on non-scrollable containers */
+  html, body {
+    overscroll-behavior: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Mobile-specific utilities                                          */
+/* ------------------------------------------------------------------ */
+
+/* Safe area padding for notched phones */
+.safe-area-top-right {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.safe-area-x {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+}
+
+/* Safe bottom padding — ensures content (buttons etc.) is never cut off by device bottom safe area */
+.safe-bottom {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+/* Custom scrollbar for modern look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.7 0.1 270 / 25%);
+  border-radius: 100px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.6 0.15 270 / 40%);
+}
+
+/* On touch devices, make scrollbar always visible but thin */
+@media (hover: none) and (pointer: coarse) {
+  ::-webkit-scrollbar {
+    width: 3px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.7 0.1 270 / 35%);
+  }
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition-property: background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Disable transition for animations and transforms */
+button, a, input, [class*="animate"] {
+  transition-property: background-color, border-color, color, box-shadow, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Mobile viewport fix                                                */
+/* ------------------------------------------------------------------ */
+
+/* Use dvh instead of vh to handle mobile browser chrome */
+@supports (height: 100dvh) {
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+  .h-dvh {
+    height: 100dvh;
+  }
+}
+
+@supports not (height: 100dvh) {
+  .min-h-dvh {
+    min-height: 100vh;
+  }
+  .h-dvh {
+    height: 100vh;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Modal / Drawer viewport-aware max-heights                          */
+/*                                                                     */
+/*  Uses dvh (dynamic viewport height) so modals shrink when the       */
+/*  virtual keyboard opens and expand back when it closes.             */
+/*  Falls back to vh for older browsers.                               */
+/*                                                                     */
+/*  --vvh is set by useVisualViewport hook as an even more robust      */
+/*  fallback — it tracks window.visualViewport.height directly.        */
+/* ------------------------------------------------------------------ */
+
+.modal-max-h-90 {
+  max-height: 90vh;
+  max-height: 90dvh;
+  max-height: calc(var(--vvh, 100dvh) * 0.9);
+}
+
+.modal-max-h-92 {
+  max-height: 92vh;
+  max-height: 92dvh;
+  max-height: calc(var(--vvh, 100dvh) * 0.92);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Mobile touch improvements                                          */
+/* ------------------------------------------------------------------ */
+
+/* Remove tap highlight on mobile */
+@media (hover: none) and (pointer: coarse) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Larger touch targets for interactive elements on mobile */
+  /* Both buttons AND inputs get 44px min-height so they stay visually aligned */
+  button, a, [role="button"],
+  [data-slot="input"],
+  textarea {
+    min-height: 44px;
+  }
+
+  /* Checkboxes must remain square — exempt from the min-height rule */
+  [role="checkbox"],
+  [data-slot="checkbox"] {
+    min-height: unset !important;
+    min-width: unset !important;
+  }
+
+  /* Switches/Toggles must keep their pill shape — exempt from min-height */
+  [role="switch"],
+  [data-slot="switch"],
+  [data-slot="toggle"],
+  [data-slot="toggle-group"],
+  [data-slot="toggle-group-item"] {
+    min-height: unset !important;
+    min-width: unset !important;
+  }
+
+  /* Select triggers match inputs — both get the same 44px min-height on mobile */
+  [data-slot="select-trigger"] {
+    min-height: 44px;
+  }
+
+  /* Prevent text selection on interactive elements */
+  button, [role="button"], nav a {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Form row alignment — ensures inputs, selects & buttons in the     */
+/*  same flex row share the same effective height                      */
+/* ------------------------------------------------------------------ */
+
+/*
+  When a flex container contains form elements, make sure the
+  data-size attribute is respected uniformly.  This prevents
+  subtle height mismatches caused by mixing size variants.
+*/
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Force all form controls inside a .form-row to stretch to the same height */
+.form-row > [data-slot="input"],
+.form-row > [data-slot="select-trigger"],
+.form-row > [data-slot="button"],
+.form-row > button,
+.form-row > a[role="button"] {
+  height: var(--form-row-height, 2.25rem); /* h-9 = 36px default */
+}
+
+/* Size variants for form rows */
+.form-row[data-size="sm"] {
+  --form-row-height: 2rem; /* h-8 = 32px */
+}
+.form-row[data-size="default"] {
+  --form-row-height: 2.25rem; /* h-9 = 36px */
+}
+.form-row[data-size="lg"] {
+  --form-row-height: 2.5rem; /* h-10 = 40px */
+}
+
+/* Prevent pull-to-refresh on the app */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Smooth scrolling for the whole app */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Prevent iOS input zoom */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shimmer Loading Animation                                          */
+/* ------------------------------------------------------------------ */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.dark .shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Customer Splash Screen Animations                                  */
+/*  Used by src/components/customer/splash-screen.tsx                  */
+/* ------------------------------------------------------------------ */
+
+@keyframes splash-logo-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) translateY(8px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.04) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes splash-text-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splash-progress-fill {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes splash-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Reduced-motion: disable all splash animations, show content immediately */
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo,
+  .splash-text,
+  .splash-progress,
+  .splash-spinner {
+    animation: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Customer Onboarding Screen Animations                              */
+/*  Used by src/components/customer/onboarding-screen.tsx              */
+/* ------------------------------------------------------------------ */
+
+@keyframes onboarding-content-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes onboarding-icon-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes onboarding-bg-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.6;
+  }
+}
+
+@keyframes onboarding-dot-fill {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+/* Story-style progress bar fill — used by the modern indicator at the
+   top of the onboarding screen. Animates the active segment from 0% to
+   100% width over a fixed duration, mimicking Instagram/TikTok story
+   progress bars. */
+@keyframes onboarding-story-fill {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+/* ── Redesigned onboarding (premium glassmorphic) animations ── */
+
+/* Large gradient orb that holds the phase icon — slow breathing pulse */
+@keyframes onboarding-orb-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 60px 0 var(--orb-glow, rgba(255, 255, 255, 0.3));
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 90px 10px var(--orb-glow, rgba(255, 255, 255, 0.45));
+  }
+}
+
+/* Floating decorative rings around the orb — slow rotation */
+@keyframes onboarding-ring-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Floating particles drifting upward in the background */
+@keyframes onboarding-particle-float {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-120px) translateX(var(--particle-drift, 0));
+    opacity: 0;
+  }
+}
+
+/* Glassmorphic card entrance — subtle rise + fade */
+@keyframes onboarding-card-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Feature card stagger entrance — each card slides in from the left */
+@keyframes onboarding-feature-enter {
+  0% {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Gradient text shimmer — subtle hue shift on the title */
+@keyframes onboarding-title-shimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Background gradient slow drift — gives the page a living feel */
+@keyframes onboarding-bg-drift {
+  0%, 100% {
+    transform: scale(1) translate(0, 0);
+  }
+  33% {
+    transform: scale(1.08) translate(2%, -2%);
+  }
+  66% {
+    transform: scale(1.04) translate(-2%, 2%);
+  }
+}
+
+/* Reduced-motion: disable onboarding animations too */
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-content,
+  .onboarding-icon,
+  .onboarding-bg-pulse,
+  .onboarding-progress-fill,
+  .onboarding-story-segment,
+  .onboarding-orb,
+  .onboarding-ring,
+  .onboarding-particle,
+  .onboarding-card,
+  .onboarding-feature,
+  .onboarding-title,
+  .onboarding-bg-drift {
+    animation: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Customer Interaction Lock                                          */
+/*  Applied by src/components/customer/interaction-lock.tsx            */
+/*  when the customer panel is mounted. Removed on unmount so          */
+/*  admin/seller/delivery panels are unaffected.                       */
+/*                                                                     */
+/*  Implements 3 of the 4 restrictions:                                */
+/*  1. Hides scrollbars (scrolling still works, just no visible bar)   */
+/*  2. Disables text selection (except in form fields)                 */
+/*  3. Disables iOS long-press callout                                 */
+/*  (Zoom prevention is handled by JS event listeners in the lock     */
+/*  component + the viewport meta in customer/layout.tsx)             */
+/* ------------------------------------------------------------------ */
+
+.customer-interaction-lock,
+.customer-interaction-lock body {
+  /* Hide scrollbars — Firefox */
+  scrollbar-width: none;
+  /* Hide scrollbars — IE / legacy Edge */
+  -ms-overflow-style: none;
+}
+
+.customer-interaction-lock ::-webkit-scrollbar {
+  /* Hide scrollbars — Chrome / Safari / Opera / modern Edge */
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Disable text selection on everything except form fields.
+   Inputs and textareas MUST keep user-select: text so users can
+   place cursors, select OTP codes, edit text, etc. */
+.customer-interaction-lock body {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Disable iOS Safari long-press callout (the "Copy/Define" menu) */
+  -webkit-touch-callout: none;
+  /* Disable image dragging on desktop browsers */
+  -webkit-user-drag: none;
+}
+
+/* Re-enable text selection in form fields (essential for UX) */
+.customer-interaction-lock input,
+.customer-interaction-lock textarea,
+.customer-interaction-lock [contenteditable="true"],
+.customer-interaction-lock [contenteditable=""] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Re-enable user-drag for none (images can still be clicked but not dragged) */
+.customer-interaction-lock img {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+
+
