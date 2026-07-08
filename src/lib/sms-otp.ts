@@ -1,27 +1,37 @@
 /**
- * SMS OTP Module — Server-Side OTP via Twilio Programmable SMS API
+ * SMS OTP Module — Server-Side OTP via MSG91 Send SMS API
  *
  * Architecture:
  *   - sendOtp(mobile) → generates a 6-digit OTP, builds a fully custom branded
- *     SMS message, sends it via Twilio's Messages API, stores the OTP hash in
+ *     SMS message, sends it via MSG91's Send SMS API, stores the OTP hash in
  *     MongoDB's otp_sessions collection.
  *   - verifyOtp(mobile, otp) → compares the entered OTP against the stored
  *     hashed OTP. On success, marks otp_sessions.verified = true.
  *
- * Why Programmable SMS (not Twilio Verify)?
- *   Twilio Verify uses its own OTP template ("Your <code> verification code is:
- *   <otp>") and the customMessage parameter only works with specific service
- *   configurations. With Programmable SMS, we have 100% control over the
- *   message body — the OTP code is embedded directly in our custom template.
+ * Why MSG91 Send SMS API (not MSG91's OTP API)?
+ *   We generate and verify the OTP ourselves (stored as a SHA-256 hash in
+ *   MongoDB) so we never trust an external gateway with verification state.
+ *   The Send SMS API gives us 100% control over the message body — the OTP
+ *   code is embedded directly in our custom branded template. This keeps the
+ *   existing otp_sessions collection and verifyOtp() logic fully intact.
  *
- * Dev-mode fallback (free tier / no Twilio creds):
- *   If Twilio credentials are NOT configured, the module enters "dev mode".
+ * Dev-mode fallback (free tier / no MSG91 creds):
+ *   If MSG91 credentials are NOT configured, the module enters "dev mode".
  *   In dev mode, sendOtp() stores the test OTP (123456) in MongoDB's otp_sessions
  *   collection, and verifyOtp() checks against it. No SMS is sent.
  *
- * Free tier: Twilio offers a free trial with $15 credit (≈ hundreds of OTP SMS).
- *   Sign up at https://www.twilio.com/ — no credit card needed for trial.
- *   After the trial, pay-as-you-go (~$0.05–$0.10 per SMS).
+ * MSG91 free account setup:
+ *   1. Sign up at https://msg91.com (free tier includes trial credits)
+ *   2. Copy your AUTH_KEY from the dashboard (top-right → API)
+ *   3. Register a 6-character Sender ID (e.g. "REALCRT") — needs approval
+ *   4. For Indian numbers (DLT/TRAI compliance): register an SMS template
+ *      and set MSG91_TEMPLATE_ID. The template variable for the OTP must
+ *      match the position of the code in buildOtpMessage() below.
+ *   5. Set these env vars in .env:
+ *        MSG91_AUTH_KEY=your-auth-key
+ *        MSG91_SENDER_ID=REALCRT
+ *        MSG91_TEMPLATE_ID=your-dlt-template-id   (optional but recommended)
+ *        MSG91_ROUTE=4                            (optional, default 4 = transactional)
  *
  * Server-side only. Never import from client components.
  */
@@ -37,7 +47,7 @@ import { createHash, randomInt } from 'crypto'
 export interface SendOtpResult {
   /** Whether the OTP was sent successfully. */
   success: boolean
-  /** Twilio message SID (or 'dev-session' in dev mode). */
+  /** MSG91 campaign/message reference (or 'dev-session' in dev mode). */
   sid: string
   /** Status: 'pending' (sent, awaiting verification) or 'cancelled'. */
   status: string
@@ -55,40 +65,47 @@ export interface VerifyOtpResult {
 /* ------------------------------------------------------------------ */
 
 /**
- * Resolve Twilio credentials from environment variables.
+ * Resolve MSG91 credentials from environment variables.
  * Returns null if any required value is missing → triggers dev mode.
  *
  * Required env vars:
- *   TWILIO_ACCOUNT_SID      — Account SID (starts with AC)
- *   TWILIO_AUTH_TOKEN       — Auth token
- *   TWILIO_PHONE_NUMBER     — The Twilio phone number to send FROM (E.164, e.g. +1234567890)
- *                             OR a Messaging Service SID (starts with MG)
+ *   MSG91_AUTH_KEY     — Authentication key from MSG91 dashboard
+ *   MSG91_SENDER_ID    — 6-character approved sender ID (e.g. "REALCRT")
+ *
+ * Optional env vars:
+ *   MSG91_ROUTE        — Route number (default "4" = transactional)
+ *   MSG91_TEMPLATE_ID  — DLT template ID (required for Indian DLT compliance)
  */
-function getTwilioConfig(): {
-  accountSid: string
-  authToken: string
-  fromNumber: string
+function getMsg91Config(): {
+  authKey: string
+  senderId: string
+  route: string
+  templateId?: string
 } | null {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  const fromNumber = process.env.TWILIO_PHONE_NUMBER // phone number OR messaging service SID
+  const authKey = process.env.MSG91_AUTH_KEY
+  const senderId = process.env.MSG91_SENDER_ID
 
-  if (!accountSid || !authToken || !fromNumber) {
+  if (!authKey || !senderId) {
     return null
   }
-  return { accountSid, authToken, fromNumber }
+  return {
+    authKey,
+    senderId,
+    route: process.env.MSG91_ROUTE || '4',
+    templateId: process.env.MSG91_TEMPLATE_ID || undefined,
+  }
 }
 
-/** Whether Twilio is properly configured (false = dev mode). */
+/** Whether MSG91 is properly configured (false = dev mode). */
 export function isSmsConfigured(): boolean {
-  return getTwilioConfig() !== null
+  return getMsg91Config() !== null
 }
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                           */
 /* ------------------------------------------------------------------ */
 
-/** Test OTP used in dev mode (no Twilio configured). */
+/** Test OTP used in dev mode (no MSG91 configured). */
 const DEV_TEST_OTP = '123456'
 
 /** OTP session TTL: 5 minutes. */
@@ -97,18 +114,8 @@ const OTP_TTL_MS = 5 * 60 * 1000
 /** Max OTP verification attempts before the session is invalidated. */
 const MAX_OTP_ATTEMPTS = 5
 
-/* ------------------------------------------------------------------ */
-/*  Phone formatting                                                    */
-/* ------------------------------------------------------------------ */
-
-/**
- * Convert a 10-digit Indian mobile to E.164 format for Twilio.
- * "9876543210" → "+919876543210"
- */
-function toE164(mobile: string): string {
-  const clean = mobile.replace(/\D/g, '').slice(-10)
-  return `+91${clean}`
-}
+/** Timeout for the MSG91 API HTTP call (milliseconds). */
+const MSG91_API_TIMEOUT_MS = 15_000
 
 /* ------------------------------------------------------------------ */
 /*  OTP Generation & Hashing                                            */
@@ -179,17 +186,17 @@ function buildOtpMessage(
 }
 
 /* ------------------------------------------------------------------ */
-/*  sendOtp — send an OTP via Twilio Programmable SMS (or store dev OTP) */
+/*  sendOtp — send an OTP via MSG91 Send SMS API (or store dev OTP)      */
 /* ------------------------------------------------------------------ */
 
 /**
  * Send an OTP to the given mobile number.
  *
- * Production (Twilio configured): generates a 6-digit OTP, builds a custom
- * branded SMS message, sends it via Twilio's Messages API, stores the OTP
+ * Production (MSG91 configured): generates a 6-digit OTP, builds a custom
+ * branded SMS message, sends it via MSG91's Send SMS API, stores the OTP
  * hash in otp_sessions.
  *
- * Dev mode (no Twilio): stores the test OTP (123456) hash in otp_sessions.
+ * Dev mode (no MSG91): stores the test OTP (123456) hash in otp_sessions.
  *
  * @param mobile - 10-digit Indian mobile number
  * @param type - 'customer' | 'delivery_boy' | 'seller' (for otp_sessions scoping)
@@ -204,7 +211,7 @@ export async function sendOtp(
     throw new Error('Invalid mobile number. Must be 10 digits.')
   }
 
-  const config = getTwilioConfig()
+  const config = getMsg91Config()
 
   // ── Dev mode: store test OTP in otp_sessions ──
   if (!config) {
@@ -228,7 +235,7 @@ export async function sendOtp(
     return { success: true, sid: 'dev-session', status: 'pending' }
   }
 
-  // ── Production: generate OTP, send via Twilio Messages API ──
+  // ── Production: generate OTP, send via MSG91 Send SMS API ──
   const otpCode = generateOtpCode()
 
   // Fetch the brand name from DB (falls back to "RealCart" if unset)
@@ -244,30 +251,65 @@ export async function sendOtp(
   // Build the professional branded OTP message with the actual code
   const messageBody = buildOtpMessage(brandName, otpCode, type)
 
-  // Send via Twilio Messages API (Programmable SMS)
-  const phone = toE164(cleanMobile)
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Messages.json`
-  const authHeader = 'Basic ' + Buffer.from(`${config.accountSid}:${config.authToken}`).toString('base64')
+  // Send via MSG91 Send SMS API (v2)
+  // MSG91 expects: country="91" + to=["<10-digit mobile>"]
+  const smsEntry: { message: string; to: string[]; template_id?: string } = {
+    message: messageBody,
+    to: [cleanMobile],
+  }
+  if (config.templateId) {
+    smsEntry.template_id = config.templateId
+  }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      To: phone,
-      From: config.fromNumber,
-      Body: messageBody,
-    }),
-  })
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), MSG91_API_TIMEOUT_MS)
 
-  const data = await response.json()
+  let response: Response
+  try {
+    response = await fetch('https://api.msg91.com/api/v2/sendsms', {
+      method: 'POST',
+      headers: {
+        authkey: config.authKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: config.senderId,
+        route: config.route,
+        country: '91',
+        sms: [smsEntry],
+      }),
+      signal: controller.signal,
+    })
+  } catch (err) {
+    clearTimeout(timeoutId)
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('MSG91 API request timed out. Please try again.')
+    }
+    throw new Error(
+      `Failed to reach MSG91 API: ${err instanceof Error ? err.message : 'network error'}`,
+    )
+  }
+  clearTimeout(timeoutId)
 
-  if (!response.ok) {
-    const msg = data.message || data.error_message || 'Failed to send OTP via SMS'
+  const data = await response.json().catch(() => ({}))
+
+  // MSG91 returns { type: "success", message: "..." } on success
+  // and { type: "error", message: "..." } on failure
+  if (!response.ok || data.type === 'error') {
+    const msg =
+      data.message ||
+      data.error ||
+      `MSG91 API returned status ${response.status}` ||
+      'Failed to send OTP via SMS'
     throw new Error(msg)
   }
+
+  // Derive a reference id for the session (MSG91 may return a campaign id)
+  const refId =
+    data.data?.[0]?._id ||
+    data.campaign_id ||
+    data._id ||
+    `msg91-${Date.now()}`
 
   // Store the OTP HASH (not the plain code) in otp_sessions for verification
   const { db } = await connectToDatabase()
@@ -277,7 +319,7 @@ export async function sendOtp(
       $set: {
         mobile: cleanMobile,
         type,
-        sessionId: data.sid, // Twilio message SID
+        sessionId: refId, // MSG91 campaign/message reference
         otpHash: hashOtp(otpCode), // store the HASH, not the plain code
         attempts: 0,
         verified: false,
@@ -288,7 +330,7 @@ export async function sendOtp(
     { upsert: true },
   )
 
-  return { success: true, sid: data.sid, status: 'pending' }
+  return { success: true, sid: refId, status: 'pending' }
 }
 
 /* ------------------------------------------------------------------ */

@@ -366,7 +366,7 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
       return
     }
     try {
-      // Send OTP via the backend SMS gateway (Twilio Verify or dev mode)
+      // Send OTP via the backend SMS gateway (MSG91 SMS API or dev mode)
       const res = await fetch('/api/auth/seller/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

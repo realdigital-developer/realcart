@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // New customer — send OTP via SMS gateway (Twilio Verify or dev mode)
+    // New customer — send OTP via SMS gateway (MSG91 SMS API or dev mode)
     await sendOtp(mobile, 'customer')
 
     return NextResponse.json({

@@ -7,7 +7,7 @@ const DELIVERY_BOYS_COLLECTION = 'delivery_boys'
 /**
  * POST /api/auth/delivery-boy/send-otp
  * Send an OTP to a mobile number for new delivery boy registration (or resend).
- * Uses server-side SMS OTP (Twilio Verify) with dev-mode fallback (test OTP 123456).
+ * Uses server-side SMS OTP (MSG91 SMS API) with dev-mode fallback (test OTP 123456).
  *
  * Body: { mobile: string }
  */
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send OTP via SMS gateway (Twilio Verify or dev mode)
+    // Send OTP via SMS gateway (MSG91 SMS API or dev mode)
     await sendOtp(mobile, 'delivery_boy')
 
     return NextResponse.json({

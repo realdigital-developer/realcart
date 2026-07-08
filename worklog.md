@@ -7395,3 +7395,55 @@ Stage Summary:
 - VERIFIED: Dev server running persistently (PID 1223, uptime 1:28, RSS 1.14GB healthy), port 3000 listening, home page HTTP 200 in 32ms, /api/health HTTP 200, gateway port 81 → 3000 HTTP 200 (preview path confirmed working). Agent Browser: app renders with live MongoDB data, Refresh + Toggle theme interactions work, zero console/page errors.
 - The preview is now accessible. The user can open it via the Preview Panel on the right (or "Open in New Tab").
 - Files created: .zscripts/dev.sh (exact sandbox format, for future-boot auto-start), .zscripts/start-dev-robust.sh (2560MB robust starter), db/ folder. No source files modified.
+
+---
+Task ID: replace-twilio-with-msg91
+Agent: Z.ai Code (main)
+Task: Replace Twilio with MSG91 (free account) for OTP functionality across customer, seller, and delivery-boy panels. Keep everything else intact. Robust solution with double-checking, no errors, no UI/code damage.
+
+Work Log:
+- STUDIED THE CODE: Read src/lib/sms-otp.ts (the ONLY file with SMS-sending logic — 409 lines). It used Twilio's Programmable Messages API with a dev-mode fallback (test OTP 123456). The architecture: generate OTP server-side (crypto.randomInt), hash it (SHA-256 + NEXTAUTH_SECRET), store hash in MongoDB otp_sessions collection, send branded SMS via gateway, verify against stored hash (not trusting the gateway with verification). This architecture is sound and was preserved 100%.
+- MAPPED ALL TWILIO REFERENCES: grep found Twilio references in exactly 10 files: src/lib/sms-otp.ts (core logic), 8 API route files (customer/seller/delivery-boy × send-otp/verify-otp/check-mobile — comments only, logic is gateway-agnostic via sendOtp()/verifyOtp() calls), and src/app/seller/page.tsx (1 comment). Confirmed order-otp.ts is a SEPARATE system (order delivery/pickup OTP shown in UI/email, NOT SMS-based) — no changes needed. Confirmed customer-notifications.ts does NOT send SMS.
+- REWROTE src/lib/sms-otp.ts: Replaced the Twilio transport with MSG91's Send SMS API (POST https://api.msg91.com/api/v2/sendsms). Key design decisions:
+  • Used MSG91's Send SMS API (not MSG91's OTP API) because it accepts a fully custom message body — this preserves the existing architecture where WE generate and verify the OTP (stored as SHA-256 hash in MongoDB), and MSG91 only delivers the SMS. Zero changes to verifyOtp(), isOtpVerified(), clearOtpSession(), the otp_sessions collection, or the API route contracts.
+  • Public API kept IDENTICAL: same function signatures (sendOtp, verifyOtp, isSmsConfigured, isOtpVerified, clearOtpSession), same return types (SendOtpResult, VerifyOtpResult), same constants (DEV_TEST_OTP='123456', OTP_TTL_MS=5min, MAX_OTP_ATTEMPTS=5), same branded message builder (buildOtpMessage — same exact message format per panel), same MongoDB collection (otp_sessions).
+  • getTwilioConfig() → getMsg91Config(): reads MSG91_AUTH_KEY (required), MSG91_SENDER_ID (required), MSG91_ROUTE (optional, default "4"=transactional), MSG91_TEMPLATE_ID (optional, for DLT compliance).
+  • The HTTP call: POST to https://api.msg91.com/api/v2/sendsms with authkey header + JSON body {sender, route:"4", country:"91", sms:[{message, to:[mobile], template_id?}]}. Added AbortController with 15s timeout (MSG91_API_TIMEOUT_MS) for robustness. Handles MSG91's response format ({type:"success"/"error", message:"..."}).
+  • Dev-mode fallback preserved: if MSG91_AUTH_KEY/MSG91_SENDER_ID not set → stores test OTP 123456 hash in otp_sessions, no SMS sent. This keeps the sandbox fully functional without any SMS provider.
+  • Removed the now-unused toE164() helper (MSG91 uses country+to array format, not E.164).
+- UPDATED COMMENTS in 8 API route files + seller/page.tsx: Replaced "Twilio Verify" references with "MSG91 SMS API" using precise perl text replacement. Verified ZERO Twilio references remain in src/. These were comment-only changes — no logic changes in any route file.
+- UPDATED .env.example: Replaced the Twilio section (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID) with MSG91 env vars (MSG91_AUTH_KEY, MSG91_SENDER_ID, MSG91_TEMPLATE_ID, MSG91_ROUTE) + step-by-step MSG91 free-account setup instructions.
+- DOUBLE-CHECKED: grep confirmed ZERO Twilio references remain anywhere in the project (src/, .env.example, prisma/, scripts/, package.json). Confirmed MSG91 references are correctly present in all 10 modified files.
+- RAN LINT: `bun run lint` → 0 errors, 24 warnings (all pre-existing "Unused eslint-disable directive" — NONE from my changes).
+- RESTARTED dev server (previous instance was OOM-killed when lint ran concurrently). Used .zscripts/start-dev-robust.sh (2560MB heap, setsid+disown to tini). Dev server running persistently (PID 2160, RSS 1.27GB, healthy).
+- TESTED ALL OTP ENDPOINTS via curl (dev mode — MSG91 not configured, test OTP 123456):
+  • Customer send-otp (9000000001) → 200 {"success":true,"message":"OTP sent successfully"} ✓
+  • Customer verify-otp (123456) → 200 {"success":true,"message":"OTP verified successfully"} ✓
+  • Customer verify-otp (999999 wrong) → 401 {"error":"Invalid OTP. Please try again."} ✓
+  • Seller send-otp (9000000002) → 200 ✓
+  • Seller verify-otp (123456) → 200 {"verified":true} ✓
+  • Delivery-boy send-otp (9000000003) → 200 ✓
+  • Delivery-boy verify-otp (123456) → 200 ✓
+  • Customer check-mobile (9000000004, new) → 200 {"exists":false,"otpSent":true} ✓
+  • Delivery-boy check-mobile (9000000005, new) → 200 {"exists":false,"otpSent":true} ✓
+- VERIFIED UI via Agent Browser (customer login flow end-to-end):
+  • Opened /customer/login → "Welcome to RealCart" + mobile number field + Continue button. Zero page/console errors.
+  • Entered mobile 9000000099 → clicked Continue → send-otp API called (200) → UI transitioned to "Verify OTP" screen ("We've sent a verification code to +91 9000000099" + OTP input + Verify button). Zero errors.
+  • Entered dev OTP 123456 → clicked Verify OTP → verify-otp API called (200) → UI transitioned to "Enter passcode" setup screen (registration next step). Zero errors.
+  • Opened /seller → page loaded (HTTP 200), seller session API 200. Zero errors.
+  • Console remained clean throughout (only React DevTools info + HMR logs — all normal).
+- CHECKED dev.log: All OTP requests returned correct status codes (200 for success, 401 for wrong OTP). No errors from MSG91 changes. The only log entry containing "error" is the pre-existing `⨯ preloadEntriesOnStart` Next.js dev-mode warning (unrelated to OTP).
+
+Stage Summary:
+- Twilio has been FULLY REPLACED with MSG91 (free account) for OTP functionality across ALL three panels (customer, seller, delivery-boy). Zero Twilio references remain in the project.
+- ARCHITECTURE PRESERVED: The MSG91 integration uses the Send SMS API (custom message body) so the existing server-side OTP generation/hashing/verification architecture is 100% intact. The otp_sessions MongoDB collection, verifyOtp() hash comparison, brute-force protection (max 5 attempts), 5-minute TTL, and branded message templates are all unchanged. MSG91 only replaces the SMS transport layer (was Twilio Messages API, now MSG91 Send SMS API).
+- PUBLIC API IDENTICAL: sendOtp(), verifyOtp(), isSmsConfigured(), isOtpVerified(), clearOtpSession() — same signatures, same return types. Zero changes needed in any of the 8 API route files (only comments updated).
+- DEV-MODE FALLBACK PRESERVED: Without MSG91_AUTH_KEY/MSG91_SENDER_ID in .env, the system uses test OTP 123456 (no SMS sent). The sandbox is fully functional without any SMS provider. When the user adds MSG91 creds to .env, the system automatically switches to sending real SMS via MSG91.
+- NO UI/CODE DAMAGE: All 8 API route files have identical logic (only comments changed). The seller page has 1 comment changed. The .env.example Twilio section was replaced with MSG91. Lint: 0 errors. Browser: customer OTP flow works end-to-end (send → verify → passcode setup), seller page loads. Zero page/console errors.
+- TO ACTIVATE MSG91 (for the user): Add to .env:
+    MSG91_AUTH_KEY=your-auth-key-from-msg91-dashboard
+    MSG91_SENDER_ID=REALCRT
+    MSG91_TEMPLATE_ID=your-dlt-template-id   (recommended for Indian DLT compliance)
+    MSG91_ROUTE=4                            (4 = transactional, default for OTP)
+  Sign up at https://msg91.com (free account includes trial SMS credits).
+- Files modified: src/lib/sms-otp.ts (core rewrite — Twilio→MSG91 transport), 8 API route files (comment updates only), src/app/seller/page.tsx (1 comment), .env.example (Twilio section → MSG91 section). No other files touched.
