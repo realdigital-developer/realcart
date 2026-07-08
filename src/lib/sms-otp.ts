@@ -68,34 +68,38 @@ export interface VerifyOtpResult {
 
 /**
  * Resolve MSG91 credentials from environment variables.
- * Returns null if any required value is missing → triggers dev mode.
+ * Returns null if MSG91_AUTH_KEY is missing → triggers dev mode.
  *
  * Required env vars:
  *   MSG91_AUTH_KEY     — Authentication key from MSG91 dashboard
- *   MSG91_SENDER_ID    — 6-character approved sender ID (e.g. "REALCT")
  *
  * Optional env vars:
+ *   MSG91_SENDER_ID    — Sender ID. If OMITTED, MSG91 uses its default global
+ *                        sender (no registration needed — perfect for RCS mode
+ *                        without sender ID / DLT). If set, must be 6 alphabetic chars.
  *   MSG91_ROUTE        — Route number (default "4" = transactional)
  *   MSG91_TEMPLATE_ID  — DLT template ID (only used when SMS_USE_DLT=true)
  *   SMS_USE_DLT        — "true" to enable DLT mode (default: false = RCS)
  */
 function getMsg91Config(): {
   authKey: string
-  senderId: string
+  senderId?: string
   route: string
   templateId?: string
   useDlt: boolean
 } | null {
   const authKey = process.env.MSG91_AUTH_KEY
-  const senderId = process.env.MSG91_SENDER_ID
 
-  if (!authKey || !senderId) {
+  if (!authKey) {
     return null
   }
   const useDlt = shouldUseDlt()
   return {
     authKey,
-    senderId,
+    // Sender ID is OPTIONAL. When omitted, MSG91 uses its default global
+    // sender ID — no registration/approval needed. This enables RCS mode
+    // (no sender ID, no DLT) out of the box.
+    senderId: process.env.MSG91_SENDER_ID || undefined,
     route: process.env.MSG91_ROUTE || '4',
     // Only retain the template ID when DLT mode is enabled. In RCS mode
     // (default), the template_id param is omitted entirely from the API request.
@@ -137,7 +141,13 @@ function shouldUseDlt(): boolean {
 
 /**
  * Resolve SMSHorizon credentials from environment variables.
- * Returns null if any required value is missing → falls through to MSG91.
+ * Returns null if API_KEY or USER is missing → falls through to MSG91.
+ *
+ * NOTE: SMSHorizon's API REQUIRES a sender ID (senderid param). If
+ * SMSHORIZON_SENDER_ID is not set, this returns null (SMSHorizon is skipped)
+ * and the system falls through to MSG91, which supports sending WITHOUT a
+ * sender ID (uses its default global sender). This enables RCS mode with
+ * no sender ID and no DLT.
  *
  * SMSHorizon API (https://smshorizon.co.in/api/v2/sendsms.php):
  *   - Auth: Bearer token in Authorization header (the API key)
@@ -148,9 +158,10 @@ function shouldUseDlt(): boolean {
  * Required env vars:
  *   SMSHORIZON_API_KEY   — API key from SMSHorizon dashboard (used as Bearer token)
  *   SMSHORIZON_USER      — Account username (the "user" param)
- *   SMSHORIZON_SENDER_ID — 6-character sender ID (e.g. "REALCT")
  *
  * Optional env vars:
+ *   SMSHORIZON_SENDER_ID  — 6-char sender ID. Required by SMSHorizon API; if
+ *                           omitted, SMSHorizon is skipped (falls to MSG91).
  *   SMSHORIZON_TEMPLATE_ID — DLT template ID (only used when SMS_USE_DLT=true)
  *   SMSHORIZON_TYPE        — Message type: "txt" (default) or "uni" (Unicode)
  *   SMS_USE_DLT            — "true" to enable DLT mode (default: false = RCS)
@@ -158,16 +169,24 @@ function shouldUseDlt(): boolean {
 function getSmsHorizonConfig(): {
   apiKey: string
   user: string
-  senderId: string
+  senderId?: string
   templateId?: string
   type: string
   useDlt: boolean
 } | null {
   const apiKey = process.env.SMSHORIZON_API_KEY
   const user = process.env.SMSHORIZON_USER
-  const senderId = process.env.SMSHORIZON_SENDER_ID
 
-  if (!apiKey || !user || !senderId) {
+  if (!apiKey || !user) {
+    return null
+  }
+  // Sender ID is optional in config, but SMSHorizon's API requires it.
+  // If not set, the send function will detect this and skip SMSHorizon,
+  // falling through to MSG91 (which supports no-sender-ID mode).
+  const senderId = process.env.SMSHORIZON_SENDER_ID || undefined
+  if (!senderId) {
+    // No sender ID configured → SMSHorizon can't be used (API requires it).
+    // Return null so the system falls through to MSG91.
     return null
   }
   const useDlt = shouldUseDlt()
@@ -713,37 +732,32 @@ export async function sendOtp(
   // Build the professional branded OTP message with the actual code
   const messageBody = buildOtpMessage(brandName, otpCode, type)
 
-  // ── PRIMARY: try SMSHorizon ──
+  // ── PRIMARY: try SMSHorizon (only if sender ID is configured — API requires it) ──
   if (smsHorizonConfig) {
-    const senderIdError = validateSenderId(smsHorizonConfig.senderId)
-    if (senderIdError) {
-      console.warn(
-        `[SMSHorizon] Configuration issue — skipping to MSG91/dev: ${senderIdError}`,
+    // SMSHorizon's API requires a sender ID. getSmsHorizonConfig() already
+    // returns null if senderId is missing, so if we're here, it's set.
+    try {
+      return await sendOtpViaSmsHorizon(
+        cleanMobile,
+        type,
+        smsHorizonConfig,
+        otpCode,
+        messageBody,
       )
-    } else {
-      try {
-        return await sendOtpViaSmsHorizon(
-          cleanMobile,
-          type,
-          smsHorizonConfig,
-          otpCode,
-          messageBody,
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      // DLT/template/auth/sender errors are non-retryable config issues —
+      // fall back to MSG91 (which supports no-sender-ID mode) or dev mode.
+      if (/not matched|template|dlt|not approved|invalid sender|sender id|header|auth|unauthor|401|403/i.test(errMsg)) {
+        console.warn(
+          `[SMSHorizon] Non-retryable error — falling back to MSG91: ${errMsg}`,
         )
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err)
-        // DLT/template/auth errors are non-retryable config issues — fall back
-        // to MSG91 or dev mode instead of hard-failing the login.
-        if (/not matched|template|dlt|not approved|invalid sender|header|auth|unauthor|401|403/i.test(errMsg)) {
-          console.warn(
-            `[SMSHorizon] Non-retryable error — falling back: ${errMsg}`,
-          )
-        } else {
-          console.warn(
-            `[SMSHorizon] Failed after retries — falling back to MSG91/dev: ${errMsg}`,
-          )
-        }
-        // Fall through to MSG91 / dev mode below.
+      } else {
+        console.warn(
+          `[SMSHorizon] Failed after retries — falling back to MSG91: ${errMsg}`,
+        )
       }
+      // Fall through to MSG91 / dev mode below.
     }
   }
 
@@ -755,20 +769,19 @@ export async function sendOtp(
 
   const config = msg91Config
 
-  // Pre-flight check: validate the MSG91 sender ID (DLT requires exactly 6
-  // alphabetic chars). An invalid sender ID is a hard block — Indian telecom
-  // operators reject non-6-char sender IDs, so we fall back to dev mode.
-  //
-  // NOTE on balance: we do NOT pre-check the MSG91 balance via the balance.php
-  // API because that endpoint is unreliable — it returns 0 even when the
-  // account wallet has funds (the dashboard wallet and the balance.php pool
-  // are different). Pre-checking balance caused legitimate sends to be
-  // silently skipped (dev-mode fallback) even with a funded wallet. Instead,
-  // we attempt the send and handle any actual error MSG91 returns.
-  const senderIdError = validateSenderId(config.senderId)
-  if (senderIdError) {
-    console.warn(`[MSG91] Configuration issue — falling back to dev mode: ${senderIdError}`)
-    return storeDevOtp(cleanMobile, type)
+  // NOTE: MSG91 sender ID is OPTIONAL. When omitted, MSG91 uses its default
+  // global sender ID — no registration/approval needed. This enables RCS mode
+  // (no sender ID, no DLT). When a sender ID IS configured, we validate it's
+  // 6 alphabetic chars (DLT rule) — but we don't hard-block on validation;
+  // instead we log a warning and proceed (MSG91 will reject it if invalid).
+  if (config.senderId) {
+    const senderIdError = validateSenderId(config.senderId)
+    if (senderIdError) {
+      console.warn(`[MSG91] Sender ID note: ${senderIdError}`)
+      // Don't fall back to dev mode — just omit the sender and let MSG91
+      // use its default global sender (RCS mode).
+      config.senderId = undefined
+    }
   }
 
   // Build the professional branded OTP message with the actual code
