@@ -330,24 +330,19 @@ export async function sendOtp(
 
   // ── Production: generate OTP, send via MSG91 Send SMS API ──
   //
-  // Pre-flight checks: validate the sender ID (DLT requires exactly 6
-  // alphabetic chars) and the account balance (MSG91 returns API "success"
-  // even with 0 balance, but never delivers the SMS). If either check fails
-  // we fall back to dev mode so login still works for testing, while logging
-  // a clear, actionable warning visible in dev.log / Vercel logs.
+  // Pre-flight check: validate the sender ID (DLT requires exactly 6
+  // alphabetic chars). An invalid sender ID is a hard block — Indian telecom
+  // operators reject non-6-char sender IDs, so we fall back to dev mode.
+  //
+  // NOTE on balance: we do NOT pre-check the MSG91 balance via the balance.php
+  // API because that endpoint is unreliable — it returns 0 even when the
+  // account wallet has funds (the dashboard wallet and the balance.php pool
+  // are different). Pre-checking balance caused legitimate sends to be
+  // silently skipped (dev-mode fallback) even with a funded wallet. Instead,
+  // we attempt the send and handle any actual error MSG91 returns.
   const senderIdError = validateSenderId(config.senderId)
   if (senderIdError) {
     console.warn(`[MSG91] Configuration issue — falling back to dev mode: ${senderIdError}`)
-    return storeDevOtp(cleanMobile, type)
-  }
-
-  const balance = await getMsg91Balance(config.authKey, config.route)
-  if (balance !== null && balance <= 0) {
-    console.warn(
-      `[MSG91] Account balance is 0 on route ${config.route} — MSG91 will accept ` +
-        `the API request but NOT deliver the SMS. Falling back to dev mode (test OTP 123456). ` +
-        `FIX: recharge your MSG91 account at https://msg91.com → Recharge.`,
-    )
     return storeDevOtp(cleanMobile, type)
   }
 
@@ -434,7 +429,11 @@ export async function sendOtp(
     // A 418 / "IP not whitelisted" failure is transient (NAT egress IP) —
     // retry; other failures are surfaced immediately.
     if (response.ok && data.type !== 'error') {
+      // MSG91 v2 sendsms returns {"type":"success","message":"<campaign_id>"}.
+      // The campaign/request ID is in the `message` field on success (on error,
+      // `message` is the error description — but we only reach here on success).
       refId =
+        data.message ||
         data.data?.[0]?._id ||
         data.campaign_id ||
         data._id ||

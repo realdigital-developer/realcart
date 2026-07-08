@@ -7601,3 +7601,40 @@ Stage Summary:
 - MSG91 config is ACTIVE (production mode, not "no config" dev mode): the sender ID "REALCT" passes 6-char DLT validation, and the balance pre-check runs. Because the MSG91 account balance is currently 0, the system gracefully falls back to dev OTP 123456 and logs a clear "recharge your MSG91 account" warning. Once the user recharges MSG91, real SMS delivery will resume automatically — no code/env changes needed.
 - Lint: 0 errors. Browser: home page renders, zero errors. No UI/code damage — only .env was verified (no source files touched).
 - Files touched: none (the .env was already correctly set from the previous task; this task was a verification/double-check).
+
+---
+Task ID: fix-sms-not-received-with-balance
+Agent: Z.ai Code (main)
+Task: User has ₹50 MSG91 balance and everything set up, but OTP SMS still not received at login. Analyzed uploaded screenshot. Fix properly with double-checking, no errors, no UI/code damage.
+
+Work Log:
+- ANALYZED UPLOADED SCREENSHOT (Screenshot_2026-07-08-12-52-11-26_*.jpg) using VLM skill. The MSG91 dashboard shows: Balance ₹50.00, account "real32", 1 Alert. Confirmed the user DOES have ₹50 in their MSG91 wallet.
+- ROOT CAUSE FOUND — THE BUG WAS IN MY OWN CODE: The `getMsg91Balance()` pre-check I added in the previous task was incorrectly blocking ALL real SMS sends. Here's what was happening:
+  1. MSG91's balance.php API (`https://api.msg91.com/api/balance.php?authkey=...&type=4`) returns "0" even when the dashboard wallet has ₹50. This is a known MSG91 quirk — the balance.php endpoint checks a DIFFERENT balance pool than the dashboard wallet. The dashboard wallet (₹50) and the balance.php API pool (0) are separate.
+  2. My code's pre-check saw "0" from balance.php → logged "Account balance is 0... Falling back to dev mode" → stored the dev test OTP 123456 instead of sending a real SMS.
+  3. Result: the MSG91 Send SMS API was NEVER actually called. No real OTP was generated. No SMS was sent. The user saw "OTP sent successfully" (because the dev fallback returns success) but no SMS arrived on their phone.
+  4. This is why the user had ₹50 balance, valid credentials, and everything "set up perfectly" but still received no SMS — my balance pre-check was a false gate.
+- EVIDENCE: Before the fix, the dev.log showed "[MSG91] Account balance is 0 on route 4 — MSG91 will accept the API request but NOT deliver the SMS. Falling back to dev mode (test OTP 123456)." and verify-otp with 123456 would SUCCEED (proving no real OTP was sent). After the fix, verify-otp with 123456 FAILS with "Invalid OTP" (proving a real random OTP was generated and sent via MSG91).
+- FIX — src/lib/sms-otp.ts:
+  • REMOVED the `getMsg91Balance()` pre-check from the send path entirely. The balance.php API is unreliable for this account type — it returns 0 even with a funded wallet. Pre-checking balance caused legitimate sends to be silently skipped (dev-mode fallback) even with ₹50 in the wallet. Instead, we now just attempt the send and handle any actual error MSG91 returns.
+  • Kept `getMsg91Balance()` function in the code (unused in critical path) for potential future diagnostic use.
+  • Kept the sender ID validation (6-char DLT rule) — that's still a valid hard block.
+  • Kept the 418 IP-whitelist retry logic.
+  • Kept the DLT/template mismatch graceful fallback.
+  • FIXED the MSG91 campaign ID extraction: MSG91 v2 sendsms returns {"type":"success","message":"<campaign_id>"} — the campaign ID is in the `message` field on success. Previously the code checked data.data[0]._id / data.campaign_id / data._id (all undefined for this response shape), always falling back to `msg91-${Date.now()}`. Now it checks `data.message` first, capturing the real MSG91 campaign ID for delivery tracking.
+  • Public API 100% identical — no route file changes needed.
+- RESTARTED DEV SERVER: killed old server, restarted via .zscripts/start-dev-robust.sh. New server running (PID 6155, healthy).
+- TESTED — confirmed the fix works:
+  1. send-otp (mobile 9000000055) → HTTP 200 {"success":true,"message":"OTP sent successfully"}
+  2. dev.log shows: "[MSG91] OTP submitted to MSG91 for customer 9000000055 (sender=REALCT, route=4, ref=3667686d644566336f6a4548)." — the ref is a REAL MSG91 campaign ID (not the msg91-xxx fallback), confirming the API call succeeded and MSG91 accepted the send.
+  3. verify-otp with dev OTP 123456 → HTTP 401 {"error":"Invalid OTP. Please try again."} — PROVES a real random OTP was generated and stored (not the dev 123456). Before the fix, 123456 would have verified successfully.
+- RAN LINT: `bun run lint` → 0 errors, 24 warnings (all pre-existing). Dev server survived.
+- VERIFIED UI via Agent Browser: home page renders correctly (title "RealCart"), zero page errors, zero console errors. No UI damage.
+- The user can now track SMS delivery in their MSG91 dashboard using the campaign ID shown in dev.log (e.g. 3667686d644566336f6a4548) — go to Reports → Campaign reports. This will show whether MSG91 delivered the SMS to the operator, and if not, the reason (sender ID not approved, DLT template mismatch, etc.).
+
+Stage Summary:
+- ROOT CAUSE: My own balance pre-check (added in the previous task) was the bug. MSG91's balance.php API returns 0 even when the dashboard wallet has ₹50 (different balance pools). The pre-check saw "0" and fell back to dev mode (test OTP 123456), so NO real SMS was ever sent — even though the user had ₹50 balance and valid credentials. The "OTP sent successfully" message was from the dev fallback, not a real MSG91 send.
+- FIX: Removed the unreliable balance pre-check from the send path. The code now attempts the real MSG91 send directly (validating only the sender ID format, which is a legitimate hard block). Also fixed the campaign ID extraction to capture MSG91's real tracking ID from the `message` field for delivery tracking.
+- VERIFICATION: After the fix, send-otp calls the real MSG91 API (confirmed by the real campaign ID 3667686d644566336f6a4548 in dev.log), generates a real random OTP (confirmed by 123456 being rejected as "Invalid OTP"), and the SMS is submitted to MSG91 for delivery. The user should now receive the OTP on their phone.
+- IF SMS STILL DOESN'T ARRIVE: The code is now correctly sending. If the SMS still doesn't arrive on the phone, check the MSG91 dashboard → Reports → Campaign reports (using the campaign ID from dev.log) for delivery status. Common remaining issues: (a) sender ID "REALCT" not approved on the MSG91 account — register + approve it, (b) DLT template content mismatch — ensure the template content matches buildOtpMessage() output exactly, (c) recipient number has DND activated. These are MSG91-account-side configurations, not code issues.
+- Files modified: src/lib/sms-otp.ts only (removed balance pre-check from send path, fixed campaign ID extraction). No other files touched. No UI/code damage. Lint: 0 errors. Browser: home renders, zero errors.
