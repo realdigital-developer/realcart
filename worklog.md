@@ -7359,3 +7359,39 @@ Stage Summary:
 - Lint: 0 errors. Browser: renders correctly, interactive (Refresh + Toggle theme work), live MongoDB data, zero console/page errors.
 - The prisma/schema.prisma is unused boilerplate (confirmed by the existing worklog) — db:push is harmless but unnecessary; the app runs entirely on MongoDB.
 - Artifacts created: .zscripts/start-dev-robust.sh (robust persistent dev starter). Backups at /tmp/pre_restore_backup (old scaffold, not needed for the app but kept for safety).
+
+---
+Task ID: fix-preview-not-opening
+Agent: Z.ai Code (main)
+Task: The user reported they could not open the code and preview of the project in the sandbox. Diagnose and fix robustly with double-checking, ensuring no errors and no damage to existing UI/code.
+
+Work Log:
+- DIAGNOSIS: Checked the dev server state and found it was NOT running (no next/next-server process, port 3000 not listening). The dev.log file was also MISSING. Caddy gateway (PID 2) was still running.
+- ROOT CAUSE: The sandbox container had been RESET/RESTARTED at 04:25 (tini PID 1 + caddy + python controller all started fresh at that time). On reset, the sandbox-managed infrastructure files were lost: `.zscripts/` directory (which contains dev.sh that the controller runs to auto-start the dev server), `dev.log`, `db/`, and the project-level `Caddyfile` were all gone. The RealCart SOURCE code survived (it lives in the persistent project dir: src/, public/, prisma/, scripts/, package.json, node_modules, etc. all intact — 422 src + 4 public + 1 prisma + 1 scripts = 428 files, matching the original copy exactly).
+- Because `.zscripts/dev.sh` was missing, the sandbox controller could not auto-start the dev server on boot → nothing was listening on port 3000 → the preview panel (which reaches the app via the Caddy gateway on port 81 → localhost:3000) showed nothing → user could not open the preview.
+- VERIFIED source integrity before any changes: src/app/page.tsx, src/app/layout.tsx, src/lib/mongodb.ts, src/lib/utils.ts, package.json (name: realcart), next.config.ts, tsconfig.json all present. node_modules/next present. .env preserved (DATABASE_URL=file:/home/z/my-project/db/custom.db). Memory healthy (3.5GB available).
+- FIX STEP 1 — Recreated the `db/` folder (needed for prisma db:push compatibility, since .env references file:/home/z/my-project/db/custom.db).
+- FIX STEP 2 — Recreated the `.zscripts/` directory.
+- FIX STEP 3 — Recreated `.zscripts/dev.sh` with the EXACT content the sandbox controller expects (full dev.sh: bun install → bun run db:push → bun run dev & → wait_for_service → health check → start_mini_services → disown DEV_PID → unset DEV_PID so the EXIT trap doesn't kill it, causing it to reparent to tini). This restores future-boot compatibility so the controller can auto-start the dev server on the next container restart.
+- FIX STEP 4 — Recreated `.zscripts/start-dev-robust.sh` (my robust starter from the previous session). Rationale: the project's package.json dev script uses NODE_OPTIONS=--max-old-space-size=1536 with --webpack, which in this 4GB sandbox causes V8 GC thrashing when the browser triggers on-demand webpack compilation of ~100+ client hydration chunks (diagnosed in the previous session — RSS pins at the 1.5GB limit, R state, 0 progress = livelock). The robust starter keeps the project code EXACTLY as-is (no package.json change) but launches `next dev` directly with --max-old-space-size=2560 via setsid, then disowns to tini for persistence across Bash-tool-call cleanup.
+- FIX STEP 5 — Started the dev server via `.zscripts/start-dev-robust.sh`. The starter blocks until the server is ready (curl on port 3000 succeeds), then exits, leaving the dev server reparented to tini (PID 1) so it survives subsequent Bash tool calls.
+- PERSISTENCE VERIFIED: In a SEPARATE tool call after the starter exited, confirmed next-server (PID 1223) still alive, port 3000 listening, home page returns HTTP 200 in 30ms with title "RealCart". MongoDB connected, all indexes created (dev.log shows clean initialization).
+- Agent Browser end-to-end verification:
+  • Opened http://localhost:3000/ → title "RealCart", page loaded.
+  • Waited 25s for client-chunk compilation + hydration (generous time; no thrash at 2560MB).
+  • Page errors: EMPTY (zero errors).
+  • Console errors/warnings: EMPTY (clean).
+  • DOM snapshot: home page renders the RealCart Database Schema viewer with LIVE MongoDB data (admins: 1 document), interactive elements present (Toggle theme button ref=e3, Refresh button ref=e5, schema data tables).
+  • Clicked "Refresh" → ✓ Done; triggered GET /api/admin/schemas 200 (23ms). No errors.
+  • Clicked "Toggle theme" → ✓ Done. No errors.
+  • Post-interaction error check: EMPTY (zero errors).
+  • Dev server health after browser interaction: next-server PID 1223, State Rl (running), RSS 1.14GB — well within the 2560MB limit, NOT thrashing. Home page HTTP 200 in 0.148s.
+- GATEWAY VERIFICATION: Confirmed the Caddy gateway (port 81 → localhost:3000) returns HTTP 200 — this is the path the preview panel uses to reach the app.
+- No existing UI or code was damaged: only infrastructure files were recreated (.zscripts/dev.sh, .zscripts/start-dev-robust.sh, db/ folder). Zero source files were modified. The RealCart source remains byte-for-byte the same as the previously-verified copy (428 files).
+
+Stage Summary:
+- ROOT CAUSE: Sandbox container reset wiped the `.zscripts/` directory (which the controller uses to auto-start the dev server via dev.sh), `dev.log`, and `db/`. With no dev.sh, the controller couldn't start the dev server on boot → port 3000 empty → preview panel couldn't reach the app.
+- FIX: Recreated the missing infrastructure (db/ folder, .zscripts/dev.sh with exact sandbox-expected content, .zscripts/start-dev-robust.sh) and started the dev server persistently via the robust starter (2560MB heap to avoid GC thrashing, setsid+disown to tini for cross-tool-call persistence).
+- VERIFIED: Dev server running persistently (PID 1223, uptime 1:28, RSS 1.14GB healthy), port 3000 listening, home page HTTP 200 in 32ms, /api/health HTTP 200, gateway port 81 → 3000 HTTP 200 (preview path confirmed working). Agent Browser: app renders with live MongoDB data, Refresh + Toggle theme interactions work, zero console/page errors.
+- The preview is now accessible. The user can open it via the Preview Panel on the right (or "Open in New Tab").
+- Files created: .zscripts/dev.sh (exact sandbox format, for future-boot auto-start), .zscripts/start-dev-robust.sh (2560MB robust starter), db/ folder. No source files modified.
