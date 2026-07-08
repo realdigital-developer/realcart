@@ -284,6 +284,7 @@ export async function sendOtp(
   // ── Production: send OTP via Authgear Authentication Flow API ──
   try {
     // Step 1: Create a new authentication flow
+    // Authgear wraps responses in a "result" object: {"result":{"state_token":"..."}}
     const flowResponse = await authgearPost(
       `${config.endpoint}/api/v1/authentication_flows?client_id=${encodeURIComponent(config.clientId)}`,
       {
@@ -293,12 +294,16 @@ export async function sendOtp(
       config,
     )
 
-    const stateToken = flowResponse.state_token as string
+    const flowResult =
+      (flowResponse.result as Record<string, unknown>) || flowResponse
+    const stateToken = flowResult.state_token as string
     if (!stateToken) {
       throw new Error('Authgear did not return a state_token.')
     }
 
     // Step 2: Identify with phone number → triggers SMS OTP
+    // Authgear expects the phone in the "login_id" field (not "login").
+    // The phone must be in E.164 format (e.g. +919876543210).
     const identifyResponse = await authgearPost(
       `${config.endpoint}/api/v1/authentication_flows/states/input`,
       {
@@ -306,13 +311,15 @@ export async function sendOtp(
         input: {
           type: 'identify',
           identification: 'phone',
-          login: toE164(cleanMobile),
+          login_id: toE164(cleanMobile),
         },
       },
       config,
     )
 
-    const newStateToken = (identifyResponse.state_token as string) || stateToken
+    const identifyResult =
+      (identifyResponse.result as Record<string, unknown>) || identifyResponse
+    const newStateToken = (identifyResult.state_token as string) || stateToken
 
     // Store the Authgear state_token in otp_sessions for verification
     const { db } = await connectToDatabase()
@@ -451,9 +458,12 @@ export async function verifyOtp(
       config,
     )
 
-    // Authgear returns {type: "finished", ...} on successful verification,
-    // or an error if the code is wrong.
-    const responseType = verifyResponse.type as string
+    // Authgear wraps responses in a "result" object: {"result":{"type":"finished",...}}
+    // On successful OTP verification, result.type is "finished" (or "no_step").
+    // On wrong code, Authgear returns an error response (caught by the catch block).
+    const verifyResult =
+      (verifyResponse.result as Record<string, unknown>) || verifyResponse
+    const responseType = verifyResult.type as string
     const isValid = responseType === 'finished' || responseType === 'no_step'
 
     if (isValid) {
