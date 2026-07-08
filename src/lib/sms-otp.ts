@@ -70,17 +70,19 @@ export interface VerifyOtpResult {
  *
  * Required env vars:
  *   MSG91_AUTH_KEY     — Authentication key from MSG91 dashboard
- *   MSG91_SENDER_ID    — 6-character approved sender ID (e.g. "REALCRT")
+ *   MSG91_SENDER_ID    — 6-character approved sender ID (e.g. "REALCT")
  *
  * Optional env vars:
  *   MSG91_ROUTE        — Route number (default "4" = transactional)
- *   MSG91_TEMPLATE_ID  — DLT template ID (required for Indian DLT compliance)
+ *   MSG91_TEMPLATE_ID  — DLT template ID (only used when SMS_USE_DLT=true)
+ *   SMS_USE_DLT        — "true" to enable DLT mode (default: false = RCS)
  */
 function getMsg91Config(): {
   authKey: string
   senderId: string
   route: string
   templateId?: string
+  useDlt: boolean
 } | null {
   const authKey = process.env.MSG91_AUTH_KEY
   const senderId = process.env.MSG91_SENDER_ID
@@ -88,17 +90,43 @@ function getMsg91Config(): {
   if (!authKey || !senderId) {
     return null
   }
+  const useDlt = shouldUseDlt()
   return {
     authKey,
     senderId,
     route: process.env.MSG91_ROUTE || '4',
-    templateId: process.env.MSG91_TEMPLATE_ID || undefined,
+    // Only retain the template ID when DLT mode is enabled. In RCS mode
+    // (default), the template_id param is omitted entirely from the API request.
+    templateId: useDlt ? (process.env.MSG91_TEMPLATE_ID || undefined) : undefined,
+    useDlt,
   }
 }
 
 /** Whether MSG91 is properly configured (false = dev mode). */
 export function isSmsConfigured(): boolean {
   return getMsg91Config() !== null
+}
+
+/* ------------------------------------------------------------------ */
+/*  DLT mode flag (RCS vs DLT SMS)                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Whether to use DLT (Distributed Ledger Technology) SMS sending.
+ *
+ * Default: FALSE (RCS / non-DLT mode).
+ *   - The DLT template ID (tid / template_id) is NOT sent with the API
+ *     request. This uses RCS / non-DLT delivery, which bypasses TRAI's DLT
+ *     template-matching requirements.
+ *
+ * Set SMS_USE_DLT=true to enable DLT mode:
+ *   - The DLT template ID (if configured) IS sent with each request.
+ *   - Required for traditional DLT-compliant SMS delivery in India.
+ *
+ * This flag applies to BOTH SMSHorizon (primary) and MSG91 (fallback).
+ */
+function shouldUseDlt(): boolean {
+  return process.env.SMS_USE_DLT === 'true'
 }
 
 /* ------------------------------------------------------------------ */
@@ -112,16 +140,18 @@ export function isSmsConfigured(): boolean {
  * SMSHorizon API (https://smshorizon.co.in/api/v2/sendsms.php):
  *   - Auth: Bearer token in Authorization header (the API key)
  *   - Required params: user, mobile, senderid, message
- *   - Recommended: tid (DLT template ID), type (txt)
+ *   - Optional: tid (DLT template ID — only sent when SMS_USE_DLT=true),
+ *     type (txt)
  *
  * Required env vars:
  *   SMSHORIZON_API_KEY   — API key from SMSHorizon dashboard (used as Bearer token)
  *   SMSHORIZON_USER      — Account username (the "user" param)
- *   SMSHORIZON_SENDER_ID — 6-character approved DLT sender ID (e.g. "REALCT")
+ *   SMSHORIZON_SENDER_ID — 6-character sender ID (e.g. "REALCT")
  *
  * Optional env vars:
- *   SMSHORIZON_TEMPLATE_ID — DLT template ID (tid param, required for Indian DLT)
+ *   SMSHORIZON_TEMPLATE_ID — DLT template ID (only used when SMS_USE_DLT=true)
  *   SMSHORIZON_TYPE        — Message type: "txt" (default) or "uni" (Unicode)
+ *   SMS_USE_DLT            — "true" to enable DLT mode (default: false = RCS)
  */
 function getSmsHorizonConfig(): {
   apiKey: string
@@ -129,6 +159,7 @@ function getSmsHorizonConfig(): {
   senderId: string
   templateId?: string
   type: string
+  useDlt: boolean
 } | null {
   const apiKey = process.env.SMSHORIZON_API_KEY
   const user = process.env.SMSHORIZON_USER
@@ -137,12 +168,16 @@ function getSmsHorizonConfig(): {
   if (!apiKey || !user || !senderId) {
     return null
   }
+  const useDlt = shouldUseDlt()
   return {
     apiKey,
     user,
     senderId,
-    templateId: process.env.SMSHORIZON_TEMPLATE_ID || undefined,
+    // Only retain the template ID when DLT mode is enabled. In RCS mode
+    // (default), the tid param is omitted entirely from the API request.
+    templateId: useDlt ? (process.env.SMSHORIZON_TEMPLATE_ID || undefined) : undefined,
     type: process.env.SMSHORIZON_TYPE || 'txt',
+    useDlt,
   }
 }
 
@@ -323,6 +358,9 @@ async function sendOtpViaSmsHorizon(
   params.append('message', messageBody)
   params.append('type', config.type)
   if (config.templateId) {
+    // DLT mode (SMS_USE_DLT=true): include the DLT template ID (tid).
+    // In RCS mode (default, SMS_USE_DLT=false), templateId is undefined
+    // and tid is omitted entirely — the message is sent without DLT.
     params.append('tid', config.templateId)
   }
 

@@ -7692,3 +7692,42 @@ Stage Summary:
     SMSHORIZON_TYPE=txt
   Restart the dev server. SMSHorizon will then be used as the primary provider; MSG91 remains as automatic fallback.
 - Files modified: src/lib/sms-otp.ts (added SMSHorizon config + sendOtpViaSmsHorizon + wired as primary in sendOtp), .env (added SMSHorizon vars), .env.example (added SMSHorizon section + re-labeled MSG91 as fallback), .zscripts/start-dev-robust.sh (recreated after sandbox reset). No other files touched.
+
+---
+Task ID: rcs-mode-without-dlt
+Agent: Z.ai Code (main)
+Task: Use only RCS SMS without DLT SMS for OTP. Make RCS/no-DLT the default. Robust solution with double-checking, no errors, no UI/code damage.
+
+Work Log:
+- STUDIED THE CODE: Read src/lib/sms-otp.ts to find all places where the DLT template ID is sent. Found exactly two:
+  1. SMSHorizon (line 360-362): `if (config.templateId) { params.append('tid', config.templateId) }` — the `tid` (DLT template ID) is conditionally appended to the form-encoded body.
+  2. MSG91 (line 661): `...(config.templateId ? { template_id: config.templateId } : {})` — the `template_id` is conditionally spread into the JSON SMS entry.
+  Both were already conditional on `config.templateId` being set. So the key to RCS/no-DLT mode is making `templateId` undefined when DLT is not desired.
+- DESIGN: Added a single `SMS_USE_DLT` environment flag (default: false = RCS mode) that controls whether the DLT template ID is EVER sent to either provider. This is the cleanest approach — one flag, applied at the config layer, so the send functions don't need changes (they already check `if (config.templateId)`).
+- IMPLEMENTED in src/lib/sms-otp.ts:
+  • Added `shouldUseDlt()` helper: returns `process.env.SMS_USE_DLT === 'true'`. Default is false (RCS mode).
+  • Updated `getMsg91Config()`: added `useDlt` field. The `templateId` is now set to `useDlt ? (process.env.MSG91_TEMPLATE_ID || undefined) : undefined`. In RCS mode (default), `templateId` is ALWAYS undefined → the `template_id` param is never sent to MSG91.
+  • Updated `getSmsHorizonConfig()`: same pattern. `templateId` is `useDlt ? (process.env.SMSHORIZON_TEMPLATE_ID || undefined) : undefined`. In RCS mode, `tid` is never sent to SMSHorizon.
+  • Added a clear comment on the `tid` append in sendOtpViaSmsHorizon: "DLT mode (SMS_USE_DLT=true): include the DLT template ID (tid). In RCS mode (default, SMS_USE_DLT=false), templateId is undefined and tid is omitted entirely — the message is sent without DLT."
+  • The MSG91 send block's existing `...(config.templateId ? { template_id: config.templateId } : {})` already handles this correctly — when templateId is undefined (RCS mode), template_id is omitted.
+  • Public API 100% identical — no route file changes needed.
+- UPDATED .env: added `SMS_USE_DLT=false` at the top of the SMS section with clear documentation. Kept MSG91_TEMPLATE_ID and SMSHORIZON_TEMPLATE_ID in .env (they're now ignored in RCS mode, but available if the user switches to DLT mode later by setting SMS_USE_DLT=true). Updated comments to clarify "Template ID only used if SMS_USE_DLT=true".
+- UPDATED .env.example: added a new "SMS delivery mode (RCS vs DLT)" section at the top documenting the SMS_USE_DLT flag with clear explanations of both modes. Updated both the SMSHorizon and MSG91 sections to note that TEMPLATE_ID is "only needed if SMS_USE_DLT=true (DLT mode). In RCS mode (default), this is ignored." Updated the API body documentation to show `[tid if DLT]` (conditional).
+- RESTARTED DEV SERVER: killed old server, restarted via .zscripts/start-dev-robust.sh. New server running (PID 2083, healthy).
+- TESTED OTP FLOW (all 3 panels, RCS mode):
+  • Customer send-otp (9000000011) → 200 {"success":true} ✓
+  • Seller send-otp (9000000012) → 200 {"success":true} ✓
+  • Delivery-boy send-otp (9000000013) → 200 {"success":true} ✓
+  • dev.log confirms: SMSHorizon attempted (fails — placeholder creds) → MSG91 fallback succeeds with real campaign IDs. The MSG91 request does NOT include template_id (RCS mode).
+  • Verified SMS_USE_DLT=false in .env. Verified the config readers set templateId=undefined in RCS mode. Verified the send functions omit tid/template_id when templateId is undefined.
+- RAN LINT: `bun run lint` → 0 errors, 24 warnings (all pre-existing). Dev server survived.
+- VERIFIED UI via Agent Browser: home page renders correctly (title "RealCart"), zero page errors, zero console errors. No UI damage.
+
+Stage Summary:
+- RCS / no-DLT mode is now the DEFAULT for OTP delivery. The `SMS_USE_DLT=false` flag (set in .env) causes both SMSHorizon (primary) and MSG91 (fallback) to omit the DLT template ID (`tid` / `template_id`) from their API requests entirely. Messages are sent without DLT template matching.
+- SINGLE FLAG, CLEAN DESIGN: One `SMS_USE_DLT` env var controls both providers. The flag is read at the config layer (getMsg91Config / getSmsHorizonConfig), which sets `templateId=undefined` in RCS mode. The send functions already conditionally include the template ID only when it's defined — so no send-function changes were needed. This is the most robust, least-invasive approach.
+- OPT-IN DLT: If DLT-compliant SMS is ever needed (e.g. for production carrier compliance), set `SMS_USE_DLT=true` and ensure MSG91_TEMPLATE_ID / SMSHORIZON_TEMPLATE_ID are set. The system will then include the template ID with each request. Both modes work without code changes.
+- EVERYTHING ELSE INTACT: The provider fallback chain (SMSHorizon → MSG91 → dev mode), retry logic, 418 IP-whitelist handling, sender ID validation, OTP generation/hashing/verification, otp_sessions MongoDB storage, and the public API (sendOtp/verifyOtp/isOtpVerified/clearOtpSession/isSmsConfigured/isSmsHorizonConfigured) are all unchanged. Zero route file changes. Zero UI changes.
+- NO UI/CODE DAMAGE: Lint: 0 errors. Browser: home renders "RealCart", zero errors. All 3 panels' OTP endpoints return 200. Only src/lib/sms-otp.ts, .env, .env.example were modified.
+- VERCEL: Add `SMS_USE_DLT=false` (or omit it — false is the default) plus the provider credentials in Project Settings → Environment Variables. The RCS mode works identically on Vercel.
+- Files modified: src/lib/sms-otp.ts (added shouldUseDlt + useDlt field in both configs + clarified tid comment), .env (added SMS_USE_DLT=false + updated comments), .env.example (added RCS vs DLT section + updated provider docs). No other files touched.
