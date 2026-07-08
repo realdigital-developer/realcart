@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // New delivery boy — send OTP via SMS gateway (MSG91 SMS API or dev mode)
+    // New delivery boy — send OTP via SMS gateway (Authgear API or dev mode)
     await sendOtp(mobile, 'delivery_boy')
 
     return NextResponse.json({

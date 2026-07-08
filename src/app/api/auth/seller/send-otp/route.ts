@@ -7,7 +7,7 @@ const SELLERS_COLLECTION = 'sellers'
 /**
  * POST /api/auth/seller/send-otp
  * Send an OTP to a mobile number for new seller registration (or resend).
- * Uses server-side SMS OTP (MSG91 SMS API) with dev-mode fallback (test OTP 123456).
+ * Uses server-side SMS OTP (Authgear API) with dev-mode fallback (test OTP 123456).
  *
  * Body: { mobile: string }
  */
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send OTP via SMS gateway (MSG91 SMS API or dev mode)
+    // Send OTP via SMS gateway (Authgear API or dev mode)
     await sendOtp(mobile, 'seller')
 
     return NextResponse.json({

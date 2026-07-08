@@ -1,46 +1,37 @@
 /**
- * SMS OTP Module — Server-Side OTP via MSG91 Send SMS API
+ * SMS OTP Module — Server-Side OTP via Authgear Authentication Flow API
  *
  * Architecture:
- *   - sendOtp(mobile) → generates a 6-digit OTP, builds a fully custom branded
- *     SMS message, sends it via MSG91's Send SMS API, stores the OTP hash in
- *     MongoDB's otp_sessions collection.
- *   - verifyOtp(mobile, otp) → compares the entered OTP against the stored
- *     hashed OTP. On success, marks otp_sessions.verified = true.
+ *   - sendOtp(mobile) → creates an Authgear authentication flow, identifies
+ *     the user by phone number (which triggers Authgear to send an SMS OTP),
+ *     and stores the Authgear flow state_token in MongoDB's otp_sessions
+ *     collection.
+ *   - verifyOtp(mobile, otp) → retrieves the state_token from otp_sessions,
+ *     submits the OTP code to Authgear's flow API for verification. On
+ *     success, marks otp_sessions.verified = true.
  *
- * Why MSG91 Send SMS API (not MSG91's OTP API)?
- *   We generate and verify the OTP ourselves (stored as a SHA-256 hash in
- *   MongoDB) so we never trust an external gateway with verification state.
- *   The Send SMS API gives us 100% control over the message body — the OTP
- *   code is embedded directly in our custom branded template. This keeps the
- *   existing otp_sessions collection and verifyOtp() logic fully intact.
+ * Authgear manages the OTP generation, SMS delivery, and verification.
+ * We store only the Authgear flow state_token (not the OTP code) in MongoDB.
  *
- * Dev-mode fallback (free tier / no MSG91 creds):
- *   If MSG91 credentials are NOT configured, the module enters "dev mode".
- *   In dev mode, sendOtp() stores the test OTP (123456) in MongoDB's otp_sessions
- *   collection, and verifyOtp() checks against it. No SMS is sent.
+ * Dev-mode fallback (no Authgear configured):
+ *   If AUTHGEAR_ENDPOINT / AUTHGEAR_CLIENT_ID are NOT set, the module enters
+ *   "dev mode". In dev mode, sendOtp() stores the test OTP (123456) in
+ *   otp_sessions, and verifyOtp() checks against it. No SMS is sent.
  *
- * MSG91 free account setup:
- *   1. Sign up at https://msg91.com (free tier includes trial credits)
- *   2. Copy your AUTH_KEY from the dashboard (top-right → API)
- *   3. Register a 6-character Sender ID (e.g. "REALCRT") — needs approval
- *   4. For Indian numbers (DLT/TRAI compliance): register an SMS template
- *      and set MSG91_TEMPLATE_ID. The template variable for the OTP must
- *      match the position of the code in buildOtpMessage() below.
- *   5. Set these env vars in .env:
- *        MSG91_AUTH_KEY=your-auth-key
- *        MSG91_SENDER_ID=REALCRT
- *        MSG91_TEMPLATE_ID=your-dlt-template-id   (optional but recommended)
- *        MSG91_ROUTE=4                            (optional, default 4 = transactional)
+ * Authgear setup:
+ *   1. Sign up at https://authgear.com
+ *   2. Create a project → copy the endpoint (e.g. https://myapp.authgear.cloud)
+ *   3. Create an OAuth client → copy the client ID
+ *   4. Enable "Phone (SMS)" as an authentication method in the portal
+ *   5. Set these env vars:
+ *        AUTHGEAR_ENDPOINT=https://your-project.authgear.cloud
+ *        AUTHGEAR_CLIENT_ID=your-client-id
  *
  * Server-side only. Never import from client components.
  */
 
 import { connectToDatabase } from '@/lib/mongodb'
-import { getBrandSettings, DEFAULT_BRAND_NAME } from '@/lib/brand-settings'
 import { createHash, randomInt } from 'crypto'
-import https from 'https'
-import { promises as dnsPromises } from 'dns'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -49,7 +40,7 @@ import { promises as dnsPromises } from 'dns'
 export interface SendOtpResult {
   /** Whether the OTP was sent successfully. */
   success: boolean
-  /** MSG91 campaign/message reference (or 'dev-session' in dev mode). */
+  /** Authgear flow reference (or 'dev-session' in dev mode). */
   sid: string
   /** Status: 'pending' (sent, awaiting verification) or 'cancelled'. */
   status: string
@@ -67,213 +58,44 @@ export interface VerifyOtpResult {
 /* ------------------------------------------------------------------ */
 
 /**
- * Resolve MSG91 credentials from environment variables.
- * Returns null if MSG91_AUTH_KEY is missing → triggers dev mode.
+ * Resolve Authgear credentials from environment variables.
+ * Returns null if any required value is missing → triggers dev mode.
  *
  * Required env vars:
- *   MSG91_AUTH_KEY     — Authentication key from MSG91 dashboard
+ *   AUTHGEAR_ENDPOINT   — Authgear project endpoint (e.g. https://myapp.authgear.cloud)
+ *   AUTHGEAR_CLIENT_ID  — OAuth client ID from the Authgear portal
  *
  * Optional env vars:
- *   MSG91_SENDER_ID    — Sender ID. If OMITTED, MSG91 uses its default global
- *                        sender (no registration needed — perfect for RCS mode
- *                        without sender ID / DLT). If set, must be 6 alphabetic chars.
- *   MSG91_ROUTE        — Route number (default "4" = transactional)
- *   MSG91_TEMPLATE_ID  — DLT template ID (only used when SMS_USE_DLT=true)
- *   SMS_USE_DLT        — "true" to enable DLT mode (default: false = RCS)
+ *   AUTHGEAR_FLOW_TYPE  — Flow type: "login" (default) or "signup"
  */
-function getMsg91Config(): {
-  authKey: string
-  senderId?: string
-  route: string
-  templateId?: string
-  useDlt: boolean
+function getAuthgearConfig(): {
+  endpoint: string
+  clientId: string
+  flowType: string
 } | null {
-  const authKey = process.env.MSG91_AUTH_KEY
+  const endpoint = process.env.AUTHGEAR_ENDPOINT
+  const clientId = process.env.AUTHGEAR_CLIENT_ID
 
-  if (!authKey) {
+  if (!endpoint || !clientId) {
     return null
   }
-  const useDlt = shouldUseDlt()
   return {
-    authKey,
-    // Sender ID is OPTIONAL. When omitted, MSG91 uses its default global
-    // sender ID — no registration/approval needed. This enables RCS mode
-    // (no sender ID, no DLT) out of the box.
-    senderId: process.env.MSG91_SENDER_ID || undefined,
-    route: process.env.MSG91_ROUTE || '4',
-    // Only retain the template ID when DLT mode is enabled. In RCS mode
-    // (default), the template_id param is omitted entirely from the API request.
-    templateId: useDlt ? (process.env.MSG91_TEMPLATE_ID || undefined) : undefined,
-    useDlt,
+    endpoint: endpoint.replace(/\/$/, ''), // strip trailing slash
+    clientId,
+    flowType: process.env.AUTHGEAR_FLOW_TYPE || 'login',
   }
 }
 
-/** Whether MSG91 is properly configured (false = dev mode). */
+/** Whether Authgear is properly configured (false = dev mode). */
 export function isSmsConfigured(): boolean {
-  return getMsg91Config() !== null
-}
-
-/* ------------------------------------------------------------------ */
-/*  DLT mode flag (RCS vs DLT SMS)                                      */
-/* ------------------------------------------------------------------ */
-
-/**
- * Whether to use DLT (Distributed Ledger Technology) SMS sending.
- *
- * Default: FALSE (RCS / non-DLT mode).
- *   - The DLT template ID (tid / template_id) is NOT sent with the API
- *     request. This uses RCS / non-DLT delivery, which bypasses TRAI's DLT
- *     template-matching requirements.
- *
- * Set SMS_USE_DLT=true to enable DLT mode:
- *   - The DLT template ID (if configured) IS sent with each request.
- *   - Required for traditional DLT-compliant SMS delivery in India.
- *
- * This flag applies to BOTH SMSHorizon (primary) and MSG91 (fallback).
- */
-function shouldUseDlt(): boolean {
-  return process.env.SMS_USE_DLT === 'true'
-}
-
-/* ------------------------------------------------------------------ */
-/*  SMSHorizon configuration (primary provider)                         */
-/* ------------------------------------------------------------------ */
-
-/**
- * Resolve SMSHorizon credentials from environment variables.
- * Returns null if API_KEY or USER is missing → falls through to MSG91.
- *
- * NOTE: SMSHorizon's API REQUIRES a sender ID (senderid param). If
- * SMSHORIZON_SENDER_ID is not set, this returns null (SMSHorizon is skipped)
- * and the system falls through to MSG91, which supports sending WITHOUT a
- * sender ID (uses its default global sender). This enables RCS mode with
- * no sender ID and no DLT.
- *
- * SMSHorizon API (https://smshorizon.co.in/api/v2/sendsms.php):
- *   - Auth: Bearer token in Authorization header (the API key)
- *   - Required params: user, mobile, senderid, message
- *   - Optional: tid (DLT template ID — only sent when SMS_USE_DLT=true),
- *     type (txt)
- *
- * Required env vars:
- *   SMSHORIZON_API_KEY   — API key from SMSHorizon dashboard (used as Bearer token)
- *   SMSHORIZON_USER      — Account username (the "user" param)
- *
- * Optional env vars:
- *   SMSHORIZON_SENDER_ID  — 6-char sender ID. Required by SMSHorizon API; if
- *                           omitted, SMSHorizon is skipped (falls to MSG91).
- *   SMSHORIZON_TEMPLATE_ID — DLT template ID (only used when SMS_USE_DLT=true)
- *   SMSHORIZON_TYPE        — Message type: "txt" (default) or "uni" (Unicode)
- *   SMS_USE_DLT            — "true" to enable DLT mode (default: false = RCS)
- */
-function getSmsHorizonConfig(): {
-  apiKey: string
-  user: string
-  senderId?: string
-  templateId?: string
-  type: string
-  useDlt: boolean
-} | null {
-  const apiKey = process.env.SMSHORIZON_API_KEY
-  const user = process.env.SMSHORIZON_USER
-
-  if (!apiKey || !user) {
-    return null
-  }
-  // Sender ID is optional in config, but SMSHorizon's API requires it.
-  // If not set, the send function will detect this and skip SMSHorizon,
-  // falling through to MSG91 (which supports no-sender-ID mode).
-  const senderId = process.env.SMSHORIZON_SENDER_ID || undefined
-  if (!senderId) {
-    // No sender ID configured → SMSHorizon can't be used (API requires it).
-    // Return null so the system falls through to MSG91.
-    return null
-  }
-  const useDlt = shouldUseDlt()
-  return {
-    apiKey,
-    user,
-    senderId,
-    // Only retain the template ID when DLT mode is enabled. In RCS mode
-    // (default), the tid param is omitted entirely from the API request.
-    templateId: useDlt ? (process.env.SMSHORIZON_TEMPLATE_ID || undefined) : undefined,
-    type: process.env.SMSHORIZON_TYPE || 'txt',
-    useDlt,
-  }
-}
-
-/** Whether SMSHorizon is properly configured. */
-export function isSmsHorizonConfigured(): boolean {
-  return getSmsHorizonConfig() !== null
-}
-
-/* ------------------------------------------------------------------ */
-/*  Configuration validation (DLT/TRAI compliance)                      */
-/* ------------------------------------------------------------------ */
-
-/**
- * Validate the MSG91 sender ID for Indian DLT/TRAI compliance.
- *
- * TRAI/DLT requires sender IDs (Headers) to be EXACTLY 6 alphabetic
- * characters (A–Z). Sender IDs that are too long (e.g. "Realcart" = 8 chars)
- * or contain non-alphabetic characters are rejected by Indian telecom
- * operators — MSG91's API may still return "success" (accepted), but the SMS
- * is never delivered to the handset.
- *
- * @returns null if valid, or an error message describing the problem.
- */
-function validateSenderId(senderId: string): string | null {
-  if (!senderId) return 'MSG91_SENDER_ID is not set'
-  if (senderId.length !== 6) {
-    return `MSG91_SENDER_ID "${senderId}" is ${senderId.length} characters — Indian DLT/TRAI requires EXACTLY 6 alphabetic characters (e.g. "REALCRT"). SMS will NOT be delivered until this is fixed.`
-  }
-  if (!/^[A-Za-z]+$/.test(senderId)) {
-    return `MSG91_SENDER_ID "${senderId}" contains non-alphabetic characters — DLT requires letters only.`
-  }
-  return null
-}
-
-/* ------------------------------------------------------------------ */
-/*  Balance check (detect exhausted free-trial credits)                 */
-/* ------------------------------------------------------------------ */
-
-/**
- * Check the MSG91 account balance for a given route.
- *
- * MSG91's Send SMS API returns `{"type":"success"}` even when the account
- * balance is ZERO — the request is accepted but the SMS is never delivered
- * to the telecom operator. This pre-check surfaces the problem so we can
- * fall back to dev mode (instead of silently failing to deliver).
- *
- * @returns the numeric balance, or null if the check itself failed.
- */
-async function getMsg91Balance(authKey: string, route: string): Promise<number | null> {
-  try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8_000)
-    const response = await fetch(
-      `https://api.msg91.com/api/balance.php?authkey=${encodeURIComponent(authKey)}&type=${encodeURIComponent(route)}`,
-      { signal: controller.signal },
-    )
-    clearTimeout(timeoutId)
-    if (!response.ok) return null
-    const text = await response.text()
-    // Balance endpoint returns a plain number (e.g. "0" or "1250.5") or a
-    // JSON error object for invalid routes. Parse defensively.
-    const trimmed = text.trim()
-    const num = Number(trimmed)
-    if (Number.isFinite(num)) return num
-    return null
-  } catch {
-    return null
-  }
+  return getAuthgearConfig() !== null
 }
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                           */
 /* ------------------------------------------------------------------ */
 
-/** Test OTP used in dev mode (no MSG91 configured). */
+/** Test OTP used in dev mode (no Authgear configured). */
 const DEV_TEST_OTP = '123456'
 
 /** OTP session TTL: 5 minutes. */
@@ -282,131 +104,54 @@ const OTP_TTL_MS = 5 * 60 * 1000
 /** Max OTP verification attempts before the session is invalidated. */
 const MAX_OTP_ATTEMPTS = 5
 
-/** Timeout for the MSG91 API HTTP call (milliseconds). */
-const MSG91_API_TIMEOUT_MS = 15_000
+/** Timeout for Authgear API HTTP calls (milliseconds). */
+const AUTHGEAR_API_TIMEOUT_MS = 15_000
 
-/**
- * Max number of MSG91 API call attempts for transient errors.
- * Error code 418 ("IP not whitelisted") is transient in this sandbox because
- * outbound traffic is routed through a NAT pool with multiple egress IPs — a
- * retry usually leaves from a different IP and succeeds.
- */
-const MSG91_MAX_RETRIES = 4
+/** Max number of Authgear API call attempts for transient errors. */
+const AUTHGEAR_MAX_RETRIES = 3
 
-/** Delay (ms) between MSG91 retry attempts. */
-const MSG91_RETRY_DELAY_MS = 600
-
-/** Timeout for the SMSHorizon API HTTP call (milliseconds). */
-const SMSHORIZON_API_TIMEOUT_MS = 15_000
-
-/** Max number of SMSHorizon API call attempts for transient errors. */
-const SMSHORIZON_MAX_RETRIES = 3
-
-/** Delay (ms) between SMSHorizon retry attempts. */
-const SMSHORIZON_RETRY_DELAY_MS = 600
-
-/** The SMSHorizon API hostname (used for SNI + Host header). */
-const SMSHORIZON_API_HOST = 'smshorizon.co.in'
-
-/** The SMSHorizon API base URL. */
-const SMSHORIZON_API_BASE = `https://${SMSHORIZON_API_HOST}`
-
-/**
- * Cache for the resolved SMSHorizon API IP address.
- * Avoids repeated DNS-over-HTTPS lookups within a single server process.
- */
-let resolvedSmsHorizonIp: string | null = null
-
-/**
- * Resolve the SMSHorizon API IP address, with fallback to public DNS.
- *
- * PROBLEM: In some sandbox/cloud environments, the default system DNS servers
- * cannot resolve `smshorizon.co.in` (they return SERVFAIL), even though the
- * domain is valid and resolvable via public DNS (e.g. Google 8.8.8.8). This
- * causes all SMSHorizon API calls to fail with "fetch failed" / ENOTFOUND.
- *
- * SOLUTION (3-tier resolution):
- *   1. If SMSHORIZON_API_IP env var is set → use it directly (manual override).
- *   2. Try Node's default DNS resolution (works in most environments/Vercel).
- *   3. If that fails → fall back to DNS-over-HTTPS via Google's public resolver
- *      (https://dns.google/resolve?name=smshorizon.co.in&type=A). This bypasses
- *      the broken system DNS and works in restrictive sandboxes.
- *
- * The resolved IP is cached for the lifetime of the process.
- *
- * @returns the IP address, or null if all resolution methods fail.
- */
-async function resolveSmsHorizonIp(): Promise<string | null> {
-  // Tier 1: manual override
-  const override = process.env.SMSHORIZON_API_IP
-  if (override) {
-    return override
-  }
-
-  // Return cached result if available
-  if (resolvedSmsHorizonIp) {
-    return resolvedSmsHorizonIp
-  }
-
-  // Tier 2: Node's default DNS resolution
-  try {
-    const addresses = await dnsPromises.lookup(SMSHORIZON_API_HOST, {
-      family: 4,
-      all: false,
-    })
-    const ip = typeof addresses === 'string' ? addresses : addresses.address
-    if (ip) {
-      resolvedSmsHorizonIp = ip
-      console.info(`[SMSHorizon] Resolved ${SMSHORIZON_API_HOST} → ${ip} (system DNS)`)
-      return ip
-    }
-  } catch {
-    // System DNS failed — fall through to DoH
-  }
-
-  // Tier 3: DNS-over-HTTPS via Google's public resolver
-  try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8_000)
-    const response = await fetch(
-      `https://dns.google/resolve?name=${SMSHORIZON_API_HOST}&type=A`,
-      { signal: controller.signal },
-    )
-    clearTimeout(timeoutId)
-    if (response.ok) {
-      const data = (await response.json()) as { Answer?: { data: string }[] }
-      const answer = data.Answer?.find((a) => /^\d{1,3}(\.\d{1,3}){3}$/.test(a.data))
-      if (answer?.data) {
-        resolvedSmsHorizonIp = answer.data
-        console.info(
-          `[SMSHorizon] Resolved ${SMSHORIZON_API_HOST} → ${answer.data} (DNS-over-HTTPS fallback)`,
-        )
-        return answer.data
-      }
-    }
-  } catch {
-    // DoH also failed
-  }
-
-  console.error(
-    `[SMSHorizon] Could not resolve ${SMSHORIZON_API_HOST} via any DNS method. ` +
-      `Set SMSHORIZON_API_IP env var to the IP address manually, or fix the DNS.`,
-  )
-  return null
-}
+/** Delay (ms) between Authgear retry attempts. */
+const AUTHGEAR_RETRY_DELAY_MS = 600
 
 /** Promise-based sleep helper for retry backoff. */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/* ------------------------------------------------------------------ */
+/*  OTP Hashing (used only in dev mode)                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Hash an OTP code for secure storage (dev mode only).
+ * In production (Authgear mode), we store the Authgear state_token instead.
+ */
+function hashOtp(code: string): string {
+  const secret = process.env.NEXTAUTH_SECRET || 'realcart-otp-hash-secret-2024'
+  return createHash('sha256').update(`${secret}:${code}`).digest('hex')
+}
+
+/* ------------------------------------------------------------------ */
+/*  Phone formatting                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Convert a 10-digit Indian mobile to E.164 format for Authgear.
+ * "9876543210" → "+919876543210"
+ */
+function toE164(mobile: string): string {
+  const clean = mobile.replace(/\D/g, '').slice(-10)
+  return `+91${clean}`
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dev-mode OTP storage (fallback when Authgear not configured)         */
+/* ------------------------------------------------------------------ */
+
 /**
  * Store the dev test OTP (123456) hash in otp_sessions and return a dev-mode
- * SendOtpResult. Used both as the primary dev-mode path AND as a graceful
- * fallback when MSG91 cannot deliver (e.g. zero balance, invalid sender ID).
- *
- * This keeps login fully functional for testing even when the SMS gateway is
- * unavailable, instead of hard-failing the request.
+ * SendOtpResult. Used when Authgear is not configured, or as a graceful
+ * fallback when Authgear can't send the OTP.
  */
 async function storeDevOtp(
   cleanMobile: string,
@@ -433,268 +178,88 @@ async function storeDevOtp(
 }
 
 /* ------------------------------------------------------------------ */
-/*  sendOtpViaSmsHorizon — primary provider (smshorizon.co.in)          */
+/*  Authgear API helpers                                                */
 /* ------------------------------------------------------------------ */
 
 /**
- * Send an OTP via SMSHorizon's Send SMS API (https://smshorizon.co.in/api/v2/sendsms.php).
- *
- * SMSHorizon is the PRIMARY provider. It offers 500 free credits on signup
- * (no card required), sub-3-second delivery, DLT-compliant routes, and Bearer-
- * token auth. RCS messaging is available as a service on the platform; the
- * standard SMS API is used here for reliable OTP delivery to all Indian
- * numbers (RCS requires the recipient's device/carrier to support it, while
- * standard SMS is universal).
- *
- * This function generates a random 6-digit OTP, builds the branded message,
- * sends it via SMSHorizon, stores the OTP hash in otp_sessions, and returns
- * a SendOtpResult. On transient errors (network, timeout, 5xx) it retries up
- * to SMSHORIZON_MAX_RETRIES times. Non-retryable errors are thrown so the
- * caller can fall back to MSG91 or dev mode.
- *
- * @returns SendOtpResult on success (throws on failure).
+ * Make a POST request to the Authgear Authentication Flow API.
+ * Returns the parsed JSON response.
+ * Retries on transient errors (network, timeout, 5xx).
  */
-async function sendOtpViaSmsHorizon(
-  cleanMobile: string,
-  type: 'customer' | 'delivery_boy' | 'seller',
-  config: NonNullable<ReturnType<typeof getSmsHorizonConfig>>,
-  otpCode: string,
-  messageBody: string,
-): Promise<SendOtpResult> {
-  // Build the SMSHorizon API request body (form-encoded).
-  const params = new URLSearchParams()
-  params.append('user', config.user)
-  params.append('mobile', cleanMobile)
-  params.append('senderid', config.senderId)
-  params.append('message', messageBody)
-  params.append('type', config.type)
-  if (config.templateId) {
-    // DLT mode (SMS_USE_DLT=true): include the DLT template ID (tid).
-    // In RCS mode (default, SMS_USE_DLT=false), templateId is undefined
-    // and tid is omitted entirely — the message is sent without DLT.
-    params.append('tid', config.templateId)
-  }
-
+async function authgearPost(
+  url: string,
+  body: Record<string, unknown>,
+  config: NonNullable<ReturnType<typeof getAuthgearConfig>>,
+): Promise<Record<string, unknown>> {
   let lastError: Error | null = null
 
-  // Resolve the SMSHorizon API IP address once (with DNS-over-HTTPS fallback).
-  // In sandbox/cloud environments where the system DNS can't resolve
-  // smshorizon.co.in, this falls back to Google's public DNS-over-HTTPS,
-  // then connects to the resolved IP with the correct Host header + TLS SNI.
-  const apiIp = await resolveSmsHorizonIp()
-  const bodyStr = params.toString()
+  for (let attempt = 1; attempt <= AUTHGEAR_MAX_RETRIES; attempt++) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), AUTHGEAR_API_TIMEOUT_MS)
 
-  for (let attempt = 1; attempt <= SMSHORIZON_MAX_RETRIES; attempt++) {
-    // Use Node's built-in https module with a custom lookup function that
-    // returns the resolved IP. This is the equivalent of `curl --resolve`
-    // and works WITHOUT any external dependencies (no undici needed).
-    // The servername option pins TLS SNI to the real hostname so the
-    // certificate validates correctly when connecting via IP.
-    const makeRequest = (): Promise<{ status: number; json: unknown }> => {
-      return new Promise((resolve, reject) => {
-        const req = https.request(
-          {
-            hostname: apiIp || SMSHORIZON_API_HOST,
-            port: 443,
-            path: '/api/v2/sendsms.php',
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${config.apiKey}`,
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'Content-Length': Buffer.byteLength(bodyStr),
-              Host: SMSHORIZON_API_HOST,
-            },
-            servername: SMSHORIZON_API_HOST, // TLS SNI — pins to real hostname
-            timeout: SMSHORIZON_API_TIMEOUT_MS,
-          },
-          (res) => {
-            let chunks = ''
-            res.on('data', (c: Buffer | string) => (chunks += c))
-            res.on('end', () => {
-              const status = res.statusCode || 0
-              try {
-                resolve({ status, json: JSON.parse(chunks) })
-              } catch {
-                resolve({ status, json: {} })
-              }
-            })
-          },
-        )
-        req.on('error', reject)
-        req.on('timeout', () => {
-          req.destroy(new Error('SMSHorizon API request timed out.'))
-        })
-        req.write(bodyStr)
-        req.end()
-      })
-    }
-
-    let status: number
-    let data: unknown
+    let response: Response
     try {
-      const result = await makeRequest()
-      status = result.status
-      data = result.json
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      })
     } catch (err) {
+      clearTimeout(timeoutId)
+      const isAbort = err instanceof Error && err.name === 'AbortError'
       lastError = new Error(
-        err instanceof Error && err.name === 'Error' && err.message.includes('timed out')
-          ? 'SMSHorizon API request timed out.'
-          : `Failed to reach SMSHorizon API: ${err instanceof Error ? err.message : 'network error'}`,
+        isAbort
+          ? 'Authgear API request timed out.'
+          : `Failed to reach Authgear API: ${err instanceof Error ? err.message : 'network error'}`,
       )
-      // Network/timeout errors may be transient — retry.
-      if (attempt < SMSHORIZON_MAX_RETRIES) {
-        await sleep(SMSHORIZON_RETRY_DELAY_MS)
+      if (attempt < AUTHGEAR_MAX_RETRIES) {
+        await sleep(AUTHGEAR_RETRY_DELAY_MS)
         continue
       }
       break
     }
+    clearTimeout(timeoutId)
 
-    const d = (data || {}) as {
-      msgid?: string
-      status?: string
-      error?: string
-      message?: string
-      balance_after?: string | number
+    const data = (await response.json().catch(() => ({}))) as Record<string, unknown>
+
+    if (response.ok) {
+      return data
     }
 
-    // SMSHorizon returns {"msgid":"...","status":"queued","balance_after":"..."} on success.
-    // On failure: {"status":"error","error":"..."} or HTTP non-2xx with an error message.
-    if (status >= 200 && status < 300 && d.status && d.status !== 'error' && d.msgid) {
-      const refId = String(d.msgid)
-      const balanceAfter =
-        d.balance_after !== undefined ? ` (balance: ${d.balance_after})` : ''
-      console.info(
-        `[SMSHorizon] OTP submitted for ${type} ${cleanMobile} ` +
-          `(sender=${config.senderId}, type=${config.type}, msgid=${refId}${balanceAfter}).`,
-      )
-      // Store the OTP hash in otp_sessions for verification.
-      const { db } = await connectToDatabase()
-      await db.collection('otp_sessions').updateOne(
-        { mobile: cleanMobile, type },
-        {
-          $set: {
-            mobile: cleanMobile,
-            type,
-            sessionId: refId,
-            otpHash: hashOtp(otpCode),
-            attempts: 0,
-            verified: false,
-            createdAt: new Date(),
-            expiresAt: new Date(Date.now() + OTP_TTL_MS),
-          },
-        },
-        { upsert: true },
-      )
-      return { success: true, sid: refId, status: 'pending' }
-    }
+    // Error response
+    const errMsg =
+      (data.error as { message?: string } | undefined)?.message ||
+      (data.message as string) ||
+      `Authgear API returned status ${response.status}`
+    lastError = new Error(errMsg)
 
-    // Failure — extract the error message.
-    const apiMsg = String(d.error || d.message || d.status || '')
-    lastError = new Error(apiMsg || `SMSHorizon API returned status ${status}`)
-
-    // Non-retryable errors (auth, DLT, config, invalid sender) — stop immediately.
-    // Retryable: 5xx server errors.
-    const isServerError = status >= 500
-    if (isServerError && attempt < SMSHORIZON_MAX_RETRIES) {
-      console.warn(
-        `[SMSHorizon] Attempt ${attempt}/${SMSHORIZON_MAX_RETRIES} failed (status ${status}). Retrying...`,
-      )
-      await sleep(SMSHORIZON_RETRY_DELAY_MS)
+    // Retry only on 5xx server errors
+    if (response.status >= 500 && attempt < AUTHGEAR_MAX_RETRIES) {
+      await sleep(AUTHGEAR_RETRY_DELAY_MS)
       continue
     }
     break
   }
 
-  throw lastError || new Error('SMSHorizon API request failed.')
+  throw lastError || new Error('Authgear API request failed.')
 }
 
 /* ------------------------------------------------------------------ */
-/*  OTP Generation & Hashing                                            */
-/* ------------------------------------------------------------------ */
-
-/**
- * Generate a cryptographically random 6-digit OTP code.
- * Uses Node's crypto.randomInt for security (not Math.random).
- */
-function generateOtpCode(): string {
-  return String(randomInt(100000, 999999))
-}
-
-/**
- * Hash an OTP code for secure storage.
- * We store the hash (not the plain code) so that even if the database is
- * compromised, the OTP codes cannot be reused. Uses SHA-256 with the
- * NEXTAUTH_SECRET as a salt.
- */
-function hashOtp(code: string): string {
-  const secret = process.env.NEXTAUTH_SECRET || 'realcart-otp-hash-secret-2024'
-  return createHash('sha256').update(`${secret}:${code}`).digest('hex')
-}
-
-/* ------------------------------------------------------------------ */
-/*  Professional OTP Message Template                                   */
-/* ------------------------------------------------------------------ */
-
-/**
- * Build a professional, branded OTP SMS message with the actual code embedded.
- *
- * Message formats (exactly as specified):
- *
- *   Customer:
- *     "Welcome! 317229 is your login OTP for RealCart Account.
- *      Valid for 5 minutes. Please do not share this code with anyone."
- *
- *   Seller:
- *     "Welcome! 482915 is your login OTP for RealCart Seller Account.
- *      Valid for 5 minutes. Please do not share this code with anyone."
- *
- *   Delivery Partner:
- *     "Welcome! 730618 is your login OTP for RealCart Delivery Partner account.
- *      Valid for 5 minutes. Please do not share this code with anyone."
- *
- * @param brandName - The platform brand name (e.g. "RealCart")
- * @param code - The actual 6-digit OTP code (e.g. "317229")
- * @param type - The user type (customer / delivery_boy / seller)
- * @returns The complete SMS message string
- */
-function buildOtpMessage(
-  brandName: string,
-  code: string,
-  type: 'customer' | 'delivery_boy' | 'seller',
-): string {
-  // Account label per user type — matches the exact formats requested.
-  const accountLabel =
-    type === 'customer'
-      ? 'Account'
-      : type === 'delivery_boy'
-        ? 'Delivery Partner account'
-        : 'Seller Account'
-
-  return (
-    `Welcome! ${code} is your login OTP for ${brandName} ${accountLabel}. ` +
-    `Valid for 5 minutes. Please do not share this code with anyone.`
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/*  sendOtp — send an OTP via SMSHorizon (primary) / MSG91 (fallback)    */
+/*  sendOtp — send an OTP via Authgear (or store dev OTP)               */
 /* ------------------------------------------------------------------ */
 
 /**
  * Send an OTP to the given mobile number.
  *
- * Provider priority (everything else intact):
- *   1. SMSHorizon (primary) — smshorizon.co.in API. 500 free credits, sub-3s
- *      delivery, DLT-compliant. Used when SMSHORIZON_API_KEY + USER + SENDER_ID
- *      are set and the sender ID passes 6-char DLT validation.
- *   2. MSG91 (fallback) — used when SMSHorizon is not configured OR fails with
- *      a non-retryable error. Keeps the existing MSG91 infrastructure intact.
- *   3. Dev mode (last resort) — test OTP 123456, no SMS sent. Used when NEITHER
- *      provider is configured, or when both fail with config/DLT errors.
+ * Production (Authgear configured):
+ *   1. Creates an Authgear authentication flow.
+ *   2. Identifies the user by phone number → triggers Authgear to send SMS OTP.
+ *   3. Stores the Authgear state_token in otp_sessions.
  *
- * The OTP is generated server-side (crypto.randomInt), hashed (SHA-256), and
- * stored in the otp_sessions MongoDB collection. Verification is always done
- * against the stored hash — the SMS provider only delivers the code.
+ * Dev mode (no Authgear): stores the test OTP (123456) hash in otp_sessions.
  *
  * @param mobile - 10-digit Indian mobile number
  * @param type - 'customer' | 'delivery_boy' | 'seller' (for otp_sessions scoping)
@@ -709,265 +274,93 @@ export async function sendOtp(
     throw new Error('Invalid mobile number. Must be 10 digits.')
   }
 
-  const smsHorizonConfig = getSmsHorizonConfig()
-  const msg91Config = getMsg91Config()
+  const config = getAuthgearConfig()
 
-  // ── Dev mode: NEITHER provider configured → store test OTP ──
-  if (!smsHorizonConfig && !msg91Config) {
+  // ── Dev mode: Authgear not configured → store test OTP ──
+  if (!config) {
     return storeDevOtp(cleanMobile, type)
   }
 
-  const otpCode = generateOtpCode()
-
-  // Fetch the brand name from DB (falls back to "RealCart" if unset)
-  let brandName = DEFAULT_BRAND_NAME
+  // ── Production: send OTP via Authgear Authentication Flow API ──
   try {
-    const { db } = await connectToDatabase()
-    const brand = await getBrandSettings(db)
-    brandName = brand.platformName || DEFAULT_BRAND_NAME
-  } catch {
-    // DB unavailable — use default brand name
-  }
+    // Step 1: Create a new authentication flow
+    const flowResponse = await authgearPost(
+      `${config.endpoint}/api/v1/authentication_flows?client_id=${encodeURIComponent(config.clientId)}`,
+      {
+        type: config.flowType,
+        name: 'default',
+      },
+      config,
+    )
 
-  // Build the professional branded OTP message with the actual code
-  const messageBody = buildOtpMessage(brandName, otpCode, type)
-
-  // ── PRIMARY: try SMSHorizon (only if sender ID is configured — API requires it) ──
-  if (smsHorizonConfig) {
-    // SMSHorizon's API requires a sender ID. getSmsHorizonConfig() already
-    // returns null if senderId is missing, so if we're here, it's set.
-    try {
-      return await sendOtpViaSmsHorizon(
-        cleanMobile,
-        type,
-        smsHorizonConfig,
-        otpCode,
-        messageBody,
-      )
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err)
-      // DLT/template/auth/sender errors are non-retryable config issues —
-      // fall back to MSG91 (which supports no-sender-ID mode) or dev mode.
-      if (/not matched|template|dlt|not approved|invalid sender|sender id|header|auth|unauthor|401|403/i.test(errMsg)) {
-        console.warn(
-          `[SMSHorizon] Non-retryable error — falling back to MSG91: ${errMsg}`,
-        )
-      } else {
-        console.warn(
-          `[SMSHorizon] Failed after retries — falling back to MSG91: ${errMsg}`,
-        )
-      }
-      // Fall through to MSG91 / dev mode below.
+    const stateToken = flowResponse.state_token as string
+    if (!stateToken) {
+      throw new Error('Authgear did not return a state_token.')
     }
-  }
 
-  // ── FALLBACK: try MSG91 (existing logic, fully intact) ──
-  if (!msg91Config) {
-    // MSG91 not configured — dev mode.
+    // Step 2: Identify with phone number → triggers SMS OTP
+    const identifyResponse = await authgearPost(
+      `${config.endpoint}/api/v1/authentication_flows/states/input`,
+      {
+        state_token: stateToken,
+        input: {
+          type: 'identify',
+          identification: 'phone',
+          login: toE164(cleanMobile),
+        },
+      },
+      config,
+    )
+
+    const newStateToken = (identifyResponse.state_token as string) || stateToken
+
+    // Store the Authgear state_token in otp_sessions for verification
+    const { db } = await connectToDatabase()
+    await db.collection('otp_sessions').updateOne(
+      { mobile: cleanMobile, type },
+      {
+        $set: {
+          mobile: cleanMobile,
+          type,
+          sessionId: newStateToken,
+          stateToken: newStateToken,
+          attempts: 0,
+          verified: false,
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + OTP_TTL_MS),
+        },
+      },
+      { upsert: true },
+    )
+
+    console.info(
+      `[Authgear] OTP sent for ${type} ${cleanMobile} ` +
+        `(flow=${config.flowType}, state=${newStateToken.substring(0, 20)}...).`,
+    )
+
+    return { success: true, sid: newStateToken, status: 'pending' }
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err)
+    console.warn(
+      `[Authgear] Failed to send OTP — falling back to dev mode: ${errMsg}`,
+    )
+    // Graceful fallback: use dev mode so login still works for testing
     return storeDevOtp(cleanMobile, type)
   }
-
-  const config = msg91Config
-
-  // NOTE: MSG91 sender ID is OPTIONAL. When omitted, MSG91 uses its default
-  // global sender ID — no registration/approval needed. This enables RCS mode
-  // (no sender ID, no DLT). When a sender ID IS configured, we validate it's
-  // 6 alphabetic chars (DLT rule) — but we don't hard-block on validation;
-  // instead we log a warning and proceed (MSG91 will reject it if invalid).
-  if (config.senderId) {
-    const senderIdError = validateSenderId(config.senderId)
-    if (senderIdError) {
-      console.warn(`[MSG91] Sender ID note: ${senderIdError}`)
-      // Don't fall back to dev mode — just omit the sender and let MSG91
-      // use its default global sender (RCS mode).
-      config.senderId = undefined
-    }
-  }
-
-  // Build the professional branded OTP message with the actual code
-  // (rebuild here so the MSG91 path is self-contained; messageBody from above
-  // is identical since otpCode/brandName/type are the same.)
-  // Note: messageBody is already defined above — reuse it.
-
-  // Send via MSG91 Send SMS API (v2) with automatic retry on transient errors.
-  //
-  // IMPORTANT — error code 418 ("IP not whitelisted"):
-  // This sandbox routes outbound traffic through a NAT pool with MULTIPLE
-  // egress IPs (e.g. 47.57.242.119 AND 8.212.10.159). If the MSG91 account
-  // has "API Security" (IP whitelist) enabled, requests that happen to leave
-  // from a non-whitelisted egress IP are rejected with code 418. Because the
-  // egress IP is chosen per-connection by the network layer, a retry usually
-  // goes out from a different IP and succeeds. We therefore retry 418
-  // responses a few times before surfacing the error to the user.
-  //
-  // The PERMANENT fix is on the MSG91 dashboard (whitelist all egress IPs OR
-  // disable API Security) — see the instructions logged below on failure.
-  const smsPayload = {
-    // Sender ID is OPTIONAL. When omitted (undefined), MSG91 uses its default
-    // global sender ID — no registration/approval needed (RCS mode). Only
-    // include the 'sender' field when a sender ID is explicitly configured.
-    ...(config.senderId ? { sender: config.senderId } : {}),
-    route: config.route,
-    country: '91',
-    sms: [
-      {
-        message: messageBody,
-        to: [cleanMobile],
-        ...(config.templateId ? { template_id: config.templateId } : {}),
-      },
-    ],
-  }
-
-  let refId = `msg91-${Date.now()}`
-  let lastError: Error | null = null
-
-  for (let attempt = 1; attempt <= MSG91_MAX_RETRIES; attempt++) {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), MSG91_API_TIMEOUT_MS)
-
-    let response: Response
-    try {
-      response = await fetch('https://api.msg91.com/api/v2/sendsms', {
-        method: 'POST',
-        headers: {
-          authkey: config.authKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(smsPayload),
-        signal: controller.signal,
-      })
-    } catch (err) {
-      clearTimeout(timeoutId)
-      const isAbort = err instanceof Error && err.name === 'AbortError'
-      lastError = new Error(
-        isAbort
-          ? 'MSG91 API request timed out. Please try again.'
-          : `Failed to reach MSG91 API: ${err instanceof Error ? err.message : 'network error'}`,
-      )
-      // Network/timeout errors may also be transient — retry once more.
-      if (attempt < MSG91_MAX_RETRIES) {
-        await sleep(MSG91_RETRY_DELAY_MS)
-        continue
-      }
-      break
-    }
-    clearTimeout(timeoutId)
-
-    const data = await response.json().catch(() => ({}))
-
-    // MSG91 returns { type: "success", message: "..." } on success
-    // and { type: "error", message: "..." } on failure.
-    // A 418 / "IP not whitelisted" failure is transient (NAT egress IP) —
-    // retry; other failures are surfaced immediately.
-    if (response.ok && data.type !== 'error') {
-      // MSG91 v2 sendsms returns {"type":"success","message":"<campaign_id>"}.
-      // The campaign/request ID is in the `message` field on success (on error,
-      // `message` is the error description — but we only reach here on success).
-      refId =
-        data.message ||
-        data.data?.[0]?._id ||
-        data.campaign_id ||
-        data._id ||
-        `msg91-${Date.now()}`
-      lastError = null
-      break
-    }
-
-    const apiMsg = String(data.message || data.error || '')
-    const isIpWhitelist =
-      response.status === 418 ||
-      /IP not whitelisted/i.test(apiMsg) ||
-      /418/.test(apiMsg)
-
-    lastError = new Error(apiMsg || `MSG91 API returned status ${response.status}`)
-
-    if (isIpWhitelist && attempt < MSG91_MAX_RETRIES) {
-      // Transient 418 — retry from a (possibly different) egress IP.
-      console.warn(
-        `[MSG91] Attempt ${attempt}/${MSG91_MAX_RETRIES} failed with 418 (IP not whitelisted). Retrying in ${MSG91_RETRY_DELAY_MS}ms...`,
-      )
-      await sleep(MSG91_RETRY_DELAY_MS)
-      continue
-    }
-
-    // Non-retryable error — stop.
-    break
-  }
-
-  if (lastError) {
-    const errMsg = lastError.message || ''
-
-    // DLT template mismatch — the message content doesn't match the approved
-    // DLT template, or the template/sender isn't approved. MSG91 rejects these
-    // with messages like "SMS not matched with DLT template" or "template not
-    // approved". Fall back to dev mode so login still works for testing.
-    if (/not matched|template|dlt|not approved|invalid sender|header/i.test(errMsg)) {
-      console.warn(
-        `[MSG91] SMS delivery rejected — DLT/template/sender issue: ${errMsg}\n` +
-          `Falling back to dev mode (test OTP 123456).\n` +
-          `FIX: ensure the message content in buildOtpMessage() EXACTLY matches ` +
-          `the approved DLT template, the sender ID is 6 alphabetic chars, and the ` +
-          `template is approved on your MSG91 + DLT portal.`,
-      )
-      return storeDevOtp(cleanMobile, type)
-    }
-
-    // Surface a clear, actionable message. For 418 we include the dashboard
-    // steps so the operator can whitelist the egress IPs (or disable API
-    // Security) in the MSG91 account.
-    if (/418|IP not whitelisted/i.test(errMsg)) {
-      console.error(
-        `[MSG91] OTP delivery failed — error code 418 (IP not whitelisted).\n` +
-          `The server's outbound IP is not in the MSG91 account's IP whitelist.\n` +
-          `FIX (MSG91 dashboard): Settings → API Security → either DISABLE it, OR whitelist the server egress IPs.\n` +
-          `Note: this sandbox uses a NAT pool with multiple egress IPs — whitelist ALL of them or disable API Security.\n` +
-          `Current known egress IPs: 47.57.242.119, 8.212.10.159 (verify via: curl https://api.ipify.org).`,
-      )
-      throw new Error(
-        'SMS gateway rejected the request (IP not whitelisted, MSG91 error 418). ' +
-          'Please whitelist the server IPs in your MSG91 account (API Security) or disable API Security, then try again.',
-      )
-    }
-    throw lastError
-  }
-
-  // Store the OTP HASH (not the plain code) in otp_sessions for verification
-  const { db } = await connectToDatabase()
-  console.info(
-    `[MSG91] OTP submitted to MSG91 for ${type} ${cleanMobile} ` +
-      `(sender=${config.senderId}, route=${config.route}, ref=${refId}). ` +
-      `Delivery depends on MSG91 balance, DLT template match, and operator status.`,
-  )
-  await db.collection('otp_sessions').updateOne(
-    { mobile: cleanMobile, type },
-    {
-      $set: {
-        mobile: cleanMobile,
-        type,
-        sessionId: refId, // MSG91 campaign/message reference
-        otpHash: hashOtp(otpCode), // store the HASH, not the plain code
-        attempts: 0,
-        verified: false,
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + OTP_TTL_MS),
-      },
-    },
-    { upsert: true },
-  )
-
-  return { success: true, sid: refId, status: 'pending' }
 }
 
 /* ------------------------------------------------------------------ */
-/*  verifyOtp — verify an OTP against the stored hash                   */
+/*  verifyOtp — verify an OTP via Authgear (or against dev hash)         */
 /* ------------------------------------------------------------------ */
 
 /**
  * Verify an OTP entered by the user.
  *
- * Compares the entered OTP against the stored hash in otp_sessions.
- * On success, marks the session as verified. Tracks attempts to prevent
- * brute-force guessing (max 5 attempts, then the session is invalidated).
+ * Production (Authgear): submits the OTP code to Authgear's flow API.
+ *   On success, marks the session as verified.
+ * Dev mode: compares the entered OTP against the stored hash.
+ *
+ * Tracks attempts to prevent brute-force guessing (max 5 attempts).
  *
  * @param mobile - 10-digit Indian mobile number
  * @param otp - 4–6 digit OTP entered by the user
@@ -1005,7 +398,6 @@ export async function verifyOtp(
   // Check max attempts (prevent brute-force)
   const attempts = (session.attempts as number) || 0
   if (attempts >= MAX_OTP_ATTEMPTS) {
-    // Invalidate the session
     await db.collection('otp_sessions').updateOne(
       { _id: session._id },
       { $set: { verified: false, invalidated: true } },
@@ -1013,26 +405,96 @@ export async function verifyOtp(
     throw new Error('Too many incorrect attempts. Please request a new OTP.')
   }
 
-  // Compare the entered OTP against the stored hash
-  const enteredHash = hashOtp(cleanOtp)
-  const storedHash = session.otpHash as string
-  const isValid = !!(storedHash && enteredHash === storedHash)
+  // ── Dev mode: verify against stored hash ──
+  if (session.sessionId === 'dev-session' || !session.stateToken) {
+    const enteredHash = hashOtp(cleanOtp)
+    const storedHash = session.otpHash as string
+    const isValid = !!(storedHash && enteredHash === storedHash)
 
-  if (isValid) {
-    // Mark as verified + reset attempts
-    await db.collection('otp_sessions').updateOne(
-      { _id: session._id },
-      { $set: { verified: true, verifiedAt: new Date(), attempts: attempts + 1 } },
+    if (isValid) {
+      await db.collection('otp_sessions').updateOne(
+        { _id: session._id },
+        { $set: { verified: true, verifiedAt: new Date(), attempts: attempts + 1 } },
+      )
+    } else {
+      await db.collection('otp_sessions').updateOne(
+        { _id: session._id },
+        { $set: { attempts: attempts + 1 } },
+      )
+    }
+
+    return { valid: isValid, status: isValid ? 'approved' : 'pending' }
+  }
+
+  // ── Production: verify via Authgear Authentication Flow API ──
+  const config = getAuthgearConfig()
+  if (!config) {
+    // Authgear was unconfigured after the OTP was sent — fall back to hash check
+    const enteredHash = hashOtp(cleanOtp)
+    const storedHash = session.otpHash as string
+    const isValid = !!(storedHash && enteredHash === storedHash)
+    return { valid: isValid, status: isValid ? 'approved' : 'pending' }
+  }
+
+  try {
+    const stateToken = session.stateToken as string
+    const verifyResponse = await authgearPost(
+      `${config.endpoint}/api/v1/authentication_flows/states/input`,
+      {
+        state_token: stateToken,
+        input: {
+          type: 'authenticate',
+          authentication: 'primary_oob_otp_sms',
+          code: cleanOtp,
+        },
+      },
+      config,
     )
-  } else {
-    // Increment attempts
+
+    // Authgear returns {type: "finished", ...} on successful verification,
+    // or an error if the code is wrong.
+    const responseType = verifyResponse.type as string
+    const isValid = responseType === 'finished' || responseType === 'no_step'
+
+    if (isValid) {
+      await db.collection('otp_sessions').updateOne(
+        { _id: session._id },
+        {
+          $set: {
+            verified: true,
+            verifiedAt: new Date(),
+            attempts: attempts + 1,
+          },
+        },
+      )
+      console.info(`[Authgear] OTP verified for ${type} ${cleanMobile}.`)
+    } else {
+      await db.collection('otp_sessions').updateOne(
+        { _id: session._id },
+        { $set: { attempts: attempts + 1 } },
+      )
+    }
+
+    return { valid: isValid, status: isValid ? 'approved' : 'pending' }
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err)
+
+    // Invalid OTP — Authgear returns an error
+    if (/invalid|incorrect|wrong|code/i.test(errMsg)) {
+      await db.collection('otp_sessions').updateOne(
+        { _id: session._id },
+        { $set: { attempts: attempts + 1 } },
+      )
+      return { valid: false, status: 'pending' }
+    }
+
+    // Other error — increment attempts and rethrow
     await db.collection('otp_sessions').updateOne(
       { _id: session._id },
       { $set: { attempts: attempts + 1 } },
     )
+    throw err
   }
-
-  return { valid: isValid, status: isValid ? 'approved' : 'pending' }
 }
 
 /* ------------------------------------------------------------------ */

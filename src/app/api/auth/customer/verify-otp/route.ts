@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid OTP is required' }, { status: 400 })
     }
 
-    // Verify the OTP via the SMS gateway (MSG91 SMS API or dev mode)
+    // Verify the OTP via the SMS gateway (Authgear API or dev mode)
     try {
       const result = await verifyOtp(mobile, otp, 'customer')
       if (!result.valid) {
