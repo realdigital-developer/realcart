@@ -39,6 +39,8 @@
 import { connectToDatabase } from '@/lib/mongodb'
 import { getBrandSettings, DEFAULT_BRAND_NAME } from '@/lib/brand-settings'
 import { createHash, randomInt } from 'crypto'
+import https from 'https'
+import { promises as dnsPromises } from 'dns'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -284,6 +286,96 @@ const SMSHORIZON_MAX_RETRIES = 3
 /** Delay (ms) between SMSHorizon retry attempts. */
 const SMSHORIZON_RETRY_DELAY_MS = 600
 
+/** The SMSHorizon API hostname (used for SNI + Host header). */
+const SMSHORIZON_API_HOST = 'smshorizon.co.in'
+
+/** The SMSHorizon API base URL. */
+const SMSHORIZON_API_BASE = `https://${SMSHORIZON_API_HOST}`
+
+/**
+ * Cache for the resolved SMSHorizon API IP address.
+ * Avoids repeated DNS-over-HTTPS lookups within a single server process.
+ */
+let resolvedSmsHorizonIp: string | null = null
+
+/**
+ * Resolve the SMSHorizon API IP address, with fallback to public DNS.
+ *
+ * PROBLEM: In some sandbox/cloud environments, the default system DNS servers
+ * cannot resolve `smshorizon.co.in` (they return SERVFAIL), even though the
+ * domain is valid and resolvable via public DNS (e.g. Google 8.8.8.8). This
+ * causes all SMSHorizon API calls to fail with "fetch failed" / ENOTFOUND.
+ *
+ * SOLUTION (3-tier resolution):
+ *   1. If SMSHORIZON_API_IP env var is set → use it directly (manual override).
+ *   2. Try Node's default DNS resolution (works in most environments/Vercel).
+ *   3. If that fails → fall back to DNS-over-HTTPS via Google's public resolver
+ *      (https://dns.google/resolve?name=smshorizon.co.in&type=A). This bypasses
+ *      the broken system DNS and works in restrictive sandboxes.
+ *
+ * The resolved IP is cached for the lifetime of the process.
+ *
+ * @returns the IP address, or null if all resolution methods fail.
+ */
+async function resolveSmsHorizonIp(): Promise<string | null> {
+  // Tier 1: manual override
+  const override = process.env.SMSHORIZON_API_IP
+  if (override) {
+    return override
+  }
+
+  // Return cached result if available
+  if (resolvedSmsHorizonIp) {
+    return resolvedSmsHorizonIp
+  }
+
+  // Tier 2: Node's default DNS resolution
+  try {
+    const addresses = await dnsPromises.lookup(SMSHORIZON_API_HOST, {
+      family: 4,
+      all: false,
+    })
+    const ip = typeof addresses === 'string' ? addresses : addresses.address
+    if (ip) {
+      resolvedSmsHorizonIp = ip
+      console.info(`[SMSHorizon] Resolved ${SMSHORIZON_API_HOST} → ${ip} (system DNS)`)
+      return ip
+    }
+  } catch {
+    // System DNS failed — fall through to DoH
+  }
+
+  // Tier 3: DNS-over-HTTPS via Google's public resolver
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8_000)
+    const response = await fetch(
+      `https://dns.google/resolve?name=${SMSHORIZON_API_HOST}&type=A`,
+      { signal: controller.signal },
+    )
+    clearTimeout(timeoutId)
+    if (response.ok) {
+      const data = (await response.json()) as { Answer?: { data: string }[] }
+      const answer = data.Answer?.find((a) => /^\d{1,3}(\.\d{1,3}){3}$/.test(a.data))
+      if (answer?.data) {
+        resolvedSmsHorizonIp = answer.data
+        console.info(
+          `[SMSHorizon] Resolved ${SMSHORIZON_API_HOST} → ${answer.data} (DNS-over-HTTPS fallback)`,
+        )
+        return answer.data
+      }
+    }
+  } catch {
+    // DoH also failed
+  }
+
+  console.error(
+    `[SMSHorizon] Could not resolve ${SMSHORIZON_API_HOST} via any DNS method. ` +
+      `Set SMSHORIZON_API_IP env var to the IP address manually, or fix the DNS.`,
+  )
+  return null
+}
+
 /** Promise-based sleep helper for retry backoff. */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -366,26 +458,67 @@ async function sendOtpViaSmsHorizon(
 
   let lastError: Error | null = null
 
-  for (let attempt = 1; attempt <= SMSHORIZON_MAX_RETRIES; attempt++) {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), SMSHORIZON_API_TIMEOUT_MS)
+  // Resolve the SMSHorizon API IP address once (with DNS-over-HTTPS fallback).
+  // In sandbox/cloud environments where the system DNS can't resolve
+  // smshorizon.co.in, this falls back to Google's public DNS-over-HTTPS,
+  // then connects to the resolved IP with the correct Host header + TLS SNI.
+  const apiIp = await resolveSmsHorizonIp()
+  const bodyStr = params.toString()
 
-    let response: Response
-    try {
-      response = await fetch('https://smshorizon.co.in/api/v2/sendsms.php', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.apiKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString(),
-        signal: controller.signal,
+  for (let attempt = 1; attempt <= SMSHORIZON_MAX_RETRIES; attempt++) {
+    // Use Node's built-in https module with a custom lookup function that
+    // returns the resolved IP. This is the equivalent of `curl --resolve`
+    // and works WITHOUT any external dependencies (no undici needed).
+    // The servername option pins TLS SNI to the real hostname so the
+    // certificate validates correctly when connecting via IP.
+    const makeRequest = (): Promise<{ status: number; json: unknown }> => {
+      return new Promise((resolve, reject) => {
+        const req = https.request(
+          {
+            hostname: apiIp || SMSHORIZON_API_HOST,
+            port: 443,
+            path: '/api/v2/sendsms.php',
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${config.apiKey}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Content-Length': Buffer.byteLength(bodyStr),
+              Host: SMSHORIZON_API_HOST,
+            },
+            servername: SMSHORIZON_API_HOST, // TLS SNI — pins to real hostname
+            timeout: SMSHORIZON_API_TIMEOUT_MS,
+          },
+          (res) => {
+            let chunks = ''
+            res.on('data', (c: Buffer | string) => (chunks += c))
+            res.on('end', () => {
+              const status = res.statusCode || 0
+              try {
+                resolve({ status, json: JSON.parse(chunks) })
+              } catch {
+                resolve({ status, json: {} })
+              }
+            })
+          },
+        )
+        req.on('error', reject)
+        req.on('timeout', () => {
+          req.destroy(new Error('SMSHorizon API request timed out.'))
+        })
+        req.write(bodyStr)
+        req.end()
       })
+    }
+
+    let status: number
+    let data: unknown
+    try {
+      const result = await makeRequest()
+      status = result.status
+      data = result.json
     } catch (err) {
-      clearTimeout(timeoutId)
-      const isAbort = err instanceof Error && err.name === 'AbortError'
       lastError = new Error(
-        isAbort
+        err instanceof Error && err.name === 'Error' && err.message.includes('timed out')
           ? 'SMSHorizon API request timed out.'
           : `Failed to reach SMSHorizon API: ${err instanceof Error ? err.message : 'network error'}`,
       )
@@ -396,15 +529,21 @@ async function sendOtpViaSmsHorizon(
       }
       break
     }
-    clearTimeout(timeoutId)
 
-    const data = await response.json().catch(() => ({}))
+    const d = (data || {}) as {
+      msgid?: string
+      status?: string
+      error?: string
+      message?: string
+      balance_after?: string | number
+    }
 
     // SMSHorizon returns {"msgid":"...","status":"queued","balance_after":"..."} on success.
     // On failure: {"status":"error","error":"..."} or HTTP non-2xx with an error message.
-    if (response.ok && data.status && data.status !== 'error' && data.msgid) {
-      const refId = String(data.msgid)
-      const balanceAfter = data.balance_after !== undefined ? ` (balance: ${data.balance_after})` : ''
+    if (status >= 200 && status < 300 && d.status && d.status !== 'error' && d.msgid) {
+      const refId = String(d.msgid)
+      const balanceAfter =
+        d.balance_after !== undefined ? ` (balance: ${d.balance_after})` : ''
       console.info(
         `[SMSHorizon] OTP submitted for ${type} ${cleanMobile} ` +
           `(sender=${config.senderId}, type=${config.type}, msgid=${refId}${balanceAfter}).`,
@@ -431,15 +570,15 @@ async function sendOtpViaSmsHorizon(
     }
 
     // Failure — extract the error message.
-    const apiMsg = String(data.error || data.message || data.status || '')
-    lastError = new Error(apiMsg || `SMSHorizon API returned status ${response.status}`)
+    const apiMsg = String(d.error || d.message || d.status || '')
+    lastError = new Error(apiMsg || `SMSHorizon API returned status ${status}`)
 
-    // Non-retryable errors (auth, DLT, config) — stop immediately.
-    // Retryable: 5xx server errors, network errors, timeouts.
-    const isServerError = response.status >= 500
+    // Non-retryable errors (auth, DLT, config, invalid sender) — stop immediately.
+    // Retryable: 5xx server errors.
+    const isServerError = status >= 500
     if (isServerError && attempt < SMSHORIZON_MAX_RETRIES) {
       console.warn(
-        `[SMSHorizon] Attempt ${attempt}/${SMSHORIZON_MAX_RETRIES} failed (status ${response.status}). Retrying...`,
+        `[SMSHorizon] Attempt ${attempt}/${SMSHORIZON_MAX_RETRIES} failed (status ${status}). Retrying...`,
       )
       await sleep(SMSHORIZON_RETRY_DELAY_MS)
       continue
