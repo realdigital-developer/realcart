@@ -117,6 +117,22 @@ const MAX_OTP_ATTEMPTS = 5
 /** Timeout for the MSG91 API HTTP call (milliseconds). */
 const MSG91_API_TIMEOUT_MS = 15_000
 
+/**
+ * Max number of MSG91 API call attempts for transient errors.
+ * Error code 418 ("IP not whitelisted") is transient in this sandbox because
+ * outbound traffic is routed through a NAT pool with multiple egress IPs — a
+ * retry usually leaves from a different IP and succeeds.
+ */
+const MSG91_MAX_RETRIES = 4
+
+/** Delay (ms) between MSG91 retry attempts. */
+const MSG91_RETRY_DELAY_MS = 600
+
+/** Promise-based sleep helper for retry backoff. */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 /* ------------------------------------------------------------------ */
 /*  OTP Generation & Hashing                                            */
 /* ------------------------------------------------------------------ */
@@ -251,65 +267,123 @@ export async function sendOtp(
   // Build the professional branded OTP message with the actual code
   const messageBody = buildOtpMessage(brandName, otpCode, type)
 
-  // Send via MSG91 Send SMS API (v2)
-  // MSG91 expects: country="91" + to=["<10-digit mobile>"]
-  const smsEntry: { message: string; to: string[]; template_id?: string } = {
-    message: messageBody,
-    to: [cleanMobile],
-  }
-  if (config.templateId) {
-    smsEntry.template_id = config.templateId
-  }
-
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), MSG91_API_TIMEOUT_MS)
-
-  let response: Response
-  try {
-    response = await fetch('https://api.msg91.com/api/v2/sendsms', {
-      method: 'POST',
-      headers: {
-        authkey: config.authKey,
-        'Content-Type': 'application/json',
+  // Send via MSG91 Send SMS API (v2) with automatic retry on transient errors.
+  //
+  // IMPORTANT — error code 418 ("IP not whitelisted"):
+  // This sandbox routes outbound traffic through a NAT pool with MULTIPLE
+  // egress IPs (e.g. 47.57.242.119 AND 8.212.10.159). If the MSG91 account
+  // has "API Security" (IP whitelist) enabled, requests that happen to leave
+  // from a non-whitelisted egress IP are rejected with code 418. Because the
+  // egress IP is chosen per-connection by the network layer, a retry usually
+  // goes out from a different IP and succeeds. We therefore retry 418
+  // responses a few times before surfacing the error to the user.
+  //
+  // The PERMANENT fix is on the MSG91 dashboard (whitelist all egress IPs OR
+  // disable API Security) — see the instructions logged below on failure.
+  const smsPayload = {
+    sender: config.senderId,
+    route: config.route,
+    country: '91',
+    sms: [
+      {
+        message: messageBody,
+        to: [cleanMobile],
+        ...(config.templateId ? { template_id: config.templateId } : {}),
       },
-      body: JSON.stringify({
-        sender: config.senderId,
-        route: config.route,
-        country: '91',
-        sms: [smsEntry],
-      }),
-      signal: controller.signal,
-    })
-  } catch (err) {
-    clearTimeout(timeoutId)
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('MSG91 API request timed out. Please try again.')
+    ],
+  }
+
+  let refId = `msg91-${Date.now()}`
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= MSG91_MAX_RETRIES; attempt++) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), MSG91_API_TIMEOUT_MS)
+
+    let response: Response
+    try {
+      response = await fetch('https://api.msg91.com/api/v2/sendsms', {
+        method: 'POST',
+        headers: {
+          authkey: config.authKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(smsPayload),
+        signal: controller.signal,
+      })
+    } catch (err) {
+      clearTimeout(timeoutId)
+      const isAbort = err instanceof Error && err.name === 'AbortError'
+      lastError = new Error(
+        isAbort
+          ? 'MSG91 API request timed out. Please try again.'
+          : `Failed to reach MSG91 API: ${err instanceof Error ? err.message : 'network error'}`,
+      )
+      // Network/timeout errors may also be transient — retry once more.
+      if (attempt < MSG91_MAX_RETRIES) {
+        await sleep(MSG91_RETRY_DELAY_MS)
+        continue
+      }
+      break
     }
-    throw new Error(
-      `Failed to reach MSG91 API: ${err instanceof Error ? err.message : 'network error'}`,
-    )
+    clearTimeout(timeoutId)
+
+    const data = await response.json().catch(() => ({}))
+
+    // MSG91 returns { type: "success", message: "..." } on success
+    // and { type: "error", message: "..." } on failure.
+    // A 418 / "IP not whitelisted" failure is transient (NAT egress IP) —
+    // retry; other failures are surfaced immediately.
+    if (response.ok && data.type !== 'error') {
+      refId =
+        data.data?.[0]?._id ||
+        data.campaign_id ||
+        data._id ||
+        `msg91-${Date.now()}`
+      lastError = null
+      break
+    }
+
+    const apiMsg = String(data.message || data.error || '')
+    const isIpWhitelist =
+      response.status === 418 ||
+      /IP not whitelisted/i.test(apiMsg) ||
+      /418/.test(apiMsg)
+
+    lastError = new Error(apiMsg || `MSG91 API returned status ${response.status}`)
+
+    if (isIpWhitelist && attempt < MSG91_MAX_RETRIES) {
+      // Transient 418 — retry from a (possibly different) egress IP.
+      console.warn(
+        `[MSG91] Attempt ${attempt}/${MSG91_MAX_RETRIES} failed with 418 (IP not whitelisted). Retrying in ${MSG91_RETRY_DELAY_MS}ms...`,
+      )
+      await sleep(MSG91_RETRY_DELAY_MS)
+      continue
+    }
+
+    // Non-retryable error — stop.
+    break
   }
-  clearTimeout(timeoutId)
 
-  const data = await response.json().catch(() => ({}))
-
-  // MSG91 returns { type: "success", message: "..." } on success
-  // and { type: "error", message: "..." } on failure
-  if (!response.ok || data.type === 'error') {
-    const msg =
-      data.message ||
-      data.error ||
-      `MSG91 API returned status ${response.status}` ||
-      'Failed to send OTP via SMS'
-    throw new Error(msg)
+  if (lastError) {
+    // Surface a clear, actionable message. For 418 we include the dashboard
+    // steps so the operator can whitelist the egress IPs (or disable API
+    // Security) in the MSG91 account.
+    if (/418|IP not whitelisted/i.test(lastError.message)) {
+      console.error(
+        `[MSG91] OTP delivery failed — error code 418 (IP not whitelisted).\n` +
+          `The server's outbound IP is not in the MSG91 account's IP whitelist.\n` +
+          `FIX (MSG91 dashboard): Settings → API Security → either DISABLE it, OR whitelist the server egress IPs.\n` +
+          `Note: this sandbox uses a NAT pool with multiple egress IPs — whitelist ALL of them or disable API Security.\n` +
+          `Current known egress IPs: 47.57.242.119, 8.212.10.159 (verify via: curl https://api.ipify.org).`,
+      )
+      throw new Error(
+        'SMS gateway rejected the request (IP not whitelisted, MSG91 error 418). ' +
+          'Please whitelist the server IPs in your MSG91 account (API Security) or disable API Security, then try again.',
+      )
+    }
+    throw lastError
   }
-
-  // Derive a reference id for the session (MSG91 may return a campaign id)
-  const refId =
-    data.data?.[0]?._id ||
-    data.campaign_id ||
-    data._id ||
-    `msg91-${Date.now()}`
 
   // Store the OTP HASH (not the plain code) in otp_sessions for verification
   const { db } = await connectToDatabase()

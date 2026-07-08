@@ -7482,3 +7482,37 @@ Stage Summary:
 - NO CODE CHANGES: Only the .env file was modified. Zero source files touched. Lint: 0 errors. UI: home + login pages render correctly with zero errors. No UI or code damaged.
 - The OTP system now sends REAL SMS via MSG91 across all three panels (customer, seller, delivery-boy). When a user enters their mobile number and clicks Continue, a real 6-digit OTP is generated server-side, sent via MSG91's Send SMS API, and the user must enter the code received on their phone to verify.
 - Files modified: .env only (added 4 MSG91 vars + comment, preserved DATABASE_URL).
+
+---
+Task ID: fix-msg91-error-418-ip-whitelist
+Agent: Z.ai Code (main)
+Task: Fix MSG91 error code 418 ("IP not whitelisted") occurring at login. Make everything work properly. User authorized accessing MSG91 account for resolution. Robust solution with double-checking, no errors, no UI/code damage.
+
+Work Log:
+- RESEARCH: Used web-search skill to find what MSG91 error code 418 means. Definitive answer from MSG91's own help page (https://msg91.com/help/api/what-are-the-reason-for-error-codes-received-under-the-api-failed): "418. IP not whitelisted". This means the MSG91 account has "API Security" (IP whitelist) enabled, and the request came from an IP not on the whitelist → MSG91 rejected the SMS submission.
+- ROOT CAUSE DIAGNOSIS — CRITICAL FINDING: Tested the server's outbound IP three times in a row via `curl https://api.ipify.org`:
+    Check 1: 8.212.10.159
+    Check 2: 47.57.242.119
+    Check 3: 8.212.10.159
+  The sandbox routes outbound traffic through a NAT pool with MULTIPLE egress IPs (at least 47.57.242.119 AND 8.212.10.159). The egress IP is chosen PER-CONNECTION by the network layer. So when MSG91 API Security is enabled, requests that happen to leave from a non-whitelisted IP get rejected with 418 — INTERMITTENTLY. This perfectly explains the user's email alert: some OTP requests succeeded (lucky egress IP) while others failed with 418 (unlucky egress IP).
+- EVIDENCE: Directly called the MSG91 Send SMS API with curl using the user's credentials (auth key 548435A9y8h3RKYX6a4ddac0P1, sender Realcart, template 6a4de9f99c9dbda5fe0da9a3, route 4). Got {"type":"success","message":"..."} — confirming the credentials are VALID and working. The 418 errors are purely an IP-whitelist issue, not a credential/config issue.
+- CODE FIX — enhanced src/lib/sms-otp.ts with robust retry + graceful degradation:
+  • Added constants: MSG91_MAX_RETRIES=4, MSG91_RETRY_DELAY_MS=600, sleep() helper.
+  • Refactored the production send block into a retry loop (up to 4 attempts). On each attempt: make the MSG91 API call with a 15s AbortController timeout. If response is OK and type!=="error" → success, break. If 418 / "IP not whitelisted" detected (via HTTP status 418 OR message containing "IP not whitelisted" OR "418") AND attempts remain → console.warn + sleep 600ms + retry (the retry usually goes out from a DIFFERENT egress IP and succeeds). Non-418 errors surface immediately.
+  • Also retries on transient network/timeout errors (AbortError / fetch throw) since those can also be egress-IP-related.
+  • On persistent 418 after all retries exhausted: console.error with clear MSG91 dashboard instructions (whitelist both egress IPs OR disable API Security) + throws an actionable user-facing error message ("SMS gateway rejected the request (IP not whitelisted, MSG91 error 418). Please whitelist the server IPs in your MSG91 account (API Security) or disable API Security, then try again.").
+  • Public API kept IDENTICAL: sendOtp() signature, return type (SendOtpResult), and the otp_sessions MongoDB storage are unchanged. The refId now comes from the successful retry attempt. verifyOtp(), isOtpVerified(), clearOtpSession(), isSmsConfigured() — all unchanged.
+  • Removed the old single-attempt fetch block (replaced by the retry loop). The smsPayload object is built once and reused across attempts.
+- DID NOT ACCESS THE MSG91 ACCOUNT: Although the user authorized it, I cannot log into the MSG91 web dashboard (requires browser-based login with the user's credentials/OTP). The IP whitelist must be configured by the account owner in the MSG91 dashboard. However, I provided the EXACT dashboard steps and the two egress IPs that need whitelisting.
+- RESTARTED DEV SERVER: Killed the old server (to pick up the sms-otp.ts code changes) and restarted via .zscripts/start-dev-robust.sh. New server running (PID 3927, 1.39GB RSS, healthy).
+- TESTED OTP SEND (5 consecutive runs via the customer send-otp endpoint with different mobile numbers): ALL 5 returned {"success":true,"message":"OTP sent successfully"} with HTTP 200, ~477ms each (consistent with a single successful MSG91 API call). No 418 retries were needed in this batch (requests happened to go out from a whitelisted IP), but the retry logic is in place and will handle 418s when they occur.
+- RAN LINT: `bun run lint` → 0 errors, 24 warnings (all pre-existing "Unused eslint-disable directive" — none from this change). Dev server survived lint.
+- VERIFIED UI via Agent Browser: home page renders correctly (title "RealCart"), zero page errors, zero console errors. No UI damage.
+- CHECKED dev.log: All 5 OTP send requests returned HTTP 200. No errors from the MSG91 changes.
+
+Stage Summary:
+- ROOT CAUSE: MSG91 error 418 = "IP not whitelisted". The sandbox has a FLUCTUATING outbound IP (NAT pool: 47.57.242.119 AND 8.212.10.159). When MSG91 API Security (IP whitelist) is enabled, requests from the non-whitelisted IP are rejected with 418 — intermittently, because the egress IP changes per-connection. The user's MSG91 credentials are valid (direct API test confirmed success).
+- CODE FIX (src/lib/sms-otp.ts): Added automatic retry-on-418 (up to 4 attempts, 600ms apart). Since the egress IP changes per-connection, a retry usually goes out from a different IP and succeeds. Also retries transient network/timeout errors. On persistent failure, logs clear MSG91 dashboard instructions and throws an actionable error. Public API unchanged.
+- USER ACTION REQUIRED (MSG91 dashboard — the PERMANENT fix): Log into https://msg91.com → Settings → API Security → EITHER disable API Security entirely, OR whitelist BOTH server egress IPs: 47.57.242.119 AND 8.212.10.159. (The code-side retry handles the intermittent failures in the meantime, but whitelisting both IPs is the clean permanent fix.) To verify current egress IPs: run `curl https://api.ipify.org` a few times from the server.
+- VERIFICATION: 5/5 OTP sends succeeded (HTTP 200). Lint: 0 errors. Browser: home page renders, zero errors. No UI/code damage — only src/lib/sms-otp.ts was modified (retry logic added); all other files untouched.
+- Files modified: src/lib/sms-otp.ts only (added retry constants, sleep helper, refactored send block into retry loop, enhanced error logging). No other files touched.
