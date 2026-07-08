@@ -803,7 +803,10 @@ export async function sendOtp(
   // The PERMANENT fix is on the MSG91 dashboard (whitelist all egress IPs OR
   // disable API Security) — see the instructions logged below on failure.
   const smsPayload = {
-    sender: config.senderId,
+    // Sender ID is OPTIONAL. When omitted (undefined), MSG91 uses its default
+    // global sender ID — no registration/approval needed (RCS mode). Only
+    // include the 'sender' field when a sender ID is explicitly configured.
+    ...(config.senderId ? { sender: config.senderId } : {}),
     route: config.route,
     country: '91',
     sms: [
