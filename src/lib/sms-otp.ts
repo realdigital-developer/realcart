@@ -102,6 +102,56 @@ export function isSmsConfigured(): boolean {
 }
 
 /* ------------------------------------------------------------------ */
+/*  SMSHorizon configuration (primary provider)                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Resolve SMSHorizon credentials from environment variables.
+ * Returns null if any required value is missing → falls through to MSG91.
+ *
+ * SMSHorizon API (https://smshorizon.co.in/api/v2/sendsms.php):
+ *   - Auth: Bearer token in Authorization header (the API key)
+ *   - Required params: user, mobile, senderid, message
+ *   - Recommended: tid (DLT template ID), type (txt)
+ *
+ * Required env vars:
+ *   SMSHORIZON_API_KEY   — API key from SMSHorizon dashboard (used as Bearer token)
+ *   SMSHORIZON_USER      — Account username (the "user" param)
+ *   SMSHORIZON_SENDER_ID — 6-character approved DLT sender ID (e.g. "REALCT")
+ *
+ * Optional env vars:
+ *   SMSHORIZON_TEMPLATE_ID — DLT template ID (tid param, required for Indian DLT)
+ *   SMSHORIZON_TYPE        — Message type: "txt" (default) or "uni" (Unicode)
+ */
+function getSmsHorizonConfig(): {
+  apiKey: string
+  user: string
+  senderId: string
+  templateId?: string
+  type: string
+} | null {
+  const apiKey = process.env.SMSHORIZON_API_KEY
+  const user = process.env.SMSHORIZON_USER
+  const senderId = process.env.SMSHORIZON_SENDER_ID
+
+  if (!apiKey || !user || !senderId) {
+    return null
+  }
+  return {
+    apiKey,
+    user,
+    senderId,
+    templateId: process.env.SMSHORIZON_TEMPLATE_ID || undefined,
+    type: process.env.SMSHORIZON_TYPE || 'txt',
+  }
+}
+
+/** Whether SMSHorizon is properly configured. */
+export function isSmsHorizonConfigured(): boolean {
+  return getSmsHorizonConfig() !== null
+}
+
+/* ------------------------------------------------------------------ */
 /*  Configuration validation (DLT/TRAI compliance)                      */
 /* ------------------------------------------------------------------ */
 
@@ -190,6 +240,15 @@ const MSG91_MAX_RETRIES = 4
 /** Delay (ms) between MSG91 retry attempts. */
 const MSG91_RETRY_DELAY_MS = 600
 
+/** Timeout for the SMSHorizon API HTTP call (milliseconds). */
+const SMSHORIZON_API_TIMEOUT_MS = 15_000
+
+/** Max number of SMSHorizon API call attempts for transient errors. */
+const SMSHORIZON_MAX_RETRIES = 3
+
+/** Delay (ms) between SMSHorizon retry attempts. */
+const SMSHORIZON_RETRY_DELAY_MS = 600
+
 /** Promise-based sleep helper for retry backoff. */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -225,6 +284,132 @@ async function storeDevOtp(
     { upsert: true },
   )
   return { success: true, sid: 'dev-session', status: 'pending' }
+}
+
+/* ------------------------------------------------------------------ */
+/*  sendOtpViaSmsHorizon — primary provider (smshorizon.co.in)          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Send an OTP via SMSHorizon's Send SMS API (https://smshorizon.co.in/api/v2/sendsms.php).
+ *
+ * SMSHorizon is the PRIMARY provider. It offers 500 free credits on signup
+ * (no card required), sub-3-second delivery, DLT-compliant routes, and Bearer-
+ * token auth. RCS messaging is available as a service on the platform; the
+ * standard SMS API is used here for reliable OTP delivery to all Indian
+ * numbers (RCS requires the recipient's device/carrier to support it, while
+ * standard SMS is universal).
+ *
+ * This function generates a random 6-digit OTP, builds the branded message,
+ * sends it via SMSHorizon, stores the OTP hash in otp_sessions, and returns
+ * a SendOtpResult. On transient errors (network, timeout, 5xx) it retries up
+ * to SMSHORIZON_MAX_RETRIES times. Non-retryable errors are thrown so the
+ * caller can fall back to MSG91 or dev mode.
+ *
+ * @returns SendOtpResult on success (throws on failure).
+ */
+async function sendOtpViaSmsHorizon(
+  cleanMobile: string,
+  type: 'customer' | 'delivery_boy' | 'seller',
+  config: NonNullable<ReturnType<typeof getSmsHorizonConfig>>,
+  otpCode: string,
+  messageBody: string,
+): Promise<SendOtpResult> {
+  // Build the SMSHorizon API request body (form-encoded).
+  const params = new URLSearchParams()
+  params.append('user', config.user)
+  params.append('mobile', cleanMobile)
+  params.append('senderid', config.senderId)
+  params.append('message', messageBody)
+  params.append('type', config.type)
+  if (config.templateId) {
+    params.append('tid', config.templateId)
+  }
+
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= SMSHORIZON_MAX_RETRIES; attempt++) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), SMSHORIZON_API_TIMEOUT_MS)
+
+    let response: Response
+    try {
+      response = await fetch('https://smshorizon.co.in/api/v2/sendsms.php', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+        signal: controller.signal,
+      })
+    } catch (err) {
+      clearTimeout(timeoutId)
+      const isAbort = err instanceof Error && err.name === 'AbortError'
+      lastError = new Error(
+        isAbort
+          ? 'SMSHorizon API request timed out.'
+          : `Failed to reach SMSHorizon API: ${err instanceof Error ? err.message : 'network error'}`,
+      )
+      // Network/timeout errors may be transient — retry.
+      if (attempt < SMSHORIZON_MAX_RETRIES) {
+        await sleep(SMSHORIZON_RETRY_DELAY_MS)
+        continue
+      }
+      break
+    }
+    clearTimeout(timeoutId)
+
+    const data = await response.json().catch(() => ({}))
+
+    // SMSHorizon returns {"msgid":"...","status":"queued","balance_after":"..."} on success.
+    // On failure: {"status":"error","error":"..."} or HTTP non-2xx with an error message.
+    if (response.ok && data.status && data.status !== 'error' && data.msgid) {
+      const refId = String(data.msgid)
+      const balanceAfter = data.balance_after !== undefined ? ` (balance: ${data.balance_after})` : ''
+      console.info(
+        `[SMSHorizon] OTP submitted for ${type} ${cleanMobile} ` +
+          `(sender=${config.senderId}, type=${config.type}, msgid=${refId}${balanceAfter}).`,
+      )
+      // Store the OTP hash in otp_sessions for verification.
+      const { db } = await connectToDatabase()
+      await db.collection('otp_sessions').updateOne(
+        { mobile: cleanMobile, type },
+        {
+          $set: {
+            mobile: cleanMobile,
+            type,
+            sessionId: refId,
+            otpHash: hashOtp(otpCode),
+            attempts: 0,
+            verified: false,
+            createdAt: new Date(),
+            expiresAt: new Date(Date.now() + OTP_TTL_MS),
+          },
+        },
+        { upsert: true },
+      )
+      return { success: true, sid: refId, status: 'pending' }
+    }
+
+    // Failure — extract the error message.
+    const apiMsg = String(data.error || data.message || data.status || '')
+    lastError = new Error(apiMsg || `SMSHorizon API returned status ${response.status}`)
+
+    // Non-retryable errors (auth, DLT, config) — stop immediately.
+    // Retryable: 5xx server errors, network errors, timeouts.
+    const isServerError = response.status >= 500
+    if (isServerError && attempt < SMSHORIZON_MAX_RETRIES) {
+      console.warn(
+        `[SMSHorizon] Attempt ${attempt}/${SMSHORIZON_MAX_RETRIES} failed (status ${response.status}). Retrying...`,
+      )
+      await sleep(SMSHORIZON_RETRY_DELAY_MS)
+      continue
+    }
+    break
+  }
+
+  throw lastError || new Error('SMSHorizon API request failed.')
 }
 
 /* ------------------------------------------------------------------ */
@@ -296,17 +481,24 @@ function buildOtpMessage(
 }
 
 /* ------------------------------------------------------------------ */
-/*  sendOtp — send an OTP via MSG91 Send SMS API (or store dev OTP)      */
+/*  sendOtp — send an OTP via SMSHorizon (primary) / MSG91 (fallback)    */
 /* ------------------------------------------------------------------ */
 
 /**
  * Send an OTP to the given mobile number.
  *
- * Production (MSG91 configured): generates a 6-digit OTP, builds a custom
- * branded SMS message, sends it via MSG91's Send SMS API, stores the OTP
- * hash in otp_sessions.
+ * Provider priority (everything else intact):
+ *   1. SMSHorizon (primary) — smshorizon.co.in API. 500 free credits, sub-3s
+ *      delivery, DLT-compliant. Used when SMSHORIZON_API_KEY + USER + SENDER_ID
+ *      are set and the sender ID passes 6-char DLT validation.
+ *   2. MSG91 (fallback) — used when SMSHorizon is not configured OR fails with
+ *      a non-retryable error. Keeps the existing MSG91 infrastructure intact.
+ *   3. Dev mode (last resort) — test OTP 123456, no SMS sent. Used when NEITHER
+ *      provider is configured, or when both fail with config/DLT errors.
  *
- * Dev mode (no MSG91): stores the test OTP (123456) hash in otp_sessions.
+ * The OTP is generated server-side (crypto.randomInt), hashed (SHA-256), and
+ * stored in the otp_sessions MongoDB collection. Verification is always done
+ * against the stored hash — the SMS provider only delivers the code.
  *
  * @param mobile - 10-digit Indian mobile number
  * @param type - 'customer' | 'delivery_boy' | 'seller' (for otp_sessions scoping)
@@ -321,28 +513,11 @@ export async function sendOtp(
     throw new Error('Invalid mobile number. Must be 10 digits.')
   }
 
-  const config = getMsg91Config()
+  const smsHorizonConfig = getSmsHorizonConfig()
+  const msg91Config = getMsg91Config()
 
-  // ── Dev mode: MSG91 not configured → store test OTP in otp_sessions ──
-  if (!config) {
-    return storeDevOtp(cleanMobile, type)
-  }
-
-  // ── Production: generate OTP, send via MSG91 Send SMS API ──
-  //
-  // Pre-flight check: validate the sender ID (DLT requires exactly 6
-  // alphabetic chars). An invalid sender ID is a hard block — Indian telecom
-  // operators reject non-6-char sender IDs, so we fall back to dev mode.
-  //
-  // NOTE on balance: we do NOT pre-check the MSG91 balance via the balance.php
-  // API because that endpoint is unreliable — it returns 0 even when the
-  // account wallet has funds (the dashboard wallet and the balance.php pool
-  // are different). Pre-checking balance caused legitimate sends to be
-  // silently skipped (dev-mode fallback) even with a funded wallet. Instead,
-  // we attempt the send and handle any actual error MSG91 returns.
-  const senderIdError = validateSenderId(config.senderId)
-  if (senderIdError) {
-    console.warn(`[MSG91] Configuration issue — falling back to dev mode: ${senderIdError}`)
+  // ── Dev mode: NEITHER provider configured → store test OTP ──
+  if (!smsHorizonConfig && !msg91Config) {
     return storeDevOtp(cleanMobile, type)
   }
 
@@ -360,6 +535,69 @@ export async function sendOtp(
 
   // Build the professional branded OTP message with the actual code
   const messageBody = buildOtpMessage(brandName, otpCode, type)
+
+  // ── PRIMARY: try SMSHorizon ──
+  if (smsHorizonConfig) {
+    const senderIdError = validateSenderId(smsHorizonConfig.senderId)
+    if (senderIdError) {
+      console.warn(
+        `[SMSHorizon] Configuration issue — skipping to MSG91/dev: ${senderIdError}`,
+      )
+    } else {
+      try {
+        return await sendOtpViaSmsHorizon(
+          cleanMobile,
+          type,
+          smsHorizonConfig,
+          otpCode,
+          messageBody,
+        )
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err)
+        // DLT/template/auth errors are non-retryable config issues — fall back
+        // to MSG91 or dev mode instead of hard-failing the login.
+        if (/not matched|template|dlt|not approved|invalid sender|header|auth|unauthor|401|403/i.test(errMsg)) {
+          console.warn(
+            `[SMSHorizon] Non-retryable error — falling back: ${errMsg}`,
+          )
+        } else {
+          console.warn(
+            `[SMSHorizon] Failed after retries — falling back to MSG91/dev: ${errMsg}`,
+          )
+        }
+        // Fall through to MSG91 / dev mode below.
+      }
+    }
+  }
+
+  // ── FALLBACK: try MSG91 (existing logic, fully intact) ──
+  if (!msg91Config) {
+    // MSG91 not configured — dev mode.
+    return storeDevOtp(cleanMobile, type)
+  }
+
+  const config = msg91Config
+
+  // Pre-flight check: validate the MSG91 sender ID (DLT requires exactly 6
+  // alphabetic chars). An invalid sender ID is a hard block — Indian telecom
+  // operators reject non-6-char sender IDs, so we fall back to dev mode.
+  //
+  // NOTE on balance: we do NOT pre-check the MSG91 balance via the balance.php
+  // API because that endpoint is unreliable — it returns 0 even when the
+  // account wallet has funds (the dashboard wallet and the balance.php pool
+  // are different). Pre-checking balance caused legitimate sends to be
+  // silently skipped (dev-mode fallback) even with a funded wallet. Instead,
+  // we attempt the send and handle any actual error MSG91 returns.
+  const senderIdError = validateSenderId(config.senderId)
+  if (senderIdError) {
+    console.warn(`[MSG91] Configuration issue — falling back to dev mode: ${senderIdError}`)
+    return storeDevOtp(cleanMobile, type)
+  }
+
+  // Build the professional branded OTP message with the actual code
+  // (rebuild here so the MSG91 path is self-contained; messageBody from above
+  // is identical since otpCode/brandName/type are the same.)
+  // Note: messageBody is already defined above — reuse it.
 
   // Send via MSG91 Send SMS API (v2) with automatic retry on transient errors.
   //
