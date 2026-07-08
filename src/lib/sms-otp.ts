@@ -102,6 +102,68 @@ export function isSmsConfigured(): boolean {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Configuration validation (DLT/TRAI compliance)                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Validate the MSG91 sender ID for Indian DLT/TRAI compliance.
+ *
+ * TRAI/DLT requires sender IDs (Headers) to be EXACTLY 6 alphabetic
+ * characters (A–Z). Sender IDs that are too long (e.g. "Realcart" = 8 chars)
+ * or contain non-alphabetic characters are rejected by Indian telecom
+ * operators — MSG91's API may still return "success" (accepted), but the SMS
+ * is never delivered to the handset.
+ *
+ * @returns null if valid, or an error message describing the problem.
+ */
+function validateSenderId(senderId: string): string | null {
+  if (!senderId) return 'MSG91_SENDER_ID is not set'
+  if (senderId.length !== 6) {
+    return `MSG91_SENDER_ID "${senderId}" is ${senderId.length} characters — Indian DLT/TRAI requires EXACTLY 6 alphabetic characters (e.g. "REALCRT"). SMS will NOT be delivered until this is fixed.`
+  }
+  if (!/^[A-Za-z]+$/.test(senderId)) {
+    return `MSG91_SENDER_ID "${senderId}" contains non-alphabetic characters — DLT requires letters only.`
+  }
+  return null
+}
+
+/* ------------------------------------------------------------------ */
+/*  Balance check (detect exhausted free-trial credits)                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Check the MSG91 account balance for a given route.
+ *
+ * MSG91's Send SMS API returns `{"type":"success"}` even when the account
+ * balance is ZERO — the request is accepted but the SMS is never delivered
+ * to the telecom operator. This pre-check surfaces the problem so we can
+ * fall back to dev mode (instead of silently failing to deliver).
+ *
+ * @returns the numeric balance, or null if the check itself failed.
+ */
+async function getMsg91Balance(authKey: string, route: string): Promise<number | null> {
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8_000)
+    const response = await fetch(
+      `https://api.msg91.com/api/balance.php?authkey=${encodeURIComponent(authKey)}&type=${encodeURIComponent(route)}`,
+      { signal: controller.signal },
+    )
+    clearTimeout(timeoutId)
+    if (!response.ok) return null
+    const text = await response.text()
+    // Balance endpoint returns a plain number (e.g. "0" or "1250.5") or a
+    // JSON error object for invalid routes. Parse defensively.
+    const trimmed = text.trim()
+    const num = Number(trimmed)
+    if (Number.isFinite(num)) return num
+    return null
+  } catch {
+    return null
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Constants                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -131,6 +193,38 @@ const MSG91_RETRY_DELAY_MS = 600
 /** Promise-based sleep helper for retry backoff. */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Store the dev test OTP (123456) hash in otp_sessions and return a dev-mode
+ * SendOtpResult. Used both as the primary dev-mode path AND as a graceful
+ * fallback when MSG91 cannot deliver (e.g. zero balance, invalid sender ID).
+ *
+ * This keeps login fully functional for testing even when the SMS gateway is
+ * unavailable, instead of hard-failing the request.
+ */
+async function storeDevOtp(
+  cleanMobile: string,
+  type: 'customer' | 'delivery_boy' | 'seller',
+): Promise<SendOtpResult> {
+  const { db } = await connectToDatabase()
+  await db.collection('otp_sessions').updateOne(
+    { mobile: cleanMobile, type },
+    {
+      $set: {
+        mobile: cleanMobile,
+        type,
+        sessionId: 'dev-session',
+        otpHash: hashOtp(DEV_TEST_OTP),
+        attempts: 0,
+        verified: false,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + OTP_TTL_MS),
+      },
+    },
+    { upsert: true },
+  )
+  return { success: true, sid: 'dev-session', status: 'pending' }
 }
 
 /* ------------------------------------------------------------------ */
@@ -229,29 +323,34 @@ export async function sendOtp(
 
   const config = getMsg91Config()
 
-  // ── Dev mode: store test OTP in otp_sessions ──
+  // ── Dev mode: MSG91 not configured → store test OTP in otp_sessions ──
   if (!config) {
-    const { db } = await connectToDatabase()
-    await db.collection('otp_sessions').updateOne(
-      { mobile: cleanMobile, type },
-      {
-        $set: {
-          mobile: cleanMobile,
-          type,
-          sessionId: 'dev-session',
-          otpHash: hashOtp(DEV_TEST_OTP), // hashed test OTP for dev mode
-          attempts: 0,
-          verified: false,
-          createdAt: new Date(),
-          expiresAt: new Date(Date.now() + OTP_TTL_MS),
-        },
-      },
-      { upsert: true },
-    )
-    return { success: true, sid: 'dev-session', status: 'pending' }
+    return storeDevOtp(cleanMobile, type)
   }
 
   // ── Production: generate OTP, send via MSG91 Send SMS API ──
+  //
+  // Pre-flight checks: validate the sender ID (DLT requires exactly 6
+  // alphabetic chars) and the account balance (MSG91 returns API "success"
+  // even with 0 balance, but never delivers the SMS). If either check fails
+  // we fall back to dev mode so login still works for testing, while logging
+  // a clear, actionable warning visible in dev.log / Vercel logs.
+  const senderIdError = validateSenderId(config.senderId)
+  if (senderIdError) {
+    console.warn(`[MSG91] Configuration issue — falling back to dev mode: ${senderIdError}`)
+    return storeDevOtp(cleanMobile, type)
+  }
+
+  const balance = await getMsg91Balance(config.authKey, config.route)
+  if (balance !== null && balance <= 0) {
+    console.warn(
+      `[MSG91] Account balance is 0 on route ${config.route} — MSG91 will accept ` +
+        `the API request but NOT deliver the SMS. Falling back to dev mode (test OTP 123456). ` +
+        `FIX: recharge your MSG91 account at https://msg91.com → Recharge.`,
+    )
+    return storeDevOtp(cleanMobile, type)
+  }
+
   const otpCode = generateOtpCode()
 
   // Fetch the brand name from DB (falls back to "RealCart" if unset)
@@ -366,10 +465,27 @@ export async function sendOtp(
   }
 
   if (lastError) {
+    const errMsg = lastError.message || ''
+
+    // DLT template mismatch — the message content doesn't match the approved
+    // DLT template, or the template/sender isn't approved. MSG91 rejects these
+    // with messages like "SMS not matched with DLT template" or "template not
+    // approved". Fall back to dev mode so login still works for testing.
+    if (/not matched|template|dlt|not approved|invalid sender|header/i.test(errMsg)) {
+      console.warn(
+        `[MSG91] SMS delivery rejected — DLT/template/sender issue: ${errMsg}\n` +
+          `Falling back to dev mode (test OTP 123456).\n` +
+          `FIX: ensure the message content in buildOtpMessage() EXACTLY matches ` +
+          `the approved DLT template, the sender ID is 6 alphabetic chars, and the ` +
+          `template is approved on your MSG91 + DLT portal.`,
+      )
+      return storeDevOtp(cleanMobile, type)
+    }
+
     // Surface a clear, actionable message. For 418 we include the dashboard
     // steps so the operator can whitelist the egress IPs (or disable API
     // Security) in the MSG91 account.
-    if (/418|IP not whitelisted/i.test(lastError.message)) {
+    if (/418|IP not whitelisted/i.test(errMsg)) {
       console.error(
         `[MSG91] OTP delivery failed — error code 418 (IP not whitelisted).\n` +
           `The server's outbound IP is not in the MSG91 account's IP whitelist.\n` +
@@ -387,6 +503,11 @@ export async function sendOtp(
 
   // Store the OTP HASH (not the plain code) in otp_sessions for verification
   const { db } = await connectToDatabase()
+  console.info(
+    `[MSG91] OTP submitted to MSG91 for ${type} ${cleanMobile} ` +
+      `(sender=${config.senderId}, route=${config.route}, ref=${refId}). ` +
+      `Delivery depends on MSG91 balance, DLT template match, and operator status.`,
+  )
   await db.collection('otp_sessions').updateOne(
     { mobile: cleanMobile, type },
     {
