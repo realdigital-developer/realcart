@@ -33,13 +33,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // New delivery boy — send OTP via SMS gateway (Authgear API or dev mode)
-    await sendOtp(mobile, 'delivery_boy')
+    // New delivery boy — send OTP via SMS gateway (SIM Binding or dev mode)
+    const simResult = await sendOtp(mobile, 'delivery_boy')
 
     return NextResponse.json({
       exists: false,
       otpSent: true,
-      message: 'OTP sent to your mobile number. Please verify to continue registration.',
+      message: 'Send an SMS from your phone to verify your number.',
+      bindingCode: simResult.bindingCode,
+      serverNumber: simResult.serverNumber || '',
     })
   } catch (error) {
     console.error('[Delivery Boy Check Mobile Error]', error)

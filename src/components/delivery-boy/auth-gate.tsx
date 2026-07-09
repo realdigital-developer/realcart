@@ -22,10 +22,10 @@ import {
   Package,
   MapPin,
   Clock,
+  MessageSquare,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
 import { useSiteLogo } from '@/hooks/use-site-logo'
 import { ThemeToggle } from '@/components/admin/theme-toggle'
@@ -157,7 +157,6 @@ export function DeliveryBoyAuthGate() {
   const [step, setStep] = useState<AuthStep>('mobile')
   const [direction, setDirection] = useState(1)
   const [mobile, setMobile] = useState('')
-  const [otp, setOtp] = useState('')
   const [passcode, setPasscode] = useState('')
   const [confirmPasscode, setConfirmPasscode] = useState('')
   const [isNewDeliveryBoy, setIsNewDeliveryBoy] = useState(false)
@@ -168,6 +167,10 @@ export function DeliveryBoyAuthGate() {
   const [error, setError] = useState('')
   const [loadingAction, setLoadingAction] = useState(false)
   const [resendTimer, setResendTimer] = useState(0)
+  // SIM binding (banking-app style) — replaces manual OTP entry
+  const [bindingCode, setBindingCode] = useState('')
+  const [serverNumber, setServerNumber] = useState('')
+  const [polling, setPolling] = useState(false)
 
   useEffect(() => {
     if (resendTimer <= 0) return
@@ -210,9 +213,11 @@ export function DeliveryBoyAuthGate() {
         setIsNewDeliveryBoy(false)
         goToStep('enter-passcode')
       } else {
-        // New delivery boy — OTP was sent by the backend via SMS gateway.
+        // New delivery boy — SIM binding request sent by the backend via SMS gateway.
         setIsNewDeliveryBoy(true)
         setResendTimer(60)
+        setBindingCode(data.bindingCode || '')
+        setServerNumber(data.serverNumber || '')
         goToStep('otp')
       }
     } catch (err) {
@@ -222,31 +227,36 @@ export function DeliveryBoyAuthGate() {
     }
   }, [mobile, goToStep])
 
-  const handleVerifyOTP = useCallback(async () => {
-    const cleanOtp = otp.replace(/\D/g, '')
-    if (cleanOtp.length < 4) {
-      setError('Please enter the complete OTP')
-      return
+  /* ------------------------------------------------------------------ */
+  /*  SIM Binding — auto-poll verify-otp until the binding succeeds      */
+  /* ------------------------------------------------------------------ */
+
+  useEffect(() => {
+    if (step !== 'otp' || !bindingCode) return
+    let cancelled = false
+    const poll = async () => {
+      if (cancelled) return
+      try {
+        const cleanMobile = mobile.replace(/\D/g, '').slice(-10)
+        const res = await fetch('/api/auth/delivery-boy/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mobile: cleanMobile, otp: bindingCode }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (res.ok && data.success) {
+          cancelled = true
+          setPolling(false)
+          goToStep('create-passcode')
+        }
+      } catch {}
     }
-    setLoadingAction(true)
-    setError('')
-    try {
-      // Send { mobile, otp } to backend — server verifies via SMS gateway
-      const cleanMobile = mobile.replace(/\D/g, '').slice(-10)
-      const res = await fetch('/api/auth/delivery-boy/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: cleanMobile, otp: cleanOtp }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Invalid OTP')
-      goToStep('create-passcode')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to verify OTP')
-    } finally {
-      setLoadingAction(false)
-    }
-  }, [otp, mobile, goToStep])
+    setPolling(true)
+    poll()
+    const interval = setInterval(poll, 3000)
+    return () => { cancelled = true; clearInterval(interval); setPolling(false) }
+  }, [step, bindingCode, mobile, goToStep])
 
   const handleResendOTP = useCallback(async () => {
     if (resendTimer > 0) return
@@ -254,18 +264,20 @@ export function DeliveryBoyAuthGate() {
     setError('')
     try {
       const cleanMobile = mobile.replace(/\D/g, '').slice(-10)
-      // Resend OTP via the backend SMS gateway
+      // Resend SIM binding request via the backend SMS gateway
       const res = await fetch('/api/auth/delivery-boy/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mobile: cleanMobile }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Failed to resend OTP')
+      if (!res.ok) throw new Error(data.error || 'Failed to resend binding request')
       setResendTimer(60)
-      setOtp('')
+      // New SIM binding cycle — capture fresh binding code + server number
+      setBindingCode(data.bindingCode || '')
+      setServerNumber(data.serverNumber || '')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend OTP')
+      setError(err instanceof Error ? err.message : 'Failed to resend binding request')
     } finally {
       setLoadingAction(false)
     }
@@ -330,8 +342,8 @@ export function DeliveryBoyAuthGate() {
       icon: <Truck className="h-6 w-6" />,
     },
     otp: {
-      title: 'Verify Your Number',
-      description: `We've sent a 6-digit code to +91 ${mobile.replace(/\D/g, '').slice(-10)}`,
+      title: 'SIM Binding Verification',
+      description: `Binding request sent to +91 ${mobile.replace(/\D/g, '').slice(-10)}`,
       icon: <ShieldCheck className="h-6 w-6" />,
     },
     'create-passcode': {
@@ -611,41 +623,55 @@ export function DeliveryBoyAuthGate() {
 
                 {step === 'otp' && (
                   <div className="space-y-5">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Enter OTP</Label>
-                      <div className="flex justify-center py-2">
-                        <InputOTP maxLength={6} value={otp} onChange={(val) => { setOtp(val); setError('') }} pattern="^[0-9]+$">
-                          <InputOTPGroup>
-                            <InputOTPSlot index={0} />
-                            <InputOTPSlot index={1} />
-                            <InputOTPSlot index={2} />
-                          </InputOTPGroup>
-                          <InputOTPSeparator />
-                          <InputOTPGroup>
-                            <InputOTPSlot index={3} />
-                            <InputOTPSlot index={4} />
-                            <InputOTPSlot index={5} />
-                          </InputOTPGroup>
-                        </InputOTP>
+                    {serverNumber && (
+                      <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Binding Server Number</p>
+                        <p className="text-sm font-semibold tracking-wider mt-0.5">{serverNumber}</p>
                       </div>
+                    )}
+
+                    <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 p-4 text-center">
+                      <p className="text-xs text-orange-700 dark:text-orange-300 font-medium">Binding Code</p>
+                      <p className="text-2xl font-bold tracking-[0.3em] font-mono text-orange-700 dark:text-orange-300 mt-1">
+                        {bindingCode || '—'}
+                      </p>
                     </div>
-                    <Button
-                      onClick={handleVerifyOTP}
-                      disabled={loadingAction || otp.replace(/\D/g, '').length < 4}
-                      className="w-full h-12 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-xl text-base font-semibold shadow-lg shadow-orange-500/25 gap-2"
-                    >
-                      {loadingAction ? <Loader2 className="h-5 w-5 animate-spin" /> : <>Verify OTP <ShieldCheck className="h-4 w-4" /></>}
-                    </Button>
+
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      {polling ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin text-orange-600 dark:text-orange-400" />
+                          <span>Waiting for SMS from your phone...</span>
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="h-4 w-4" />
+                          <span>Auto-verifying via SIM binding...</span>
+                        </>
+                      )}
+                    </div>
+
                     <div className="text-center text-sm">
                       {resendTimer > 0 ? (
-                        <span className="text-muted-foreground">Resend OTP in <span className="font-semibold text-foreground">{resendTimer}s</span></span>
+                        <span className="text-muted-foreground">
+                          Resend in <span className="font-semibold text-foreground">{resendTimer}s</span>
+                        </span>
                       ) : (
-                        <button onClick={handleResendOTP} disabled={loadingAction} className="text-orange-600 hover:text-orange-700 font-medium inline-flex items-center gap-1">
-                          <RefreshCw className="h-3.5 w-3.5" />Resend OTP
+                        <button
+                          onClick={handleResendOTP}
+                          disabled={loadingAction}
+                          className="text-orange-600 hover:text-orange-700 font-medium inline-flex items-center gap-1"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          Resend binding request
                         </button>
                       )}
                     </div>
-                    <button onClick={() => { setOtp(''); goToStep('mobile') }} className="w-full text-center text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1">
+
+                    <button
+                      onClick={() => { setBindingCode(''); setServerNumber(''); goToStep('mobile') }}
+                      className="w-full text-center text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1"
+                    >
                       <ArrowLeft className="h-3.5 w-3.5" />Change mobile number
                     </button>
                   </div>

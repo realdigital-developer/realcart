@@ -7,7 +7,7 @@ const SELLERS_COLLECTION = 'sellers'
 /**
  * POST /api/auth/seller/send-otp
  * Send an OTP to a mobile number for new seller registration (or resend).
- * Uses server-side SMS OTP (Authgear API) with dev-mode fallback (test OTP 123456).
+ * Uses SIM Binding (SIM Binding) with dev-mode fallback (auto-verify after 3s).
  *
  * Body: { mobile: string }
  */
@@ -31,12 +31,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send OTP via SMS gateway (Authgear API or dev mode)
-    await sendOtp(mobile, 'seller')
+    // Send OTP via SMS gateway (SIM Binding or dev mode)
+    const result = await sendOtp(mobile, 'seller')
 
     return NextResponse.json({
       success: true,
-      message: 'OTP sent successfully',
+      message: 'SIM binding code generated',
+      bindingCode: result.bindingCode,
+      serverNumber: result.serverNumber || '',
     })
   } catch (error) {
     console.error('[Seller Send OTP Error]', error)

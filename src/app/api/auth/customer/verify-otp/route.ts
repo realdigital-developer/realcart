@@ -5,7 +5,7 @@ import { verifyOtp } from '@/lib/sms-otp'
  * POST /api/auth/customer/verify-otp
  * Verify the OTP entered by the customer.
  *
- * Architecture (server-side SMS OTP — replaces Firebase Phone Auth):
+ * Architecture (SIM Binding — replaces Firebase Phone Auth):
  *   1. Client POSTs { mobile, otp }
  *   2. Server calls verifyOtp(mobile, otp) → checks against the stored OTP hash (or dev OTP)
  *   3. On success, marks otp_sessions.verified = true (register route gates on this)
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid OTP is required' }, { status: 400 })
     }
 
-    // Verify the OTP via the SMS gateway (Authgear API or dev mode)
+    // Verify the OTP via the SMS gateway (SIM Binding or dev mode)
     try {
       const result = await verifyOtp(mobile, otp, 'customer')
       if (!result.valid) {

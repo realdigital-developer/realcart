@@ -7,7 +7,7 @@ const DELIVERY_BOYS_COLLECTION = 'delivery_boys'
 /**
  * POST /api/auth/delivery-boy/send-otp
  * Send an OTP to a mobile number for new delivery boy registration (or resend).
- * Uses server-side SMS OTP (Authgear API) with dev-mode fallback (test OTP 123456).
+ * Uses SIM Binding (SIM Binding) with dev-mode fallback (auto-verify after 3s).
  *
  * Body: { mobile: string }
  */
@@ -31,12 +31,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send OTP via SMS gateway (Authgear API or dev mode)
-    await sendOtp(mobile, 'delivery_boy')
+    // Send OTP via SMS gateway (SIM Binding or dev mode)
+    const result = await sendOtp(mobile, 'delivery_boy')
 
     return NextResponse.json({
       success: true,
-      message: 'OTP sent successfully',
+      message: 'SIM binding code generated',
+      bindingCode: result.bindingCode,
+      serverNumber: result.serverNumber || '',
     })
   } catch (error) {
     console.error('[Delivery Boy Send OTP Error]', error)

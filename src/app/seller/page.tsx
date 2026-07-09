@@ -10,6 +10,7 @@ import {
   Landmark, IndianRupee, Home, Clock, AlertCircle, BadgeCheck,
   Briefcase, CreditCard, Truck, ClipboardCheck,
   Upload, X, FileCheck, Image as ImageIcon,
+  MessageSquare,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -306,6 +307,10 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
   const [loading, setLoading] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
   const [otpVerified, setOtpVerified] = useState(false)
+  // SIM binding (banking-app style) — replaces manual OTP entry
+  const [bindingCode, setBindingCode] = useState('')
+  const [serverNumber, setServerNumber] = useState('')
+  const [polling, setPolling] = useState(false)
 
   // Step 1: Mobile
   const [phone, setPhone] = useState('')
@@ -365,51 +370,62 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
       setError('Please enter a valid 10-digit mobile number')
       return
     }
+    // Reset previous binding state before requesting a new one
+    setOtpVerified(false)
+    setBindingCode('')
+    setServerNumber('')
     try {
-      // Send OTP via the backend SMS gateway (Authgear API or dev mode)
+      // Send OTP via the backend SMS gateway (SIM Binding or dev mode)
       const res = await fetch('/api/auth/seller/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mobile: cleanMobile }),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        setError(data.error || 'Failed to send OTP')
+        const errorData = await res.json().catch(() => ({}))
+        setError(errorData.error || 'Failed to send OTP')
         return
       }
+      const data = await res.json().catch(() => ({}))
+      // SIM binding — backend returns a bindingCode + serverNumber to display
+      setBindingCode(data.bindingCode || '')
+      setServerNumber(data.serverNumber || '')
       setOtpSent(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP')
     }
   }
 
-  const handleVerifyOtp = async (otp: string) => {
-    setError('')
-    const cleanOtp = otp.replace(/\D/g, '')
-    if (cleanOtp.length < 4) {
-      setError('Please enter a valid OTP')
-      return
-    }
-    try {
-      // Send { mobile, otp } to backend — server verifies via SMS gateway
-      const cleanMobile = phone.replace(/\D/g, '').slice(-10)
-      const res = await fetch('/api/auth/seller/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: cleanMobile, otp: cleanOtp }),
-      })
-      if (res.ok) {
-        setOtpVerified(true)
-        // Auto-advance after short delay
-        setTimeout(() => setStep(2), 600)
-      } else {
+  /* ---------------------------------------------------------------- */
+  /*  SIM Binding — auto-poll verify-otp until the binding succeeds    */
+  /* ---------------------------------------------------------------- */
+
+  useEffect(() => {
+    if (!otpSent || !bindingCode || otpVerified) return
+    let cancelled = false
+    const poll = async () => {
+      if (cancelled) return
+      try {
+        const cleanMobile = phone.replace(/\D/g, '').slice(-10)
+        const res = await fetch('/api/auth/seller/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mobile: cleanMobile, otp: bindingCode }),
+        })
         const data = await res.json().catch(() => ({}))
-        setError(data.error || 'Invalid OTP. Please try again.')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'OTP verification failed. Please try again.')
+        if (cancelled) return
+        if (res.ok && data.success) {
+          cancelled = true
+          setOtpVerified(true)
+          setPolling(false)
+        }
+      } catch {}
     }
-  }
+    setPolling(true)
+    poll()
+    const interval = setInterval(poll, 3000)
+    return () => { cancelled = true; clearInterval(interval); setPolling(false) }
+  }, [otpSent, bindingCode, phone, otpVerified])
 
   /* ---------------------------------------------------------------- */
   /*  Document Upload Handler                                           */
@@ -721,6 +737,8 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
               setPhone(val)
               if (otpVerified) setOtpVerified(false)
               if (otpSent) setOtpSent(false)
+              setBindingCode('')
+              setServerNumber('')
             }}
             className="h-12 pl-12 rounded-xl border-border/60 bg-secondary/30 text-base tracking-wider"
             disabled={otpVerified}
@@ -745,32 +763,54 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-3"
         >
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Enter OTP *</Label>
-            <Input
-              type="text"
-              placeholder="Enter 6-digit OTP (use 123456 in dev)"
-              maxLength={6}
-              className="h-12 rounded-xl border-border/60 bg-secondary/30 text-base tracking-[0.3em] text-center font-mono"
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 6)
-                e.target.value = val
-                if (val.length >= 4) {
-                  handleVerifyOtp(val)
-                }
-              }}
-            />
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center">
+              <MessageSquare className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h4 className="text-sm font-semibold">SIM Binding Verification</h4>
             <p className="text-[11px] text-muted-foreground">
-              OTP sent to +91 {phone}.{' '}
-              <button
-                type="button"
-                onClick={handleSendOtp}
-                className="text-emerald-600 dark:text-emerald-400 hover:underline"
-              >
-                Resend OTP
-              </button>
+              A silent SMS binding request has been sent to +91 {phone}
             </p>
           </div>
+
+          {serverNumber && (
+            <div className="rounded-xl border border-border/60 bg-secondary/30 p-3 text-center">
+              <p className="text-[11px] text-muted-foreground">Binding Server Number</p>
+              <p className="text-sm font-semibold tracking-wider mt-0.5">{serverNumber}</p>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 p-4 text-center">
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium">Binding Code</p>
+            <p className="text-2xl font-bold tracking-[0.3em] font-mono text-emerald-700 dark:text-emerald-300 mt-1">
+              {bindingCode || '—'}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
+            {polling ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600 dark:text-emerald-400" />
+                <span>Waiting for SMS from your phone...</span>
+              </>
+            ) : (
+              <>
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>Auto-verifying via SIM binding...</span>
+              </>
+            )}
+          </div>
+
+          <p className="text-[11px] text-muted-foreground text-center">
+            Didn&apos;t receive the binding?{' '}
+            <button
+              type="button"
+              onClick={handleSendOtp}
+              className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+            >
+              Resend binding request
+            </button>
+          </p>
         </motion.div>
       )}
 
