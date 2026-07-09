@@ -8332,3 +8332,34 @@ Stage Summary:
 - PRODUCTION MODE: Set SIM_BINDING_SERVER_NUMBER to your inbound SMS number, set INBOUND_SMS_WEBHOOK_SECRET, configure your SMS gateway (MSG91, Twilio, etc.) to forward received SMS to /api/sms/inbound?secret=YOUR_SECRET. The webhook verifies the sender + code and marks the binding as verified. The frontend polling detects this and advances.
 - VERCEL: Add SIM_BINDING_DEV_MODE, SIM_BINDING_SERVER_NUMBER, INBOUND_SMS_WEBHOOK_SECRET in Project Settings → Environment Variables.
 - Files modified: src/lib/sms-otp.ts (complete rewrite), src/app/api/sms/inbound/route.ts (new), 8 API route files (comments + bindingCode pass-through), 4 frontend files (customer login, customer auth-gate, seller page, delivery-boy auth-gate — all OTP entry replaced with SIM binding UI), .env, .env.example.
+
+---
+Task ID: fix-register-otp-sessions-mismatch
+Agent: Z.ai Code (main)
+Task: Fix the "Please verify your mobile number with OTP" error that appeared after confirming the passcode at login/registration. Robust solution, no errors, no UI/code damage.
+
+Work Log:
+- ROOT CAUSE FOUND: The 3 register route files (customer, seller, delivery-boy) were querying the OLD `otp_sessions` MongoDB collection to check if the phone was verified. But the SIM binding implementation (from the previous task) stores verified sessions in the `sim_bindings` collection (not `otp_sessions`). So the register route's query `db.collection('otp_sessions').findOne({mobile, type, verified: true})` ALWAYS returned null → the register route always rejected with "Please verify your mobile number with OTP first" — even though the SIM binding WAS verified.
+- EVIDENCE: The sms-otp.ts sendOtp() function stores in `db.collection('sim_bindings')`, and the verifyOtp() function checks `db.collection('sim_bindings')`. But the register routes were checking `db.collection('otp_sessions')` — a collection that no longer gets written to. This is a leftover from the Authgear→SIM-binding migration: the register routes weren't updated to use the new collection name.
+- FIX: Updated all 3 register route files to query `sim_bindings` instead of `otp_sessions`:
+  • src/app/api/auth/customer/register/route.ts: Changed the verification query from `db.collection('otp_sessions')` to `db.collection('sim_bindings')`, renamed `otpSession` → `bindingSession`, updated the error message to "Please verify your mobile number with SIM binding first", and updated the cleanup deleteOne to use `sim_bindings`.
+  • src/app/api/auth/seller/register/route.ts: Same fix — changed the verification query + cleanup to `sim_bindings`, renamed `otpSession` → `bindingSession`, updated error message + comments.
+  • src/app/api/auth/delivery-boy/register/route.ts: Same fix — changed the verification query + cleanup to `sim_bindings`, renamed `otpSession` → `bindingSession`, updated error message.
+- ALSO FIXED: Updated the seller page frontend error message from "Please verify your mobile number with OTP" to "Please complete SIM binding verification first" (for consistency with the new SIM binding terminology).
+- ALSO CLEANED UP: Updated stale comments in the 3 verify-otp route files + 2 frontend files that referenced `otp_sessions` → `sim_bindings` (comment-only changes, no functional impact).
+- VERIFIED: ZERO `otp_sessions` references remain in the codebase (grep confirmed).
+- RESTARTED DEV SERVER: new server running (PID 4346, healthy).
+- TESTED FULL REGISTRATION FLOW (customer):
+  1. Send OTP → {"success":true,"bindingCode":"314494"} ✓
+  2. Wait 4s for dev-mode auto-verify ✓
+  3. Verify OTP → {"success":true,"OTP verified successfully"} ✓
+  4. Register (previously failed) → {"success":true,"user":{"id":"6a4f373dce9ba311ce5f70cd","mobile":"9000000201","name":"Test User","role":"customer"}} ✓
+  The register route now correctly finds the verified sim_bindings session and allows registration.
+- RAN LINT: 0 errors, 24 warnings (all pre-existing). Dev server survived.
+- VERIFIED UI via Agent Browser: customer login page renders correctly (title "RealCart - Shop Smarter, Live Better"), zero page errors, zero console errors.
+
+Stage Summary:
+- ROOT CAUSE: Collection name mismatch. The register routes queried `otp_sessions` (old Authgear-era collection), but the SIM binding implementation writes to `sim_bindings`. The query always returned null → "Please verify your mobile number with OTP first" error on every registration attempt.
+- FIX: Updated all 3 register routes (customer, seller, delivery-boy) to query `sim_bindings` instead of `otp_sessions`. Also updated the cleanup deleteOne calls + error messages + comments.
+- VERIFICATION: Full customer registration flow tested end-to-end — send-otp → auto-verify → verify-otp → register → all succeed. The "Please verify your mobile number" error no longer appears. Lint: 0 errors. Browser: zero errors. No UI/code damage.
+- Files modified: 3 register routes (customer, seller, delivery-boy — collection name fix), seller page (frontend error message), 3 verify-otp routes + 2 frontend files (comment cleanup). No other files touched.

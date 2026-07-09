@@ -27,17 +27,17 @@ export async function POST(request: NextRequest) {
 
     const { db } = await connectToDatabase()
 
-    // Verify that OTP was verified for this mobile number
-    const otpSession = await db.collection('otp_sessions').findOne({
+    // Verify that the SIM binding was verified for this mobile number
+    const bindingSession = await db.collection('sim_bindings').findOne({
       mobile,
       type: 'delivery_boy',
       verified: true,
       expiresAt: { $gt: new Date() },
     })
 
-    if (!otpSession) {
+    if (!bindingSession) {
       return NextResponse.json(
-        { error: 'Please verify your mobile number with OTP first' },
+        { error: 'Please verify your mobile number with SIM binding first' },
         { status: 400 }
       )
     }
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
 
     // Clean up OTP session
     try {
-      await db.collection('otp_sessions').deleteOne({ mobile, type: 'delivery_boy' })
+      await db.collection('sim_bindings').deleteOne({ mobile, type: 'delivery_boy' })
     } catch {
       // Non-critical — don't fail registration
     }

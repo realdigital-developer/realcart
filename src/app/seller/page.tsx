@@ -496,7 +496,7 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
       return false
     }
     if (!otpVerified) {
-      setError('Please verify your mobile number with OTP')
+      setError('Please complete SIM binding verification first')
       return false
     }
     return true

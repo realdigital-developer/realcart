@@ -193,21 +193,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ── OTP verification gate (security parity with customer/delivery-boy) ──
-    // The frontend verifies the phone via Firebase Phone Auth, then the
-    // /verify-otp endpoint upserts otp_sessions.verified = true. This gate
-    // ensures the phone was actually verified before allowing registration.
-    // Without it, anyone could POST to /register without a real OTP.
+    // ── SIM binding verification gate ──
+    // The frontend sends an SMS from the user's phone to verify the number.
+    // The /verify-otp endpoint + inbound SMS webhook upserts sim_bindings.verified = true.
+    // This gate ensures the phone was actually verified before allowing registration.
     const cleanMobile = phone.replace(/\D/g, '').slice(-10)
-    const otpSession = await db.collection('otp_sessions').findOne({
+    const bindingSession = await db.collection('sim_bindings').findOne({
       mobile: cleanMobile,
       type: 'seller',
       verified: true,
       expiresAt: { $gt: new Date() },
     })
-    if (!otpSession) {
+    if (!bindingSession) {
       return NextResponse.json(
-        { error: 'Please verify your mobile number with OTP first.' },
+        { error: 'Please verify your mobile number with SIM binding first.' },
         { status: 400 },
       )
     }
@@ -353,7 +352,7 @@ export async function POST(request: NextRequest) {
 
     // ── Clean up the OTP session (one-time use) ──
     try {
-      await db.collection('otp_sessions').deleteOne({ _id: otpSession._id })
+      await db.collection('sim_bindings').deleteOne({ _id: bindingSession._id })
     } catch {
       // non-fatal — the session has an expiry anyway
     }

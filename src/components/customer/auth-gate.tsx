@@ -261,7 +261,7 @@ export function AuthGate() {
   }, [mobile, goToStep])
 
   // Auto-poll the SIM binding verification endpoint while on the OTP step.
-  // Backend marks otp_sessions.verified = true when the user SMSs the binding
+  // Backend marks sim_bindings.verified = true when the user SMSs the binding
   // code to the server number; in dev mode it auto-verifies after ~3 seconds.
   useEffect(() => {
     if (step !== 'otp' || !bindingCode) return

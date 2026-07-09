@@ -8,7 +8,7 @@ import { verifyOtp } from '@/lib/sms-otp'
  * Architecture (SIM Binding — replaces Firebase Phone Auth):
  *   1. Client POSTs { mobile, otp }
  *   2. Server calls verifyOtp(mobile, otp) → checks against the stored OTP hash (or dev OTP)
- *   3. On success, marks otp_sessions.verified = true (register route gates on this)
+ *   3. On success, marks sim_bindings.verified = true (register route gates on this)
  *
  * Body: { mobile: string, otp: string }
  */
